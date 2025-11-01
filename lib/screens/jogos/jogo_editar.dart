@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
+import '../../services/places_service.dart';
 
 class JogoEditar extends StatefulWidget {
   final String jogoId;
@@ -16,6 +17,12 @@ class _JogoEditarState extends State<JogoEditar> {
   final _jogadoresCtrl = TextEditingController();
   DateTime? _data;
   bool _busy = false;
+  // Google Places
+  final _places = PlacesService();
+  String? _placesToken;
+  List<PlaceSuggestion> _placesSug = [];
+  double? _selLat;
+  double? _selLon;
 
   // sugestões simples baseadas em locais já usados (gratuito)
   List<String> _locaisHistorico = [];
@@ -28,18 +35,16 @@ class _JogoEditarState extends State<JogoEditar> {
     _localCtrl.addListener(_filtrarSugestoes);
   }
 
-  void _filtrarSugestoes() {
-    final q = _localCtrl.text.trim().toLowerCase();
-    if (q.isEmpty) {
-      setState(() => _sugestoes = []);
-    } else {
-      setState(() {
-        _sugestoes = _locaisHistorico
-            .where((e) => e.toLowerCase().startsWith(q))
-            .take(5)
-            .toList();
-      });
+  void _filtrarSugestoes() async {
+    final q = _localCtrl.text.trim();
+    if (!_places.isConfigured || q.length < 3) {
+      setState(() => _placesSug = []);
+      return;
     }
+    _placesToken ??= DateTime.now().millisecondsSinceEpoch.toString();
+    final preds = await _places.autocomplete(q, sessionToken: _placesToken);
+    if (!mounted) return;
+    setState(() => _placesSug = preds);
   }
 
   Future<void> _carregarInicial() async {
@@ -64,7 +69,6 @@ class _JogoEditarState extends State<JogoEditar> {
     }
     setState(() {
       _locaisHistorico = set.toList();
-      _filtrarSugestoes();
     });
   }
 
@@ -98,15 +102,17 @@ class _JogoEditarState extends State<JogoEditar> {
       final local = _localCtrl.text.trim();
       final jogadores = int.tryParse(_jogadoresCtrl.text.trim()) ?? 0;
 
-      double? lat;
-      double? lon;
-      try {
-        final results = await locationFromAddress('$local, Portugal');
-        if (results.isNotEmpty) {
-          lat = results.first.latitude;
-          lon = results.first.longitude;
-        }
-      } catch (_) {}
+      double? lat = _selLat;
+      double? lon = _selLon;
+      if (lat == null || lon == null) {
+        try {
+          final results = await locationFromAddress('$local, Portugal');
+          if (results.isNotEmpty) {
+            lat = results.first.latitude;
+            lon = results.first.longitude;
+          }
+        } catch (_) {}
+      }
 
       final update = <String, dynamic>{
         'local': local,
@@ -151,8 +157,9 @@ class _JogoEditarState extends State<JogoEditar> {
                     controller: _localCtrl,
                     decoration: const InputDecoration(labelText: 'Local'),
                     validator: (v) => (v == null || v.trim().isEmpty) ? 'Indica o local' : null,
+                    onChanged: (_) => _filtrarSugestoes(),
                   ),
-                  if (_sugestoes.isNotEmpty)
+                  if (_placesSug.isNotEmpty)
                     Positioned(
                       top: 60,
                       left: 0,
@@ -162,14 +169,19 @@ class _JogoEditarState extends State<JogoEditar> {
                         borderRadius: BorderRadius.circular(8),
                         child: ListView(
                           shrinkWrap: true,
-                          children: _sugestoes
+                          children: _placesSug
                               .map((s) => ListTile(
                                     dense: true,
-                                    title: Text(s),
-                                    onTap: () {
-                                      _localCtrl.text = s;
-                                      _sugestoes = [];
-                                      setState(() {});
+                                    title: Text(s.description),
+                                    onTap: () async {
+                                      _localCtrl.text = s.description;
+                                      final loc = await _places.fetchPlaceLatLng(s.placeId, sessionToken: _placesToken);
+                                      _placesToken = null; // close session
+                                      setState(() {
+                                        _placesSug = [];
+                                        _selLat = loc?.lat;
+                                        _selLon = loc?.lon;
+                                      });
                                     },
                                   ))
                               .toList(),
