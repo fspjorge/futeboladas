@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import '../../services/places_service.dart';
+import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart';
 
 class JogoEditar extends StatefulWidget {
   final String jogoId;
@@ -18,9 +19,15 @@ class _JogoEditarState extends State<JogoEditar> {
   DateTime? _data;
   bool _busy = false;
   // Google Places
-  final _places = PlacesService();
+  final _restPlaces = PlacesService();
+  late final FlutterGooglePlacesSdk _placesSdk = FlutterGooglePlacesSdk(
+    const String.fromEnvironment(
+      'PLACES_API_KEY',
+      defaultValue: 'AIzaSyAPRZImkhwXKE0lqBhYAUvlBXKLN-UbnYk',
+    ),
+  );
   String? _placesToken;
-  List<PlaceSuggestion> _placesSug = [];
+  List<AutocompletePrediction> _placesSug = [];
   double? _selLat;
   double? _selLon;
 
@@ -37,14 +44,27 @@ class _JogoEditarState extends State<JogoEditar> {
 
   void _filtrarSugestoes() async {
     final q = _localCtrl.text.trim();
-    if (!_places.isConfigured || q.length < 3) {
+    if (q.length < 3) {
       setState(() => _placesSug = []);
       return;
     }
     _placesToken ??= DateTime.now().millisecondsSinceEpoch.toString();
-    final preds = await _places.autocomplete(q, sessionToken: _placesToken);
-    if (!mounted) return;
-    setState(() => _placesSug = preds);
+    try {
+      final res = await _placesSdk.findAutocompletePredictions(
+        q,
+        countries: const ['pt'],
+        sessionToken: _placesToken,
+      );
+      if (!mounted) return;
+      setState(() => _placesSug = res.predictions);
+    } catch (_) {
+      if (!_restPlaces.isConfigured) return;
+      final preds = await _restPlaces.autocomplete(q, sessionToken: _placesToken);
+      if (!mounted) return;
+      setState(() => _placesSug = preds
+          .map((p) => AutocompletePrediction(placeId: p.placeId, fullText: p.description))
+          .toList());
+    }
   }
 
   Future<void> _carregarInicial() async {
@@ -172,15 +192,29 @@ class _JogoEditarState extends State<JogoEditar> {
                           children: _placesSug
                               .map((s) => ListTile(
                                     dense: true,
-                                    title: Text(s.description),
+                                    title: Text(s.fullText),
                                     onTap: () async {
-                                      _localCtrl.text = s.description;
-                                      final loc = await _places.fetchPlaceLatLng(s.placeId, sessionToken: _placesToken);
+                                      _localCtrl.text = s.fullText;
+                                      double? lat;
+                                      double? lon;
+                                      try {
+                                        final det = await _placesSdk.fetchPlace(
+                                          s.placeId,
+                                          fields: const [PlaceField.Location],
+                                          sessionToken: _placesToken,
+                                        );
+                                        lat = det.place?.latLng?.lat;
+                                        lon = det.place?.latLng?.lng;
+                                      } catch (_) {
+                                        final loc = await _restPlaces.fetchPlaceLatLng(s.placeId, sessionToken: _placesToken);
+                                        lat = loc?.lat;
+                                        lon = loc?.lon;
+                                      }
                                       _placesToken = null; // close session
                                       setState(() {
                                         _placesSug = [];
-                                        _selLat = loc?.lat;
-                                        _selLon = loc?.lon;
+                                        _selLat = lat;
+                                        _selLon = lon;
                                       });
                                     },
                                   ))

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import '../../services/places_service.dart';
+import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart';
 
 class JogosForm extends StatefulWidget {
   const JogosForm({super.key});
@@ -18,9 +19,16 @@ class _JogosFormState extends State<JogosForm> {
   DateTime? _data;
   bool _busy = false;
   // Google Places (session-based autocomplete)
-  final _places = PlacesService();
+  final _restPlaces = PlacesService();
+  // Prefer native SDK; fallback to REST if unavailable
+  late final FlutterGooglePlacesSdk _placesSdk = FlutterGooglePlacesSdk(
+    const String.fromEnvironment(
+      'PLACES_API_KEY',
+      defaultValue: 'AIzaSyAPRZImkhwXKE0lqBhYAUvlBXKLN-UbnYk',
+    ),
+  );
   String? _placesToken;
-  List<PlaceSuggestion> _sugestoes = [];
+  List<AutocompletePrediction> _sugestoes = [];
   double? _selLat;
   double? _selLon;
 
@@ -124,15 +132,28 @@ class _JogosFormState extends State<JogosForm> {
                     decoration: const InputDecoration(labelText: 'Local'),
                     validator: (v) => (v == null || v.trim().isEmpty) ? 'Indica o local' : null,
                     onChanged: (txt) async {
-                      if (!_places.isConfigured) return;
+                      // Prefer SDK; if it fails, fallback to REST service
                       if (txt.trim().length < 3) {
                         setState(() => _sugestoes = []);
                         return;
                       }
                       _placesToken ??= DateTime.now().millisecondsSinceEpoch.toString();
-                      final preds = await _places.autocomplete(txt.trim(), sessionToken: _placesToken);
-                      if (!mounted) return;
-                      setState(() => _sugestoes = preds);
+                      try {
+                        final res = await _placesSdk.findAutocompletePredictions(
+                          txt.trim(),
+                          countries: const ['pt'],
+                          sessionToken: _placesToken,
+                        );
+                        if (!mounted) return;
+                        setState(() => _sugestoes = res.predictions);
+                      } catch (_) {
+                        if (!_restPlaces.isConfigured) return;
+                        final preds = await _restPlaces.autocomplete(txt.trim(), sessionToken: _placesToken);
+                        if (!mounted) return;
+                        setState(() => _sugestoes = preds
+                            .map((p) => AutocompletePrediction(placeId: p.placeId, fullText: p.description))
+                            .toList());
+                      }
                     },
                   ),
                   if (_sugestoes.isNotEmpty)
@@ -148,15 +169,29 @@ class _JogosFormState extends State<JogosForm> {
                           children: _sugestoes
                               .map((s) => ListTile(
                                     dense: true,
-                                    title: Text(s.description),
+                                    title: Text(s.fullText),
                                     onTap: () async {
-                                      _localCtrl.text = s.description;
-                                      final loc = await _places.fetchPlaceLatLng(s.placeId, sessionToken: _placesToken);
+                                      _localCtrl.text = s.fullText;
+                                      double? lat;
+                                      double? lon;
+                                      try {
+                                        final det = await _placesSdk.fetchPlace(
+                                          s.placeId,
+                                          fields: const [PlaceField.Location],
+                                          sessionToken: _placesToken,
+                                        );
+                                        lat = det.place?.latLng?.lat;
+                                        lon = det.place?.latLng?.lng;
+                                      } catch (_) {
+                                        final loc = await _restPlaces.fetchPlaceLatLng(s.placeId, sessionToken: _placesToken);
+                                        lat = loc?.lat;
+                                        lon = loc?.lon;
+                                      }
                                       _placesToken = null; // close session
                                       setState(() {
                                         _sugestoes = [];
-                                        _selLat = loc?.lat;
-                                        _selLon = loc?.lon;
+                                        _selLat = lat;
+                                        _selLon = lon;
                                       });
                                     },
                                   ))
