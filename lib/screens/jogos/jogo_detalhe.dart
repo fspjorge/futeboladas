@@ -1,4 +1,4 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -7,6 +7,7 @@ import 'jogo_editar.dart';
 
 class JogoDetalhe extends StatefulWidget {
   final String jogoId;
+  const JogoDetalhe({super.key, required this.jogoId});
 
   @override
   State<JogoDetalhe> createState() => _JogoDetalheState();
@@ -39,7 +40,8 @@ class _JogoDetalheState extends State<JogoDetalhe> {
             StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
               stream: jogoRef.snapshots(),
               builder: (context, s) {
-                final isOwner = s.hasData && (s.data!.data()?['createdBy'] == uid);
+                if (!s.hasData) return const SizedBox.shrink();
+                final isOwner = (s.data!.data()?['createdBy'] == uid);
                 if (!isOwner) return const SizedBox.shrink();
                 return IconButton(
                   tooltip: 'Editar',
@@ -79,7 +81,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // Público: local, data, confirmados
+              // Público: local, data, organizador, confirmados
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -110,7 +112,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                           ),
                         ],
                       ),
-                                            const SizedBox(height: 8),
+                      const SizedBox(height: 8),
                       Row(
                         children: [
                           const Icon(Icons.person_outline, size: 18),
@@ -118,7 +120,8 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                           Text('Organizador: $createdByName'),
                         ],
                       ),
-                      const SizedBox(height: 8),                      StreamBuilder<int>(
+                      const SizedBox(height: 8),
+                      StreamBuilder<int>(
                         stream: presencas.countConfirmados(widget.jogoId),
                         builder: (context, countSnap) {
                           final confirmados = countSnap.data ?? 0;
@@ -131,6 +134,24 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                           );
                         },
                       ),
+                      if (isOwner)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            icon: const Icon(Icons.edit_outlined),
+                            label: const Text('Editar jogo'),
+                            onPressed: () async {
+                              final ok = await Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => JogoEditar(jogoId: widget.jogoId)),
+                              );
+                              if (ok == true && context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Jogo atualizado.')),
+                                );
+                              }
+                            },
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -146,14 +167,10 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Jogadores confirmados',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        const Text('Jogadores confirmados', style: TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 8),
                         StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                          stream: jogoRef
-                              .collection('presencas')
-                              .where('vai', isEqualTo: true)
-                              .snapshots(),
+                          stream: jogoRef.collection('presencas').where('vai', isEqualTo: true).snapshots(),
                           builder: (context, psnap) {
                             if (psnap.connectionState == ConnectionState.waiting) {
                               return const Center(child: CircularProgressIndicator());
@@ -167,16 +184,14 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                                 final n = d.data()['name'] as String? ?? 'Jogador';
                                 final p = d.data()['photo'] as String?;
                                 final isOrganizer = d.id == (createdBy ?? '');
-                                final _title = isOrganizer ? '$n (organizador)' : n;
+                                final title = isOrganizer ? '$n (organizador)' : n;
                                 return ListTile(
                                   contentPadding: EdgeInsets.zero,
                                   leading: CircleAvatar(
                                     backgroundImage: p != null ? NetworkImage(p) : null,
-                                    child: p == null
-                                        ? const Icon(Icons.person_outline)
-                                        : null,
+                                    child: p == null ? const Icon(Icons.person_outline) : null,
                                   ),
-                                  title: Text(_title),
+                                  title: Text(title),
                                 );
                               }).toList(),
                             );
@@ -204,7 +219,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                           } catch (e) {
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Erro ao atualizar presença: ')),
+                              SnackBar(content: Text('Erro ao atualizar presença: $e')),
                             );
                           }
                         },
@@ -229,27 +244,6 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                           children: [
                             const Text('Área do organizador', style: TextStyle(fontWeight: FontWeight.bold)),
                             const Spacer(),
-                            TextButton.icon(
-                              icon: const Icon(Icons.edit_outlined),
-                              label: const Text('Editar jogo'),
-                              onPressed: () async {
-                                final ok = await Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (_) => JogoEditar(jogoId: widget.jogoId)),
-                                );
-                                if (ok == true && context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Jogo atualizado.')),
-                                  );
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                                }
-                              },
-                            ),
-                          ],
-                        ),
                             TextButton.icon(
                               icon: const Icon(Icons.edit_outlined),
                               label: const Text('Editar jogo'),
@@ -325,11 +319,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                                             }
                                           },
                                     icon: _saving
-                                        ? const SizedBox(
-                                            width: 16,
-                                            height: 16,
-                                            child: CircularProgressIndicator(strokeWidth: 2),
-                                          )
+                                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                                         : const Icon(Icons.save_outlined),
                                     label: const Text('Guardar'),
                                   ),
@@ -349,7 +339,4 @@ class _JogoDetalheState extends State<JogoDetalhe> {
     );
   }
 }
-
-
-
 
