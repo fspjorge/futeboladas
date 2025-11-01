@@ -161,9 +161,9 @@ class JogosLista extends StatelessWidget {
                         final info = snap.data!;
                         final descricao = info['desc'] as String;
                         final temp = info['temp'];
-                        final diaNoite = info['diaNoite'];
+                        // Mostramos apenas descrição e temperatura (sem Dia/Noite)
                         return Text(
-                          '${descricao[0].toUpperCase()}${descricao.substring(1)} — $temp°C  $diaNoite',
+                          '${descricao[0].toUpperCase()}${descricao.substring(1)} — $temp°C',
                           style: const TextStyle(fontSize: 13, color: Colors.blueGrey),
                         );
                       },

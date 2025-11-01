@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -63,13 +63,13 @@ class _JogosMapaState extends State<JogosMapa> {
             final desc = (ft['desc'] as String?) ?? '';
             final temp = ft['temp'];
             final dn = ft['diaNoite'];
-            descricao = '${desc.isNotEmpty ? '${desc[0].toUpperCase()}${desc.substring(1)}' : ''} — $tempºC  $dn';
+            descricao = '${desc.isNotEmpty ? '${desc[0].toUpperCase()}${desc.substring(1)}' : ''} â $tempÂºC  ';
           }
         }
         if (tempo != null && descricao.isEmpty) {
           final desc = tempo['weather'][0]['description'];
           final temp = tempo['main']['temp'].round();
-          descricao = '${desc[0].toUpperCase()}${desc.substring(1)} — $temp�C';
+          descricao = '${desc[0].toUpperCase()}${desc.substring(1)} â $tempºC';
         }
 
         final marker = Marker(
@@ -78,7 +78,7 @@ class _JogosMapaState extends State<JogosMapa> {
           infoWindow: InfoWindow(
             title: local,
             snippet: dataJogo != null
-                ? '${dataJogo.day.toString().padLeft(2, '0')}/${dataJogo.month.toString().padLeft(2, '0')} ${dataJogo.hour.toString().padLeft(2, '0')}:${dataJogo.minute.toString().padLeft(2, '0')} — $descricao'
+                ? '${dataJogo.day.toString().padLeft(2, '0')}/${dataJogo.month.toString().padLeft(2, '0')} ${dataJogo.hour.toString().padLeft(2, '0')}:${dataJogo.minute.toString().padLeft(2, '0')} â $descricao'
                 : descricao,
           ),
         );
@@ -109,4 +109,5 @@ class _JogosMapaState extends State<JogosMapa> {
     );
   }
 }
+
 
