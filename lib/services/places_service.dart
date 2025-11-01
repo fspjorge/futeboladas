@@ -14,8 +14,12 @@ class PlaceLocation {
 }
 
 class PlacesService {
-  // Provide this at build time: --dart-define=PLACES_API_KEY=YOUR_KEY
-  static const String _apiKey = String.fromEnvironment('PLACES_API_KEY', defaultValue: '');
+  // Reads from --dart-define if provided; otherwise falls back to the configured key.
+  // Note: consider moving this to a secure config if you prefer not to embed it.
+  static const String _apiKey = String.fromEnvironment(
+    'PLACES_API_KEY',
+    defaultValue: 'AIzaSyAPRZImkhwXKE0lqBhYAUvlBXKLN-UbnYk',
+  );
   static const String _base = 'https://maps.googleapis.com/maps/api/place';
 
   bool get isConfigured => _apiKey.isNotEmpty;
@@ -53,4 +57,3 @@ class PlacesService {
     return PlaceLocation(lat: (loc['lat'] as num).toDouble(), lon: (loc['lng'] as num).toDouble());
   }
 }
-

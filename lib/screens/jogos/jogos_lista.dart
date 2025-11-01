@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:intl/intl.dart';
@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/weather_service.dart';
 import 'jogo_detalhe.dart';
 import '../../services/presenca_service.dart';
+import 'jogo_editar.dart';
 
 class JogosLista extends StatelessWidget {
   const JogosLista({super.key});
@@ -145,6 +146,16 @@ class JogosLista extends StatelessWidget {
                             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                         ),
+                        if (FirebaseAuth.instance.currentUser?.uid == createdBy)
+                          IconButton(
+                            tooltip: "Editar jogo",
+                            icon: const Icon(Icons.edit_outlined),
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => JogoEditar(jogoId: jogoId)),
+                              );
+                            },
+                          ),
                         Chip(
                           label: Text('$jogadores'),
                           backgroundColor: Colors.green.shade100,
