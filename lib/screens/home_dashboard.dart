@@ -44,7 +44,7 @@ class HomeDashboard extends StatelessWidget {
             const SizedBox(height: 10),
             const JogosLista(),
             const SizedBox(height: 30),
-            _sectionTitle('Atalhos RÃ¡pidos'),
+            _sectionTitle('Atalhos rapidos'),
             const SizedBox(height: 10),
             Wrap(
               spacing: 12,
@@ -153,5 +153,6 @@ class HomeDashboard extends StatelessWidget {
     );
   }
 }
+
 
 
