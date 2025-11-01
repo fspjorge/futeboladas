@@ -15,6 +15,52 @@ class HomeDashboard extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: colorAccent,
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            UserAccountsDrawerHeader(
+              accountName: Text(user.displayName ?? 'Jogador'),
+              accountEmail: Text(user.email ?? ''),
+              currentAccountPicture: CircleAvatar(
+                backgroundColor: Colors.white,
+                child: Icon(Icons.person, color: Colors.black54),
+              ),
+              decoration: BoxDecoration(color: colorPrimary),
+            ),
+            ListTile(
+              leading: Icon(Icons.map),
+              title: Text('Mapa'),
+              onTap: () { Navigator.of(context).pushNamed('/jogos/mapa'); },
+            ),
+            ListTile(
+              leading: Icon(Icons.people),
+              title: Text('Jogadores'),
+              onTap: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Em breve'))); },
+            ),
+            ListTile(
+              leading: Icon(Icons.bar_chart),
+              title: Text('Estatísticas'),
+              onTap: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Em breve'))); },
+            ),
+            ListTile(
+              leading: Icon(Icons.settings),
+              title: Text('Conta'),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => HomePage(user: user)),
+                );
+              },
+            ),
+            Divider(),
+            ListTile(
+              leading: Icon(Icons.logout),
+              title: Text('Sair'),
+              onTap: () async { await FirebaseAuth.instance.signOut(); },
+            ),
+          ],
+        ),
+      ),
       appBar: AppBar(
         backgroundColor: colorAccent,
         elevation: 0,
@@ -25,14 +71,6 @@ class HomeDashboard extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-            },
-          ),
-        ],
       ),
       body: SafeArea(
         child: ListView(
@@ -43,26 +81,6 @@ class HomeDashboard extends StatelessWidget {
             _sectionTitle('Próximos Jogos'),
             const SizedBox(height: 10),
             const JogosLista(),
-            const SizedBox(height: 30),
-            _sectionTitle('Atalhos Rápidos'),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              alignment: WrapAlignment.center,
-              children: [
-                _quickButton(Icons.map, 'Mapa', colorPrimary, colorCard, () {
-                  Navigator.of(context).pushNamed('/jogos/mapa');
-                }),
-                _quickButton(Icons.people, 'Jogadores', colorPrimary, colorCard, () {}),
-                _quickButton(Icons.bar_chart, 'Estatísticas', colorPrimary, colorCard, () {}),
-                _quickButton(Icons.settings, 'Conta', colorPrimary, colorCard, () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => HomePage(user: user)),
-                  );
-                }),
-              ],
-            ),
           ],
         ),
       ),
