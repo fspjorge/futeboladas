@@ -1,7 +1,10 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+﻿import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:futeboladas/screens/home_dashboard.dart';
+import 'package:futeboladas/screens/jogos/jogos_maps.dart';
+import 'package:futeboladas/screens/jogos/jogos_form.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'firebase_options.dart';
@@ -56,6 +59,10 @@ class FuteboladasApp extends StatelessWidget {
         ),
       ),
       home: const AuthGate(),
+      routes: {
+        '/jogos/mapa': (_) => const JogosMapa(),
+        '/jogos/novo': (_) => const JogosForm(),
+      },
     );
   }
 }
@@ -97,7 +104,7 @@ class AuthGate extends StatelessWidget {
         }
 
         // autenticado e ok
-        return HomePage(user: user);
+        return HomeDashboard(user: user);
       },
     );
   }
@@ -804,3 +811,4 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
+

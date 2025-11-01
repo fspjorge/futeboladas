@@ -1,4 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 
@@ -62,11 +63,16 @@ class _JogosFormState extends State<JogosForm> {
         }
       } catch (_) {}
 
+      final user = FirebaseAuth.instance.currentUser;
       final data = <String, dynamic>{
         'ativo': true,
         'local': local,
         'jogadores': jogadores,
         'data': Timestamp.fromDate(_data!),
+        'createdBy': user?.uid,
+        'createdAt': FieldValue.serverTimestamp(),
+        if (user?.displayName != null) 'createdByName': user!.displayName,
+        if (user?.photoURL != null) 'createdByPhoto': user!.photoURL,
         if (lat != null && lon != null) 'lat': lat,
         if (lat != null && lon != null) 'lon': lon,
       };
@@ -148,3 +154,5 @@ class _JogosFormState extends State<JogosForm> {
     );
   }
 }
+
+

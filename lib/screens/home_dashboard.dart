@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'jogos/jogos_lista.dart';
 import 'package:futeboladas/main.dart' show HomePage;
@@ -44,7 +44,7 @@ class HomeDashboard extends StatelessWidget {
             const SizedBox(height: 10),
             const JogosLista(),
             const SizedBox(height: 30),
-            _sectionTitle('Atalhos Rápidos'),
+            _sectionTitle('Atalhos RÃ¡pidos'),
             const SizedBox(height: 10),
             Wrap(
               spacing: 12,
@@ -153,3 +153,5 @@ class HomeDashboard extends StatelessWidget {
     );
   }
 }
+
+
