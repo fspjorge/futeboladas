@@ -1,8 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/weather_service.dart';
+import 'jogo_detalhe.dart';
+import '../../services/presenca_service.dart';
 
 class JogosLista extends StatelessWidget {
   const JogosLista({super.key});
@@ -36,7 +39,7 @@ class JogosLista extends StatelessWidget {
         isUtc: true,
       ).add(Duration(seconds: (dados['timezone'] as num?)?.toInt() ?? 0));
 
-      final diaNoite = (horaLocal.isAfter(nascer) && horaLocal.isBefore(por)) ? '🌞 Dia' : '🌙 Noite';
+      final diaNoite = (horaLocal.isAfter(nascer) && horaLocal.isBefore(por)) ? 'Dia' : 'Noite';
 
       return {'desc': desc, 'temp': temp, 'diaNoite': diaNoite};
     } catch (e) {
@@ -69,7 +72,7 @@ class JogosLista extends StatelessWidget {
         isUtc: true,
       ).add(Duration(seconds: (dados['timezone'] as num?)?.toInt() ?? 0));
 
-      final diaNoite = (horaLocal.isAfter(nascer) && horaLocal.isBefore(por)) ? '🌞 Dia' : '🌙 Noite';
+      final diaNoite = (horaLocal.isAfter(nascer) && horaLocal.isBefore(por)) ? 'Dia' : 'Noite';
 
       return {'desc': desc, 'temp': temp, 'diaNoite': diaNoite};
     } catch (e) {
@@ -81,6 +84,8 @@ class JogosLista extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final formatoData = DateFormat('dd/MM/yyyy HH:mm');
+    final presencas = PresencaService();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
 
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
@@ -105,15 +110,25 @@ class JogosLista extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           itemCount: jogos.length,
           itemBuilder: (context, index) {
-            final data = jogos[index].data();
+            final doc = jogos[index];
+            final data = doc.data();
             final local = data['local'] as String? ?? 'Local desconhecido';
             final jogadores = (data['jogadores'] as num?)?.toInt() ?? 0;
             final date = (data['data'] as Timestamp).toDate();
             final lat = (data['lat'] as num?)?.toDouble();
             final lon = (data['lon'] as num?)?.toDouble();
+            final jogoId = doc.id;
 
             return Card(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: InkWell(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => JogoDetalhe(jogoId: jogoId),
+                  ),
+                );
+              },
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: Column(
@@ -141,6 +156,52 @@ class JogosLista extends StatelessWidget {
                       style: const TextStyle(fontSize: 13, color: Colors.grey),
                     ),
                     const SizedBox(height: 6),
+                    // presenças: contador + botÃ£o Vou/Desmarcar
+                    StreamBuilder<int>(
+                      stream: presencas.countConfirmados(jogoId),
+                      builder: (context, countSnap) {
+                        final confirmados = countSnap.data ?? 0;
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Confirmados: $confirmados/${jogadores > 0 ? jogadores : '-'}',
+                                style: const TextStyle(fontSize: 13, color: Colors.black87),
+                              ),
+                            ),
+                            if (uid != null)
+                              StreamBuilder<bool>(
+                                stream: presencas.minhaPresenca(jogoId),
+                                builder: (context, meSnap) {
+                                  final vou = meSnap.data ?? false;
+                                  final lotado = !vou && jogadores > 0 && confirmados >= jogadores;
+                                  return OutlinedButton(
+                                    onPressed: lotado
+                                        ? null
+                                        : () async {
+                                            try {
+                                              if (!vou && jogadores > 0 && confirmados >= jogadores) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(content: Text('Jogo lotado.')),
+                                                );
+                                                return;
+                                              }
+                                              await presencas.marcarPresenca(jogoId, !vou);
+                                            } catch (e) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(content: Text('Erro ao atualizar presença: $e')),
+                                              );
+                                            }
+                                          },
+                                    child: Text(vou ? 'Desmarcar' : 'Vou'),
+                                  );
+                                },
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 6),
                     FutureBuilder<Map<String, dynamic>?>(
                       future: (lat != null && lon != null)
                           ? _buscarTempoPorCoords(lat, lon, date)
@@ -163,13 +224,14 @@ class JogosLista extends StatelessWidget {
                         final temp = info['temp'];
                         // Mostramos apenas descrição e temperatura (sem Dia/Noite)
                         return Text(
-                          '${descricao[0].toUpperCase()}${descricao.substring(1)} — $temp°C',
+                          '${descricao.isNotEmpty ? '${descricao[0].toUpperCase()}${descricao.substring(1)}' : ''} - $temp°C',
                           style: const TextStyle(fontSize: 13, color: Colors.blueGrey),
                         );
                       },
                     ),
                   ],
                 ),
+              ),
               ),
             );
           },
@@ -178,3 +240,6 @@ class JogosLista extends StatelessWidget {
     );
   }
 }
+
+
+

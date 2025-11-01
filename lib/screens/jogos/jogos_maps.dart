@@ -14,7 +14,6 @@ class JogosMapa extends StatefulWidget {
 
 class _JogosMapaState extends State<JogosMapa> {
   final Completer<GoogleMapController> _controller = Completer();
-  final WeatherService _weatherService = WeatherService();
   final Set<Marker> _marcadores = {};
 
   static const CameraPosition _inicio = CameraPosition(
@@ -34,7 +33,7 @@ class _JogosMapaState extends State<JogosMapa> {
         .where('ativo', isEqualTo: true)
         .get();
 
-    for (var doc in snapshot.docs) {
+    for (final doc in snapshot.docs) {
       final data = doc.data();
       final local = data['local'] as String? ?? 'Local desconhecido';
       final dataJogo = (data['data'] as Timestamp?)?.toDate();
@@ -55,21 +54,22 @@ class _JogosMapaState extends State<JogosMapa> {
           useLon = pos.longitude;
         }
 
-        final tempo = await _weatherService.getWeather(useLat, useLon);
         String descricao = '';
-        if (dataJogo != null && descricao.isEmpty) {
-          final ft = await _weatherService.getForecastAt(useLat, useLon, dataJogo);
-          if (ft != null) {
-            final desc = (ft['desc'] as String?) ?? '';
-            final temp = ft['temp'];
-            final dn = ft['diaNoite'];
-            descricao = '${desc.isNotEmpty ? '${desc[0].toUpperCase()}${desc.substring(1)}' : ''} â $tempÂºC  ';
+        if (dataJogo != null) {
+          final prev = await WeatherService().getForecastAt(useLat, useLon, dataJogo);
+          if (prev != null) {
+            final desc = (prev['desc'] as String?) ?? '';
+            final temp = prev['temp'];
+            descricao = '${desc.isNotEmpty ? '${desc[0].toUpperCase()}${desc.substring(1)}' : ''} - $temp°C';
           }
         }
-        if (tempo != null && descricao.isEmpty) {
-          final desc = tempo['weather'][0]['description'];
-          final temp = tempo['main']['temp'].round();
-          descricao = '${desc[0].toUpperCase()}${desc.substring(1)} â $tempºC';
+        if (descricao.isEmpty) {
+          final tempo = await WeatherService().getWeather(useLat, useLon);
+          if (tempo != null) {
+            final desc = tempo['weather'][0]['description'] as String? ?? '';
+            final temp = (tempo['main']['temp'] as num).round();
+            descricao = '${desc.isNotEmpty ? '${desc[0].toUpperCase()}${desc.substring(1)}' : ''} - $temp°C';
+          }
         }
 
         final marker = Marker(
@@ -78,14 +78,16 @@ class _JogosMapaState extends State<JogosMapa> {
           infoWindow: InfoWindow(
             title: local,
             snippet: dataJogo != null
-                ? '${dataJogo.day.toString().padLeft(2, '0')}/${dataJogo.month.toString().padLeft(2, '0')} ${dataJogo.hour.toString().padLeft(2, '0')}:${dataJogo.minute.toString().padLeft(2, '0')} â $descricao'
+                ? '${dataJogo.day.toString().padLeft(2, '0')}/${dataJogo.month.toString().padLeft(2, '0')} ${dataJogo.hour.toString().padLeft(2, '0')}:${dataJogo.minute.toString().padLeft(2, '0')} — $descricao'
                 : descricao,
           ),
         );
 
-        setState(() {
-          _marcadores.add(marker);
-        });
+        if (mounted) {
+          setState(() {
+            _marcadores.add(marker);
+          });
+        }
       } catch (e) {
         debugPrint('Erro ao processar local $local: $e');
       }
@@ -109,5 +111,4 @@ class _JogosMapaState extends State<JogosMapa> {
     );
   }
 }
-
 
