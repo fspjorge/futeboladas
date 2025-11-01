@@ -120,6 +120,7 @@ class JogosLista extends StatelessWidget {
             final lon = (data['lon'] as num?)?.toDouble();
             final jogoId = doc.id;
             final createdByName = data['createdByName'] as String? ?? 'Desconhecido';
+            final createdBy = data['createdBy'] as String?;
 
             return Card(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
