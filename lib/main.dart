@@ -76,7 +76,7 @@ class AuthGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
+      stream: FirebaseAuth.instance.userChanges(),
       builder: (context, snap) {
         final user = snap.data;
 
@@ -404,8 +404,8 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     final refreshed = FirebaseAuth.instance.currentUser;
     if (refreshed != null && refreshed.emailVerified) {
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => HomePage(user: refreshed)),
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Email verificado.')),
       );
     } else {
       if (!mounted) return;
