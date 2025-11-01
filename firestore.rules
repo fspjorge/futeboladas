@@ -1,16 +1,21 @@
-rules_version = '2';
+﻿rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Regras mínimas para desenvolvimento
-    // - permite ler e criar documentos em `jogos` se autenticado
-    // - bloqueia update/delete (ajuste quando houver ownership/moderação)
+    // Jogos pÃºblicos: leitura aberta; cria§Ã£o com validaÃ§Ã£o bÃ¡sica
+    // - bloqueia update/delete (ajuste quando houver ownership/moderaÃ§Ã£o)
     match /jogos/{id} {
-      allow read, create: if request.auth != null
-        && request.resource.data.keys().hasOnly(['ativo','local','jogadores','data','lat','lon'])
+      // Leitura pÃºblica
+      allow read: if true;
+
+      // cria jogo: autenticado + campos vÃ¡lidos
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['ativo','local','jogadores','data','lat','lon','createdBy','createdAt','createdByName','createdByPhoto'])
         && request.resource.data.ativo is bool
         && request.resource.data.local is string
         && request.resource.data.jogadores is int
         && request.resource.data.data is timestamp
+        && request.resource.data.createdBy is string
+        && request.resource.data.createdAt is timestamp
         && (
           // lat/lon opcionais e do tipo double
           (
@@ -19,8 +24,32 @@ service cloud.firestore {
             request.resource.data.lat is double && request.resource.data.lon is double
           )
         );
-      allow update, delete: if false;
+            allow delete: if false;
+
+      // permitir update ao criador do jogo, com validação básica
+      allow update: if request.auth != null
+        && resource.data.createdBy == request.auth.uid
+        && request.resource.data.keys().hasOnly(['ativo','local','jogadores','data','lat','lon','createdBy','createdAt','createdByName','createdByPhoto'])
+        && request.resource.data.local is string
+        && request.resource.data.jogadores is int
+        && request.resource.data.data is timestamp
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt is timestamp
+        && (
+          (!(request.resource.data.keys().hasAny(['lat','lon'])) ) || (request.resource.data.lat is double && request.resource.data.lon is double)
+        );
+
+      // SubcoleçãoÃ£o de presenÃ§as: cada utilizador sÃ³ pode gerir a sua doc (uid)
+      match /presencas/{uid} {
+        // Leitura pÃºblica
+        allow read: if true;
+        allow create, update, delete: if request.auth != null && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['vai','updatedAt','name','photo'])
+          && request.resource.data.vai is bool;
+      }
     }
   }
 }
+
+
 
