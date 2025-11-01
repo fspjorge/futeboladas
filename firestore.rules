@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Regras mínimas para desenvolvimento
+    // - permite ler e criar documentos em `jogos` se autenticado
+    // - bloqueia update/delete (ajuste quando houver ownership/moderação)
+    match /jogos/{id} {
+      allow read, create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['ativo','local','jogadores','data','lat','lon'])
+        && request.resource.data.ativo is bool
+        && request.resource.data.local is string
+        && request.resource.data.jogadores is int
+        && request.resource.data.data is timestamp
+        && (
+          // lat/lon opcionais e do tipo double
+          (
+            !(request.resource.data.keys().hasAny(['lat','lon']))
+          ) || (
+            request.resource.data.lat is double && request.resource.data.lon is double
+          )
+        );
+      allow update, delete: if false;
+    }
+  }
+}
+
