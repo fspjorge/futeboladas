@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+﻿﻿import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -35,6 +35,7 @@ class _JogosMapaState extends State<JogosMapa> {
 
     for (final doc in snapshot.docs) {
       final data = doc.data();
+      final org = (data['createdByName'] as String?) ?? 'Desconhecido';
       final local = data['local'] as String? ?? 'Local desconhecido';
       final dataJogo = (data['data'] as Timestamp?)?.toDate();
       final lat = (data['lat'] as num?)?.toDouble();
@@ -60,7 +61,7 @@ class _JogosMapaState extends State<JogosMapa> {
           if (prev != null) {
             final desc = (prev['desc'] as String?) ?? '';
             final temp = prev['temp'];
-            descricao = '${desc.isNotEmpty ? '${desc[0].toUpperCase()}${desc.substring(1)}' : ''} - $temp°C';
+            descricao = '${desc.isNotEmpty ? '${desc[0].toUpperCase()}${desc.substring(1)}' : ''} - $temp\u00B0C';
           }
         }
         if (descricao.isEmpty) {
@@ -68,7 +69,7 @@ class _JogosMapaState extends State<JogosMapa> {
           if (tempo != null) {
             final desc = tempo['weather'][0]['description'] as String? ?? '';
             final temp = (tempo['main']['temp'] as num).round();
-            descricao = '${desc.isNotEmpty ? '${desc[0].toUpperCase()}${desc.substring(1)}' : ''} - $temp°C';
+            descricao = '${desc.isNotEmpty ? '${desc[0].toUpperCase()}${desc.substring(1)}' : ''} - $temp\u00B0C';
           }
         }
 
@@ -78,7 +79,7 @@ class _JogosMapaState extends State<JogosMapa> {
           infoWindow: InfoWindow(
             title: local,
             snippet: dataJogo != null
-                ? '${dataJogo.day.toString().padLeft(2, '0')}/${dataJogo.month.toString().padLeft(2, '0')} ${dataJogo.hour.toString().padLeft(2, '0')}:${dataJogo.minute.toString().padLeft(2, '0')} — $descricao'
+                ? '${dataJogo.day.toString().padLeft(2, '0')}/${dataJogo.month.toString().padLeft(2, '0')} ${dataJogo.hour.toString().padLeft(2, '0')}:${dataJogo.minute.toString().padLeft(2, '0')} - $descricao'
                 : descricao,
           ),
         );

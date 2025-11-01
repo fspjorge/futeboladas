@@ -118,6 +118,7 @@ class JogosLista extends StatelessWidget {
             final lat = (data['lat'] as num?)?.toDouble();
             final lon = (data['lon'] as num?)?.toDouble();
             final jogoId = doc.id;
+            final createdByName = data['createdByName'] as String? ?? 'Desconhecido';
 
             return Card(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -154,6 +155,14 @@ class JogosLista extends StatelessWidget {
                     Text(
                       formatoData.format(date),
                       style: const TextStyle(fontSize: 13, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.person_outline, size: 16, color: Colors.grey),
+                        const SizedBox(width: 6),
+                        Text('Organizador: $createdByName', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                      ],
                     ),
                     const SizedBox(height: 6),
                     // presenças: contador + botÃ£o Vou/Desmarcar
