@@ -54,14 +54,6 @@ class HomeDashboard extends StatelessWidget {
                 _quickButton(Icons.map, 'Mapa', colorPrimary, colorCard, () {
                   Navigator.of(context).pushNamed('/jogos/mapa');
                 }),
-                _quickButton(Icons.add, 'Agendar', colorPrimary, colorCard, () async {
-                  final ok = await Navigator.of(context).pushNamed('/jogos/novo');
-                  if (ok == true) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Jogo agendado.')),
-                    );
-                  }
-                }),
                 _quickButton(Icons.people, 'Jogadores', colorPrimary, colorCard, () {}),
                 _quickButton(Icons.bar_chart, 'Estatísticas', colorPrimary, colorCard, () {}),
                 _quickButton(Icons.settings, 'Conta', colorPrimary, colorCard, () {
@@ -73,6 +65,20 @@ class HomeDashboard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'fab-agendar',
+        icon: const Icon(Icons.add),
+        label: const Text('Agendar'),
+        onPressed: () async {
+          final ok = await Navigator.of(context).pushNamed('/jogos/novo');
+          if (ok == true && context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Jogo agendado.')),
+            );
+          }
+        },
       ),
     );
   }
@@ -153,3 +159,4 @@ class HomeDashboard extends StatelessWidget {
     );
   }
 }
+
