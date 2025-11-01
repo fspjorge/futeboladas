@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'jogos/jogos_lista.dart';
 import 'package:futeboladas/main.dart' show HomePage;
@@ -44,7 +44,7 @@ class HomeDashboard extends StatelessWidget {
             const SizedBox(height: 10),
             const JogosLista(),
             const SizedBox(height: 30),
-            _sectionTitle('Atalhos rapidos'),
+            _sectionTitle('Atalhos Rápidos'),
             const SizedBox(height: 10),
             Wrap(
               spacing: 12,
@@ -64,7 +64,6 @@ class HomeDashboard extends StatelessWidget {
                 }),
                 _quickButton(Icons.people, 'Jogadores', colorPrimary, colorCard, () {}),
                 _quickButton(Icons.bar_chart, 'Estatísticas', colorPrimary, colorCard, () {}),
-                _quickButton(Icons.settings, 'Conta', colorPrimary, colorCard, () {
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => HomePage(user: user)),
                   );
@@ -153,6 +152,3 @@ class HomeDashboard extends StatelessWidget {
     );
   }
 }
-
-
-
