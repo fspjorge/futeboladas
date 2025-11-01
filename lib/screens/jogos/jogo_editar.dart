@@ -1,9 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import '../../services/places_service.dart';
-import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart';
-
+\nclass _Suggestion {\n  final String placeId;\n  final String description;\n  const _Suggestion(this.placeId, this.description);\n}\n\n
 class JogoEditar extends StatefulWidget {
   final String jogoId;
   const JogoEditar({super.key, required this.jogoId});
@@ -27,7 +26,7 @@ class _JogoEditarState extends State<JogoEditar> {
     ),
   );
   String? _placesToken;
-  List<AutocompletePrediction> _placesSug = [];
+  List<_Suggestion> _placesSug = [];
   double? _selLat;
   double? _selLon;
 
@@ -50,20 +49,14 @@ class _JogoEditarState extends State<JogoEditar> {
     }
     _placesToken ??= DateTime.now().millisecondsSinceEpoch.toString();
     try {
-      final res = await _placesSdk.findAutocompletePredictions(
-        q,
-        countries: const ['pt'],
-        sessionToken: _placesToken,
-      );
+      final res = await _placesSdk.findAutocompletePredictions(q, countries: const ['pt']);
       if (!mounted) return;
-      setState(() => _placesSug = res.predictions);
+      setState(() => _placesSug = res.predictions.map((p) => _Suggestion(p.placeId, p.fullText ?? ([p.primaryText, p.secondaryText].whereType<String>().join(' ').trim()))).toList());
     } catch (_) {
       if (!_restPlaces.isConfigured) return;
       final preds = await _restPlaces.autocomplete(q, sessionToken: _placesToken);
       if (!mounted) return;
-      setState(() => _placesSug = preds
-          .map((p) => AutocompletePrediction(placeId: p.placeId, fullText: p.description))
-          .toList());
+      setState(() => _placesSug = preds.map((p) => _Suggestion(p.placeId, p.description)).toList());
     }
   }
 
@@ -192,17 +185,13 @@ class _JogoEditarState extends State<JogoEditar> {
                           children: _placesSug
                               .map((s) => ListTile(
                                     dense: true,
-                                    title: Text(s.fullText),
+                                    title: Text(s.description),
                                     onTap: () async {
-                                      _localCtrl.text = s.fullText;
+                                      _localCtrl.text = s.description;
                                       double? lat;
                                       double? lon;
                                       try {
-                                        final det = await _placesSdk.fetchPlace(
-                                          s.placeId,
-                                          fields: const [PlaceField.Location],
-                                          sessionToken: _placesToken,
-                                        );
+                                        final det = await _placesSdk.fetchPlace(s.placeId, fields: const [PlaceField.Location]);
                                         lat = det.place?.latLng?.lat;
                                         lon = det.place?.latLng?.lng;
                                       } catch (_) {
