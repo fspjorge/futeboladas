@@ -7,7 +7,6 @@ import 'jogo_editar.dart';
 
 class JogoDetalhe extends StatefulWidget {
   final String jogoId;
-  const JogoDetalhe({super.key, required this.jogoId});
 
   @override
   State<JogoDetalhe> createState() => _JogoDetalheState();
@@ -74,6 +73,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
           final date = (data['data'] as Timestamp?)?.toDate();
           final maxJogadores = (data['jogadores'] as num?)?.toInt();
           final createdBy = data['createdBy'] as String?;
+          final createdByName = data['createdByName'] as String? ?? 'Desconhecido';
           final isOwner = uid != null && createdBy == uid;
 
           return ListView(
@@ -110,8 +110,15 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      StreamBuilder<int>(
+                                            const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(Icons.person_outline, size: 18),
+                          const SizedBox(width: 6),
+                          Text('Organizador: $createdByName'),
+                        ],
+                      ),
+                      const SizedBox(height: 8),                      StreamBuilder<int>(
                         stream: presencas.countConfirmados(widget.jogoId),
                         builder: (context, countSnap) {
                           final confirmados = countSnap.data ?? 0;
@@ -195,7 +202,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                           } catch (e) {
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Erro ao atualizar presença: $e')),
+                              SnackBar(content: Text('Erro ao atualizar presença: ')),
                             );
                           }
                         },
@@ -216,8 +223,47 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Área do organizador',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        Row(
+                          children: [
+                            const Text('Área do organizador', style: TextStyle(fontWeight: FontWeight.bold)),
+                            const Spacer(),
+                            TextButton.icon(
+                              icon: const Icon(Icons.edit_outlined),
+                              label: const Text('Editar jogo'),
+                              onPressed: () async {
+                                final ok = await Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => JogoEditar(jogoId: widget.jogoId)),
+                                );
+                                if (ok == true && context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Jogo atualizado.')),
+                                  );
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                            TextButton.icon(
+                              icon: const Icon(Icons.edit_outlined),
+                              label: const Text('Editar jogo'),
+                              onPressed: () async {
+                                final ok = await Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => JogoEditar(jogoId: widget.jogoId)),
+                                );
+                                if (ok == true && context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Jogo atualizado.')),
+                                  );
+                                }
+                              },
+                            ),
+                          ],
+                        ),
                         const SizedBox(height: 8),
                         Text('Criado por: ${data['createdByName'] ?? 'Desconhecido'}'),
                         const SizedBox(height: 12),
@@ -301,4 +347,6 @@ class _JogoDetalheState extends State<JogoDetalhe> {
     );
   }
 }
+
+
 
