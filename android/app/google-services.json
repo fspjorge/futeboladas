@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "704341845387",
+    "project_id": "futeboladas-62f15",
+    "storage_bucket": "futeboladas-62f15.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:704341845387:android:87267cbcc0ea2b32cf7b8e",
+        "android_client_info": {
+          "package_name": "com.example.futeboladas"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "704341845387-dea8ulplfm60bqnn5m33manpi9cnva1v.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.futeboladas",
+            "certificate_hash": "a94fb83300dcf4f0327dfca811258a85b8b179c5"
+          }
+        },
+        {
+          "client_id": "704341845387-phrtrpoc86e4d8f1jkmd7unv28vo18vt.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCp9I07WlHZfb61QqtqL1qhG0qAY-1-ZJ0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "704341845387-phrtrpoc86e4d8f1jkmd7unv28vo18vt.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

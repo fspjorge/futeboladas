@@ -1,2 +1,16 @@
 # futeboladas
-Aplicação móvel Flutter para gestão e marcação de jogos de futebol entre amigos. Inclui autenticação através do Google e email, integração com Firebase e uma interface moderna inspirada em tons de relva e ambiente urbano. Futuras versões irão incluir gestão de equipas, resultados e estatísticas dos jogos.
+
+A new Flutter project.
+
+## Getting Started
+
+This project is a starting point for a Flutter application.
+
+A few resources to get you started if this is your first Flutter project:
+
+- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
+- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+
+For help getting started with Flutter development, view the
+[online documentation](https://docs.flutter.dev/), which offers tutorials,
+samples, guidance on mobile development, and a full API reference.
