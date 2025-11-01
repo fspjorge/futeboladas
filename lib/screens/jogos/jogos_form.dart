@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
+import '../../services/places_service.dart';
 
 class JogosForm extends StatefulWidget {
   const JogosForm({super.key});
@@ -16,6 +17,12 @@ class _JogosFormState extends State<JogosForm> {
   final _jogadoresCtrl = TextEditingController(text: '10');
   DateTime? _data;
   bool _busy = false;
+  // Google Places (session-based autocomplete)
+  final _places = PlacesService();
+  String? _placesToken;
+  List<PlaceSuggestion> _sugestoes = [];
+  double? _selLat;
+  double? _selLon;
 
   @override
   void dispose() {
@@ -52,16 +59,18 @@ class _JogosFormState extends State<JogosForm> {
       final local = _localCtrl.text.trim();
       final jogadores = int.tryParse(_jogadoresCtrl.text.trim()) ?? 0;
 
-      double? lat;
-      double? lon;
-      try {
-        // geocoding pode falhar no web; ignorar erro
-        final results = await locationFromAddress('$local, Portugal');
-        if (results.isNotEmpty) {
-          lat = results.first.latitude;
-          lon = results.first.longitude;
-        }
-      } catch (_) {}
+      double? lat = _selLat;
+      double? lon = _selLon;
+      if (lat == null || lon == null) {
+        try {
+          // geocoding pode falhar no web; ignorar erro
+          final results = await locationFromAddress('$local, Portugal');
+          if (results.isNotEmpty) {
+            lat = results.first.latitude;
+            lon = results.first.longitude;
+          }
+        } catch (_) {}
+      }
 
       final user = FirebaseAuth.instance.currentUser;
       final data = <String, dynamic>{
@@ -108,10 +117,54 @@ class _JogosFormState extends State<JogosForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextFormField(
-                controller: _localCtrl,
-                decoration: const InputDecoration(labelText: 'Local'),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Indica o local' : null,
+              Stack(
+                children: [
+                  TextFormField(
+                    controller: _localCtrl,
+                    decoration: const InputDecoration(labelText: 'Local'),
+                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Indica o local' : null,
+                    onChanged: (txt) async {
+                      if (!_places.isConfigured) return;
+                      if (txt.trim().length < 3) {
+                        setState(() => _sugestoes = []);
+                        return;
+                      }
+                      _placesToken ??= DateTime.now().millisecondsSinceEpoch.toString();
+                      final preds = await _places.autocomplete(txt.trim(), sessionToken: _placesToken);
+                      if (!mounted) return;
+                      setState(() => _sugestoes = preds);
+                    },
+                  ),
+                  if (_sugestoes.isNotEmpty)
+                    Positioned(
+                      top: 60,
+                      left: 0,
+                      right: 0,
+                      child: Material(
+                        elevation: 2,
+                        borderRadius: BorderRadius.circular(8),
+                        child: ListView(
+                          shrinkWrap: true,
+                          children: _sugestoes
+                              .map((s) => ListTile(
+                                    dense: true,
+                                    title: Text(s.description),
+                                    onTap: () async {
+                                      _localCtrl.text = s.description;
+                                      final loc = await _places.fetchPlaceLatLng(s.placeId, sessionToken: _placesToken);
+                                      _placesToken = null; // close session
+                                      setState(() {
+                                        _sugestoes = [];
+                                        _selLat = loc?.lat;
+                                        _selLon = loc?.lon;
+                                      });
+                                    },
+                                  ))
+                              .toList(),
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 12),
               TextFormField(
