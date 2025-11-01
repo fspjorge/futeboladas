@@ -166,6 +166,8 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                               children: docs.map((d) {
                                 final n = d.data()['name'] as String? ?? 'Jogador';
                                 final p = d.data()['photo'] as String?;
+                                final isOrganizer = d.id == (createdBy ?? '');
+                                final _title = isOrganizer ? '$n (organizador)' : n;
                                 return ListTile(
                                   contentPadding: EdgeInsets.zero,
                                   leading: CircleAvatar(
@@ -174,7 +176,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                                         ? const Icon(Icons.person_outline)
                                         : null,
                                   ),
-                                  title: Text(n),
+                                  title: Text(_title),
                                 );
                               }).toList(),
                             );
