@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+﻿import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -18,7 +18,7 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  // Tenta capturar links de redefinição de password (Dynamic Links ou link direto no web)
+  // Tenta capturar links de redefiniÃ§Ã£o de password (Dynamic Links ou link direto no web)
   await _setupPasswordResetLinkHandling();
   runApp(const FuteboladasApp());
 }
@@ -74,7 +74,7 @@ class FuteboladasApp extends StatelessWidget {
           final uri = Uri.base;
           final code = uri.queryParameters['oobCode'];
           if (code == null || code.isEmpty) {
-            return const Scaffold(body: Center(child: Text('Código em falta.')));
+            return const Scaffold(body: Center(child: Text('CÃ³digo em falta.')));
           }
           return ResetPasswordPage(oobCode: code);
         },
@@ -88,7 +88,7 @@ Future<void> _setupPasswordResetLinkHandling() async {
     final uri = Uri.base;
     if (uri.queryParameters['mode'] == 'resetPassword' && uri.queryParameters['oobCode'] != null) {
       final code = uri.queryParameters['oobCode']!;
-      // Abre a página de reset dentro da app (no web funciona com rotas)
+      // Abre a pÃ¡gina de reset dentro da app (no web funciona com rotas)
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _navKey.currentState?.push(MaterialPageRoute(builder: (_) => ResetPasswordPage(oobCode: code)));
       });
@@ -97,7 +97,7 @@ Future<void> _setupPasswordResetLinkHandling() async {
   }
   // Mobile - Firebase Dynamic Links
   final initial = await FirebaseDynamicLinks.instance.getInitialLink();
-  void handle(DynamicLinkData? data) {
+  void handle(PendingDynamicLinkData? data) {
     final link = data?.link;
     if (link == null) return;
     final params = link.queryParameters;
@@ -110,9 +110,9 @@ Future<void> _setupPasswordResetLinkHandling() async {
   FirebaseDynamicLinks.instance.onLink.listen(handle);
 }
 
-/// Mostra login se não estiver autenticado.
-/// Se estiver autenticado mas o email não estiver verificado (e for email/password),
-/// mostra ecrã para verificar.
+/// Mostra login se nÃ£o estiver autenticado.
+/// Se estiver autenticado mas o email nÃ£o estiver verificado (e for email/password),
+/// mostra ecrÃ£ para verificar.
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
@@ -136,7 +136,7 @@ class AuthGate extends StatelessWidget {
           );
         }
 
-        // não autenticado
+        // nÃ£o autenticado
         if (user == null) {
           return const LoginPage();
         }
@@ -183,7 +183,7 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isBusy = true);
     try {
       if (kIsWeb) {
-        // no web o Firebase Auth já faz o popup
+        // no web o Firebase Auth jÃ¡ faz o popup
         final googleProvider = GoogleAuthProvider();
         await _auth.signInWithPopup(googleProvider);
         return;
@@ -237,7 +237,7 @@ class _LoginPageState extends State<LoginPage> {
           await cred.user?.updateDisplayName(name);
         }
 
-        // enviar email de verificação
+        // enviar email de verificaÃ§Ã£o
         await cred.user?.sendEmailVerification();
         _showInfo('Conta criada. Verifica o teu email.');
       }
@@ -277,11 +277,11 @@ class _LoginPageState extends State<LoginPage> {
     try {
       await _auth.sendPasswordResetEmail(email: email);
       if (!mounted) return;
-      _showInfo('Se existir uma conta para $email, enviámos um email de recuperação.');
+      _showInfo('Se existir uma conta para $email, enviÃ¡mos um email de recuperaÃ§Ã£o.');
     } on FirebaseAuthException catch (e) {
       _showError(_mapFirebaseError(e));
     } catch (e) {
-      _showError('Erro ao enviar recuperação: $e');
+      _showError('Erro ao enviar recuperaÃ§Ã£o: $e');
     } finally {
       if (mounted) setState(() => _isBusy = false);
     }
@@ -290,12 +290,12 @@ class _LoginPageState extends State<LoginPage> {
   String _mapFirebaseError(FirebaseAuthException e) {
     switch (e.code) {
       case 'email-already-in-use':
-        return 'Já existe uma conta com esse email.';
+        return 'JÃ¡ existe uma conta com esse email.';
       case 'invalid-email':
-        return 'Email inválido.';
+        return 'Email invÃ¡lido.';
       case 'user-not-found':
       case 'wrong-password':
-        return 'Credenciais inválidas.';
+        return 'Credenciais invÃ¡lidas.';
       case 'weak-password':
         return 'Password demasiado fraca.';
       default:
@@ -410,7 +410,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    'Será enviado um email de verificação.',
+                    'SerÃ¡ enviado um email de verificaÃ§Ã£o.',
                     style: TextStyle(fontSize: 12),
                   ),
                 ],
@@ -431,7 +431,7 @@ class _LoginPageState extends State<LoginPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(_isLoginMode ? 'Ainda não tens conta?' : 'Já tens conta?'),
+                    Text(_isLoginMode ? 'Ainda nÃ£o tens conta?' : 'JÃ¡ tens conta?'),
                     TextButton(
                       onPressed: () {
                         setState(() {
@@ -466,7 +466,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-/// Ecrã mostrado quando a conta de email existe mas ainda não foi verificada.
+/// EcrÃ£ mostrado quando a conta de email existe mas ainda nÃ£o foi verificada.
 class VerifyEmailPage extends StatefulWidget {
   final User user;
   const VerifyEmailPage({super.key, required this.user});
@@ -490,7 +490,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     });
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Email de verificação enviado.')),
+      const SnackBar(content: Text('Email de verificaÃ§Ã£o enviado.')),
     );
   }
 
@@ -505,7 +505,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     } else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ainda não está verificado.')),
+        const SnackBar(content: Text('Ainda nÃ£o estÃ¡ verificado.')),
       );
     }
   }
@@ -525,7 +525,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Enviámos um email de verificação para:',
+                'EnviÃ¡mos um email de verificaÃ§Ã£o para:',
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
               ),
@@ -542,7 +542,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
               const SizedBox(height: 12),
               OutlinedButton(
                 onPressed: _refresh,
-                child: const Text('Já confirmei'),
+                child: const Text('JÃ¡ confirmei'),
               ),
               const SizedBox(height: 24),
               TextButton(
@@ -628,7 +628,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _changePassword() async {
-    // só para email/pass
+    // sÃ³ para email/pass
     if (!_isEmailUser) return;
 
     final currentPassCtrl = TextEditingController();
@@ -715,7 +715,7 @@ class _HomePageState extends State<HomePage> {
     setState(() => _busy = true);
     try {
       await _user.delete();
-      // terminar sessão também
+      // terminar sessÃ£o tambÃ©m
       await _signOut();
     } on FirebaseAuthException catch (e) {
       if (e.code == 'requires-recent-login') {
@@ -806,7 +806,7 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             onPressed: _busy ? null : _signOut,
             icon: const Icon(Icons.logout),
-            tooltip: 'Terminar sessão',
+            tooltip: 'Terminar sessÃ£o',
           ),
         ],
       ),
@@ -870,7 +870,7 @@ class _HomePageState extends State<HomePage> {
           if (_isEmailUser && !_user.emailVerified)
             ListTile(
               leading: const Icon(Icons.mark_email_unread_outlined),
-              title: const Text('Reenviar email de verificação'),
+              title: const Text('Reenviar email de verificaÃ§Ã£o'),
               onTap: _busy
                   ? null
                   : () async {
@@ -899,4 +899,5 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
+
 
