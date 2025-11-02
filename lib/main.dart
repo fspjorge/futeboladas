@@ -76,7 +76,6 @@ class FuteboladasApp extends StatelessWidget {
         ),
         chipTheme: const ChipThemeData(
           padding: EdgeInsets.symmetric(horizontal: 6, vertical: 0),
-          visualDensity: VisualDensity.compact,
         ),
       ),
       home: const AuthGate(),
