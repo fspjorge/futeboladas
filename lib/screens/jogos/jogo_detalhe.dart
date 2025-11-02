@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geocoding/geocoding.dart';
 
 import '../../services/presenca_service.dart';
 import 'jogo_editar.dart';
@@ -18,6 +20,21 @@ class _JogoDetalheState extends State<JogoDetalhe> {
   final _historicoCtrl = TextEditingController();
   bool _adminLoaded = false;
   bool _saving = false;
+
+  Future<LatLng?> _obterLatLng(String local, Map<String, dynamic> data) async {
+    final lat = (data['lat'] as num?)?.toDouble();
+    final lon = (data['lon'] as num?)?.toDouble();
+    if (lat != null && lon != null) {
+      return LatLng(lat, lon);
+    }
+    try {
+      final res = await locationFromAddress('$local, Portugal');
+      if (res.isEmpty) return null;
+      return LatLng(res.first.latitude, res.first.longitude);
+    } catch (_) {
+      return null;
+    }
+  }
 
   @override
   void dispose() {
@@ -152,6 +169,62 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                             },
                           ),
                         ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+              // Localização + mapa
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Localização',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        local,
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(height: 12),
+                      FutureBuilder<LatLng?>(
+                        future: _obterLatLng(local, data),
+                        builder: (context, posSnap) {
+                          if (posSnap.connectionState == ConnectionState.waiting) {
+                            return const SizedBox(
+                              height: 220,
+                              child: Center(child: CircularProgressIndicator()),
+                            );
+                          }
+                          final pos = posSnap.data;
+                          if (pos == null) {
+                            return const Text('Não foi possível localizar o endereço no mapa.');
+                          }
+                          return SizedBox(
+                            height: 260,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: GoogleMap(
+                                mapType: MapType.normal,
+                                initialCameraPosition: CameraPosition(target: pos, zoom: 15),
+                                markers: {
+                                  Marker(markerId: const MarkerId('local'), position: pos),
+                                },
+                                zoomControlsEnabled: false,
+                                myLocationButtonEnabled: false,
+                                myLocationEnabled: false,
+                                compassEnabled: false,
+                                tiltGesturesEnabled: false,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),
