@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class PlaceSuggestion {
@@ -30,7 +30,7 @@ class PlacesService {
       '$_base/autocomplete/json?input=${Uri.encodeComponent(query)}&key=$_apiKey&language=$language&components=country:$country${sessionToken != null ? '&sessiontoken=$sessionToken' : ''}',
     );
     final res = await http.get(uri);
-    if (res.statusCode != 200) return [];
+    if (res.statusCode != 200) { print('Places autocomplete error: '+res.statusCode.toString()+' '+res.body); return []; }
     final data = json.decode(res.body) as Map<String, dynamic>;
     final preds = (data['predictions'] as List<dynamic>? ?? [])
         .cast<Map<String, dynamic>>()
@@ -48,7 +48,7 @@ class PlacesService {
       '$_base/details/json?place_id=${Uri.encodeComponent(placeId)}&key=$_apiKey&fields=geometry${sessionToken != null ? '&sessiontoken=$sessionToken' : ''}',
     );
     final res = await http.get(uri);
-    if (res.statusCode != 200) return null;
+    if (res.statusCode != 200) { print('Places details error: '+res.statusCode.toString()+' '+res.body); return null; }
     final data = json.decode(res.body) as Map<String, dynamic>;
     final result = data['result'] as Map<String, dynamic>?;
     final geom = result?['geometry'] as Map<String, dynamic>?;
@@ -57,3 +57,4 @@ class PlacesService {
     return PlaceLocation(lat: (loc['lat'] as num).toDouble(), lon: (loc['lng'] as num).toDouble());
   }
 }
+

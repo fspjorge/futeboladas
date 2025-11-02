@@ -2,7 +2,14 @@
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import '../../services/places_service.dart';
-\nclass _Suggestion {\n  final String placeId;\n  final String description;\n  const _Suggestion(this.placeId, this.description);\n}\n\n
+import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart';
+
+class _Suggestion {
+  final String placeId;
+  final String description;
+  const _Suggestion(this.placeId, this.description);
+}
+
 class JogoEditar extends StatefulWidget {
   final String jogoId;
   const JogoEditar({super.key, required this.jogoId});

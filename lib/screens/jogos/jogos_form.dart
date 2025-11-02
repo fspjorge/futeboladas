@@ -3,7 +3,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import '../../services/places_service.dart';
-\nclass _Suggestion {\n  final String placeId;\n  final String description;\n  const _Suggestion(this.placeId, this.description);\n}\n\n
+import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart';
+
+class _Suggestion {
+  final String placeId;
+  final String description;
+  const _Suggestion(this.placeId, this.description);
+}
+
 class JogosForm extends StatefulWidget {
   const JogosForm({super.key});
 
@@ -139,8 +146,15 @@ class _JogosFormState extends State<JogosForm> {
                       _placesToken ??= DateTime.now().millisecondsSinceEpoch.toString();
                       try {
                         final res = await _placesSdk.findAutocompletePredictions(txt.trim(), countries: const ['pt']);
+                        var list = res.predictions
+                            .map((p) => _Suggestion(p.placeId, p.fullText ?? ([p.primaryText, p.secondaryText].whereType<String>().join(' ').trim())))
+                            .toList();
+                        if (list.isEmpty && _restPlaces.isConfigured) {
+                          final preds = await _restPlaces.autocomplete(txt.trim(), sessionToken: _placesToken);
+                          list = preds.map((p) => _Suggestion(p.placeId, p.description)).toList();
+                        }
                         if (!mounted) return;
-                        setState(() => _sugestoes = res.predictions.map((p) => _Suggestion(p.placeId, p.fullText ?? ([p.primaryText, p.secondaryText].whereType<String>().join(' ').trim()))).toList());
+                        setState(() => _sugestoes = list);
                       } catch (_) {
                         if (!_restPlaces.isConfigured) return;
                         final preds = await _restPlaces.autocomplete(txt.trim(), sessionToken: _placesToken);
