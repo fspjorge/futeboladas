@@ -124,9 +124,63 @@ class _JogoDetalheState extends State<JogoDetalhe> {
           final createdByName = data['createdByName'] as String? ?? 'Desconhecido';
           final isOwner = uid != null && createdBy == uid;
 
+          final cs = Theme.of(context).colorScheme;
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              // Header estilo Google Calendar
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  gradient: LinearGradient(
+                    colors: [cs.primary, cs.primaryContainer],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // imagem/banner placeholder
+                    Container(height: 120, color: Colors.white.withOpacity(0.05)),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.circle, size: 12, color: Colors.white),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  local,
+                                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const Icon(Icons.schedule_outlined, size: 16, color: Colors.white70),
+                              const SizedBox(width: 6),
+                              Text(
+                                date != null
+                                    ? DateFormat('EEEE, d MMM • HH:mm', 'pt_PT').format(date)
+                                    : 'Sem data',
+                                style: const TextStyle(color: Colors.white70),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
               // Público: local, data, organizador, confirmados
               Card(
                 child: Padding(
