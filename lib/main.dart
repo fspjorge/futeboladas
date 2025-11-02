@@ -4,6 +4,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:futeboladas/screens/home_dashboard.dart';
 import 'package:futeboladas/screens/jogos/jogos_maps.dart';
+import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_dynamic_links/firebase_dynamic_links.dart';
 import 'screens/auth/reset_password.dart';
 import 'package:futeboladas/screens/jogos/jogos_form.dart';
@@ -18,6 +20,9 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  // Locale data for Intl (pt_PT) used in DateFormat across the app
+  Intl.defaultLocale = 'pt_PT';
+  await initializeDateFormatting('pt_PT', null);
   // Tenta capturar links de redefiniÃ§Ã£o de password (Dynamic Links ou link direto no web)
   await _setupPasswordResetLinkHandling();
   runApp(const FuteboladasApp());
