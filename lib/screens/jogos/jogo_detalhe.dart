@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'jogo_mapa_detalhe.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -45,6 +47,18 @@ class _JogoDetalheState extends State<JogoDetalhe> {
       // fallback para geo: (pode não funcionar em todos os dispositivos)
       final geo = Uri.parse('geo:${pos.latitude},${pos.longitude}?q=${pos.latitude},${pos.longitude}($q)');
       await launchUrl(geo, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Future<bool> _supportsInteractiveMap() async {
+    if (kIsWeb) return true;
+    if (defaultTargetPlatform != TargetPlatform.android) return true;
+    try {
+      final info = await DeviceInfoPlugin().androidInfo;
+      final sdk = info.version.sdkInt ?? 0;
+      return sdk >= 29; // Android 10+
+    } catch (_) {
+      return false;
     }
   }
 
@@ -253,27 +267,35 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  OutlinedButton.icon(
-                                    onPressed: () => _abrirNoGoogleMaps(pos, local),
-                                    icon: const Icon(Icons.directions),
-                                    label: const Text('Abrir no Google Maps'),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  TextButton.icon(
-                                    onPressed: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) => JogoMapaDetalhe(pos: pos, titulo: local),
+                              FutureBuilder<bool>(
+                                future: _supportsInteractiveMap(),
+                                builder: (context, okSnap) {
+                                  final ok = okSnap.data ?? false;
+                                  return Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      OutlinedButton.icon(
+                                        onPressed: () => _abrirNoGoogleMaps(pos, local),
+                                        icon: const Icon(Icons.directions),
+                                        label: const Text('Abrir no Google Maps'),
+                                      ),
+                                      if (ok) ...[
+                                        const SizedBox(width: 8),
+                                        TextButton.icon(
+                                          onPressed: () {
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (_) => JogoMapaDetalhe(pos: pos, titulo: local),
+                                              ),
+                                            );
+                                          },
+                                          icon: const Icon(Icons.map_outlined),
+                                          label: const Text('Mapa interativo'),
                                         ),
-                                      );
-                                    },
-                                    icon: const Icon(Icons.map_outlined),
-                                    label: const Text('Mapa interativo'),
-                                  ),
-                                ],
+                                      ],
+                                    ],
+                                  );
+                                },
                               ),
                             ],
                           );
