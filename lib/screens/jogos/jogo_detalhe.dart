@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
 import 'jogo_mapa_detalhe.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/presenca_service.dart';
 import 'jogo_editar.dart';
@@ -34,6 +35,16 @@ class _JogoDetalheState extends State<JogoDetalhe> {
       return LatLng(res.first.latitude, res.first.longitude);
     } catch (_) {
       return null;
+    }
+  }
+
+  Future<void> _abrirNoGoogleMaps(LatLng pos, String label) async {
+    final q = Uri.encodeComponent(label);
+    final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}&query_place_id=$q');
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      // fallback para geo: (pode não funcionar em todos os dispositivos)
+      final geo = Uri.parse('geo:${pos.latitude},${pos.longitude}?q=${pos.latitude},${pos.longitude}($q)');
+      await launchUrl(geo, mode: LaunchMode.externalApplication);
     }
   }
 
@@ -242,19 +253,27 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: TextButton.icon(
-                                  onPressed: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) => JogoMapaDetalhe(pos: pos, titulo: local),
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.map_outlined),
-                                  label: const Text('Abrir mapa'),
-                                ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  OutlinedButton.icon(
+                                    onPressed: () => _abrirNoGoogleMaps(pos, local),
+                                    icon: const Icon(Icons.directions),
+                                    label: const Text('Abrir no Google Maps'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  TextButton.icon(
+                                    onPressed: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => JogoMapaDetalhe(pos: pos, titulo: local),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.map_outlined),
+                                    label: const Text('Mapa interativo'),
+                                  ),
+                                ],
                               ),
                             ],
                           );
