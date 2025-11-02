@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -7,6 +7,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'jogo_mapa_detalhe.dart';
+import 'confirmacao_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/presenca_service.dart';
@@ -115,7 +116,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
             return const Center(child: CircularProgressIndicator());
           }
           if (!snap.hasData || !snap.data!.exists) {
-            return const Center(child: Text('Jogo não encontrado.'));
+            return const Center(child: Text('Jogo nÃ£o encontrado.'));
           }
           final data = snap.data!.data()!;
           final local = data['local'] as String? ?? 'Local desconhecido';
@@ -169,7 +170,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                               const SizedBox(width: 6),
                               Text(
                                 date != null
-                                    ? DateFormat('EEEE, d MMM • HH:mm', 'pt_PT').format(date)
+                                    ? DateFormat('EEEE, d MMM â€¢ HH:mm', 'pt_PT').format(date)
                                     : 'Sem data',
                                 style: const TextStyle(color: Colors.white70),
                               ),
@@ -182,7 +183,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                 ),
               ),
               const SizedBox(height: 12),
-              // Público: local, data, organizador, confirmados
+              // PÃºblico: local, data, organizador, confirmados
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -198,6 +199,16 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                               local,
                               style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                             ),
+                          ),
+                          IconButton(
+                            tooltip: 'Abrir no Maps',
+                            icon: const Icon(Icons.directions),
+                            onPressed: () async {
+                              final pos = await _obterLatLng(local, data);
+                              if (pos != null) {
+                                await _abrirNoGoogleMaps(pos, local);
+                              }
+                            },
                           ),
                         ],
                       ),
@@ -258,114 +269,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                 ),
               ),
 
-              const SizedBox(height: 12),
-              // Localização + mapa
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Localização',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        local,
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                      const SizedBox(height: 12),
-                      FutureBuilder<LatLng?>(
-                        future: _obterLatLng(local, data),
-                        builder: (context, posSnap) {
-                          if (posSnap.connectionState == ConnectionState.waiting) {
-                            return const SizedBox(
-                              height: 220,
-                              child: Center(child: CircularProgressIndicator()),
-                            );
-                          }
-                          final pos = posSnap.data;
-                          if (pos == null) {
-                            return const Text('Não foi possível localizar o endereço no mapa.');
-                          }
-                          final width = 640; // Static Maps free tier máx.
-                          final height = 320;
-                          const key = String.fromEnvironment(
-                            'PLACES_API_KEY',
-                            defaultValue: 'AIzaSyAPRZImkhwXKE0lqBhYAUvlBXKLN-UbnYk',
-                          );
-                          final url = Uri.https(
-                            'maps.googleapis.com',
-                            '/maps/api/staticmap',
-                            {
-                              'center': '${pos.latitude},${pos.longitude}',
-                              'zoom': '15',
-                              'size': '${width}x$height',
-                              'scale': '2',
-                              'maptype': 'roadmap',
-                              'markers': 'color:green|${pos.latitude},${pos.longitude}',
-                              'key': key,
-                            },
-                          ).toString();
-
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  url,
-                                  height: 220,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (c, e, s) => const SizedBox(
-                                    height: 220,
-                                    child: Center(child: Text('Falha ao carregar mapa.')),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              FutureBuilder<bool>(
-                                future: _supportsInteractiveMap(),
-                                builder: (context, okSnap) {
-                                  final ok = okSnap.data ?? false;
-                                  return Align(
-                                    alignment: Alignment.centerRight,
-                                    child: Wrap(
-                                      alignment: WrapAlignment.end,
-                                      spacing: 8,
-                                      runSpacing: 8,
-                                      children: [
-                                        OutlinedButton.icon(
-                                          onPressed: () => _abrirNoGoogleMaps(pos, local),
-                                          icon: const Icon(Icons.directions),
-                                          label: const Text('Abrir no Google Maps'),
-                                        ),
-                                        if (ok)
-                                          TextButton.icon(
-                                            onPressed: () {
-                                              Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder: (_) => JogoMapaDetalhe(pos: pos, titulo: local),
-                                                ),
-                                              );
-                                            },
-                                            icon: const Icon(Icons.map_outlined),
-                                            label: const Text('Mapa interativo'),
-                                          ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              // (Mapa removido deliberadamente â€“ abrir via Ã­cone no bloco acima)
 
               const SizedBox(height: 12),
 
@@ -387,7 +291,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                             }
                             final docs = psnap.data?.docs ?? [];
                             if (docs.isEmpty) {
-                              return const Text('Ainda sem confirmações.');
+                              return const Text('Ainda sem confirmaÃ§Ãµes.');
                             }
                             return Column(
                               children: docs.map((d) {
@@ -414,7 +318,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                 const SizedBox(height: 12),
               ],
 
-              // Botão Vou/Desmarcar
+              // BotÃ£o Vou/Desmarcar
               if (uid != null)
                 StreamBuilder<bool>(
                   stream: presencas.minhaPresenca(widget.jogoId),
@@ -425,11 +329,11 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                       child: ElevatedButton.icon(
                         onPressed: () async {
                           try {
-                            await presencas.marcarPresenca(widget.jogoId, !vou);
+                            await presencas.marcarPresenca(widget.jogoId, !vou); if (!vou) { if (!context.mounted) return; Navigator.of(context).push(MaterialPageRoute(builder: (_) => ConfirmacaoJogoPage(titulo: local, data: date ?? DateTime.now(), local: local))); }
                           } catch (e) {
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Erro ao atualizar presença: $e')),
+                              SnackBar(content: Text('Erro ao atualizar presenÃ§a: $e')),
                             );
                           }
                         },
@@ -442,7 +346,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
 
               const SizedBox(height: 12),
 
-              // Organizador: área privada (admin/privado)
+              // Organizador: Ã¡rea privada (admin/privado)
               if (isOwner)
                 Card(
                   child: Padding(
@@ -452,7 +356,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                       children: [
                         Row(
                           children: [
-                            const Text('Área do organizador', style: TextStyle(fontWeight: FontWeight.bold)),
+                            const Text('Ãrea do organizador', style: TextStyle(fontWeight: FontWeight.bold)),
                             const Spacer(),
                             TextButton.icon(
                               icon: const Icon(Icons.edit_outlined),
@@ -495,7 +399,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                                 TextField(
                                   controller: _historicoCtrl,
                                   maxLines: 3,
-                                  decoration: const InputDecoration(labelText: 'Histórico'),
+                                  decoration: const InputDecoration(labelText: 'HistÃ³rico'),
                                 ),
                                 const SizedBox(height: 12),
                                 SizedBox(
@@ -550,4 +454,5 @@ class _JogoDetalheState extends State<JogoDetalhe> {
     );
   }
 }
+
 
