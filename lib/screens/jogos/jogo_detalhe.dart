@@ -26,6 +26,34 @@ class _JogoDetalheState extends State<JogoDetalhe> {
   final _historicoCtrl = TextEditingController();
   bool _adminLoaded = false;
   bool _saving = false;
+  int _reminderMin = 5;
+
+  Future<void> _pickReminder() async {
+    final opts = const [0, 5, 10, 15, 30, 60];
+    final picked = await showModalBottomSheet<int>(
+      context: context,
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(12.0),
+                child: Text('Lembrete', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+              ...opts.map((m) => ListTile(
+                    title: Text(m == 0 ? 'No momento do evento' : '$m minutos antes'),
+                    onTap: () => Navigator.pop(ctx, m),
+                  )),
+            ],
+          ),
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() => _reminderMin = picked);
+    }
+  }
 
   Future<LatLng?> _obterLatLng(String local, Map<String, dynamic> data) async {
     final lat = (data['lat'] as num?)?.toDouble();
@@ -223,6 +251,18 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                                 : 'Sem data',
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: _pickReminder,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.notifications_none, size: 18),
+                            const SizedBox(width: 6),
+                            Text(_reminderMin == 0 ? 'No momento do evento' : '$_reminderMin minutos antes',
+                                style: Theme.of(context).textTheme.bodyMedium),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Row(

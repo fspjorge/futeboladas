@@ -1,8 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'jogo_detalhe.dart';
+import 'confirmacao_page.dart';
 import '../../services/presenca_service.dart';
 
 class JogosLista extends StatefulWidget {
@@ -12,7 +13,7 @@ class JogosLista extends StatefulWidget {
   State<JogosLista> createState() => _JogosListaState();
 }
 
-class _JogosListaState extends State<JogosLista> {
+class _JogosListaState extends State<JogosLista> {\n  DateTime? _selectedDay;\n  bool _onlyMine = false;\n  bool _onlyAvailable = false;
   DateTime? _selectedDay;
   bool _onlyMine = false;
 
@@ -231,7 +232,7 @@ class _JogosListaState extends State<JogosLista> {
                                                         style: Theme.of(context).textTheme.bodyMedium,
                                                       ),
                                                     ),
-                                                    if (uid != null)
+                                                  if (uid != null)
                                                       StreamBuilder<bool>(
                                                         stream: presencas.minhaPresenca(jogoId),
                                                         builder: (context, meSnap) {
@@ -247,8 +248,21 @@ class _JogosListaState extends State<JogosLista> {
                                                                         return;
                                                                       }
                                                                       await presencas.marcarPresenca(jogoId, !vou);
+                                                                      if (!vou) {
+                                                                        // marcou presenÃ§a -> mostrar ecrÃ£ de confirmaÃ§Ã£o
+                                                                        if (!context.mounted) return;
+                                                                        Navigator.of(context).push(
+                                                                          MaterialPageRoute(
+                                                                            builder: (_) => ConfirmacaoJogoPage(
+                                                                              titulo: local,
+                                                                              data: date,
+                                                                              local: local,
+                                                                            ),
+                                                                          ),
+                                                                        );
+                                                                      }
                                                                     } catch (e) {
-                                                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao atualizar presença: $e')));
+                                                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao atualizar presenÃ§a: $e')));
                                                                     }
                                                                   },
                                                             child: Text(vou ? 'Desmarcar' : 'Vou'),
@@ -281,4 +295,6 @@ class _JogosListaState extends State<JogosLista> {
     );
   }
 }
+
+
 
