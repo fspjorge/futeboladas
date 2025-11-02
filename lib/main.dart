@@ -4,16 +4,22 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:futeboladas/screens/home_dashboard.dart';
 import 'package:futeboladas/screens/jogos/jogos_maps.dart';
+import 'package:firebase_dynamic_links/firebase_dynamic_links.dart';
+import 'screens/auth/reset_password.dart';
 import 'package:futeboladas/screens/jogos/jogos_form.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'firebase_options.dart';
+
+final GlobalKey<NavigatorState> _navKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  // Tenta capturar links de redefinição de password (Dynamic Links ou link direto no web)
+  await _setupPasswordResetLinkHandling();
   runApp(const FuteboladasApp());
 }
 
@@ -25,6 +31,7 @@ class FuteboladasApp extends StatelessWidget {
     final seed = const Color(0xFF2ECC71); // verde relva
 
     return MaterialApp(
+      navigatorKey: _navKey,
       title: 'Futeboladas',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -62,9 +69,45 @@ class FuteboladasApp extends StatelessWidget {
       routes: {
         '/jogos/mapa': (_) => const JogosMapa(),
         '/jogos/novo': (_) => const JogosForm(),
+        // fallback manual (caso queira abrir via url interna /auth/reset?oobCode=...)
+        '/auth/reset': (ctx) {
+          final uri = Uri.base;
+          final code = uri.queryParameters['oobCode'];
+          if (code == null || code.isEmpty) {
+            return const Scaffold(body: Center(child: Text('Código em falta.')));
+          }
+          return ResetPasswordPage(oobCode: code);
+        },
       },
     );
   }
+}
+
+Future<void> _setupPasswordResetLinkHandling() async {
+  if (kIsWeb) {
+    final uri = Uri.base;
+    if (uri.queryParameters['mode'] == 'resetPassword' && uri.queryParameters['oobCode'] != null) {
+      final code = uri.queryParameters['oobCode']!;
+      // Abre a página de reset dentro da app (no web funciona com rotas)
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _navKey.currentState?.push(MaterialPageRoute(builder: (_) => ResetPasswordPage(oobCode: code)));
+      });
+    }
+    return;
+  }
+  // Mobile - Firebase Dynamic Links
+  final initial = await FirebaseDynamicLinks.instance.getInitialLink();
+  void handle(DynamicLinkData? data) {
+    final link = data?.link;
+    if (link == null) return;
+    final params = link.queryParameters;
+    if (params['mode'] == 'resetPassword' && params['oobCode'] != null) {
+      final code = params['oobCode']!;
+      _navKey.currentState?.push(MaterialPageRoute(builder: (_) => ResetPasswordPage(oobCode: code)));
+    }
+  }
+  handle(initial);
+  FirebaseDynamicLinks.instance.onLink.listen(handle);
 }
 
 /// Mostra login se não estiver autenticado.
