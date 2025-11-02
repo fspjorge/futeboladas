@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:intl/intl.dart';
@@ -107,32 +107,7 @@ class JogosLista extends StatelessWidget {
         }
 
         final jogos = snapshot.data!.docs;
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: jogos.length,
-          itemBuilder: (context, index) {
-            final doc = jogos[index];
-            final data = doc.data();
-            final local = data['local'] as String? ?? 'Local desconhecido';
-            final jogadores = (data['jogadores'] as num?)?.toInt() ?? 0;
-            final date = (data['data'] as Timestamp).toDate();
-            final lat = (data['lat'] as num?)?.toDouble();
-            final lon = (data['lon'] as num?)?.toDouble();
-            final jogoId = doc.id;
-            final createdByName = data['createdByName'] as String? ?? 'Desconhecido';
-            final createdBy = data['createdBy'] as String?;
-
-            final cs = Theme.of(context).colorScheme;
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: InkWell(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => JogoDetalhe(jogoId: jogoId),
-                    ),
-                  );
+        ;
                 },
                 child: Padding(
                   padding: const EdgeInsets.all(12.0),
@@ -227,7 +202,7 @@ class JogosLista extends StatelessWidget {
                                                 await presencas.marcarPresenca(jogoId, !vou);
                                               } catch (e) {
                                                 ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(content: Text('Erro ao atualizar presença: $e')),
+                                                  SnackBar(content: Text('Erro ao atualizar presenÃ§a: $e')),
                                                 );
                                               }
                                             },
@@ -247,7 +222,7 @@ class JogosLista extends StatelessWidget {
                         builder: (context, snap) {
                           if (snap.connectionState == ConnectionState.waiting) {
                             return const Text(
-                              'A obter previsão do tempo...',
+                              'A obter previsÃ£o do tempo...',
                               style: TextStyle(fontSize: 12),
                             );
                           }
@@ -258,7 +233,7 @@ class JogosLista extends StatelessWidget {
                           final descricao = info['desc'] as String;
                           final temp = info['temp'];
                           return Text(
-                            '${descricao.isNotEmpty ? '${descricao[0].toUpperCase()}${descricao.substring(1)}' : ''} - $temp°C',
+                            '${descricao.isNotEmpty ? '${descricao[0].toUpperCase()}${descricao.substring(1)}' : ''} - $tempÂ°C',
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -276,3 +251,143 @@ class JogosLista extends StatelessWidget {
     );
   }
 }
+        final docs = snapshot.data!.docs;
+        final Map<String, List<QueryDocumentSnapshot<Map<String, dynamic>>>> grupos = {};
+        for (final d in docs) {
+          final dt = (d.data()['data'] as Timestamp).toDate();
+          final key = DateFormat('yyyy-MM-dd').format(dt);
+          grupos.putIfAbsent(key, () => []).add(d);
+        }
+        final orderedKeys = grupos.keys.toList()..sort((a,b)=>a.compareTo(b));
+        final cs = Theme.of(context).colorScheme;
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: orderedKeys.length,
+          itemBuilder: (context, i) {
+            final key = orderedKeys[i];
+            final dayDate = DateFormat('yyyy-MM-dd').parse(key);
+            final dayName = DateFormat.E('pt_PT').format(dayDate).toUpperCase();
+            final dayNum = DateFormat.d('pt_PT').format(dayDate);
+            final items = grupos[key]!;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 64,
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: cs.primaryContainer,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(dayName, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                              Text(dayNum, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                            ],
+                          ),
+                        ),
+                        Container(width: 2, height: 12, margin: const EdgeInsets.only(top: 6), color: cs.outlineVariant),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      children: items.map((doc){
+                        final data = doc.data();
+                        final local = data['local'] as String? ?? 'Local desconhecido';
+                        final jogadores = (data['jogadores'] as num?)?.toInt() ?? 0;
+                        final date = (data['data'] as Timestamp).toDate();
+                        final jogoId = doc.id;
+                        final createdByName = data['createdByName'] as String? ?? 'Desconhecido';
+                        final createdBy = data['createdBy'] as String?;
+                        final hora = DateFormat('HH:mm').format(date);
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 12, bottom: 10),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(14),
+                            onTap: ()=> Navigator.of(context).push(MaterialPageRoute(builder: (_)=> JogoDetalhe(jogoId: jogoId))),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: cs.surface,
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: [BoxShadow(color: cs.shadow.withOpacity(0.08), blurRadius: 8, offset: Offset(0,4))],
+                                border: Border(left: BorderSide(color: cs.primary, width: 6)),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    SizedBox(width: 56, child: Text(hora, style: Theme.of(context).textTheme.titleSmall)),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(local, maxLines: 2, overflow: TextOverflow.ellipsis,
+                                            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                                          const SizedBox(height: 4),
+                                          Row(children:[
+                                            Icon(Icons.person_outline, size: 16, color: cs.onSurfaceVariant),
+                                            const SizedBox(width: 4),
+                                            Expanded(child: Text('Organizador: '+createdByName,
+                                              maxLines: 1, overflow: TextOverflow.ellipsis,
+                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)))
+                                          ]),
+                                          const SizedBox(height: 6),
+                                          StreamBuilder<int>(
+                                            stream: PresencaService().countConfirmados(jogoId),
+                                            builder: (context, countSnap){
+                                              final confirmados = countSnap.data ?? 0;
+                                              return Row(children:[
+                                                Expanded(child: Text('Confirmados: '+confirmados.toString()+'/'+(jogadores>0? jogadores.toString(): '-'),
+                                                  style: Theme.of(context).textTheme.bodyMedium)),
+                                                if (uid != null)
+                                                  StreamBuilder<bool>(
+                                                    stream: PresencaService().minhaPresenca(jogoId),
+                                                    builder: (context, meSnap){
+                                                      final vou = meSnap.data ?? false;
+                                                      final lotado = !vou && jogadores>0 && confirmados>=jogadores;
+                                                      return OutlinedButton(
+                                                        onPressed: lotado? null: () async {
+                                                          try{
+                                                            if(!vou && jogadores>0 && confirmados>=jogadores){
+                                                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Jogo lotado.')));
+                                                              return;
+                                                            }
+                                                            await PresencaService().marcarPresenca(jogoId, !vou);
+                                                          }catch(e){
+                                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao atualizar presença: '+e.toString())));
+                                                          }
+                                                        },
+                                                        child: Text(vou? 'Desmarcar':'Vou'),
+                                                      );
+                                                    }
+                                                  )
+                                              ]);
+                                            }
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  )
+                ],
+              ),
+            );
+          },
+        );
+
