@@ -42,12 +42,15 @@ class _JogoDetalheState extends State<JogoDetalhe> {
 
   Future<void> _abrirNoGoogleMaps(LatLng pos, String label) async {
     final q = Uri.encodeComponent(label);
-    final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}&query_place_id=$q');
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      // fallback para geo: (pode não funcionar em todos os dispositivos)
-      final geo = Uri.parse('geo:${pos.latitude},${pos.longitude}?q=${pos.latitude},${pos.longitude}($q)');
-      await launchUrl(geo, mode: LaunchMode.externalApplication);
+    // Prefer geo: scheme (mais direto nas apps de mapas)
+    final geo = Uri.parse('geo:${pos.latitude},${pos.longitude}?q=${pos.latitude},${pos.longitude}($q)');
+    if (await canLaunchUrl(geo)) {
+      final ok = await launchUrl(geo, mode: LaunchMode.externalApplication);
+      if (ok) return;
     }
+    // Fallback universal link
+    final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}');
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   Future<bool> _supportsInteractiveMap() async {
