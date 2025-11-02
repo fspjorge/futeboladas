@@ -271,29 +271,32 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                                 future: _supportsInteractiveMap(),
                                 builder: (context, okSnap) {
                                   final ok = okSnap.data ?? false;
-                                  return Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
-                                      OutlinedButton.icon(
-                                        onPressed: () => _abrirNoGoogleMaps(pos, local),
-                                        icon: const Icon(Icons.directions),
-                                        label: const Text('Abrir no Google Maps'),
-                                      ),
-                                      if (ok) ...[
-                                        const SizedBox(width: 8),
-                                        TextButton.icon(
-                                          onPressed: () {
-                                            Navigator.of(context).push(
-                                              MaterialPageRoute(
-                                                builder: (_) => JogoMapaDetalhe(pos: pos, titulo: local),
-                                              ),
-                                            );
-                                          },
-                                          icon: const Icon(Icons.map_outlined),
-                                          label: const Text('Mapa interativo'),
+                                  return Align(
+                                    alignment: Alignment.centerRight,
+                                    child: Wrap(
+                                      alignment: WrapAlignment.end,
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: [
+                                        OutlinedButton.icon(
+                                          onPressed: () => _abrirNoGoogleMaps(pos, local),
+                                          icon: const Icon(Icons.directions),
+                                          label: const Text('Abrir no Google Maps'),
                                         ),
+                                        if (ok)
+                                          TextButton.icon(
+                                            onPressed: () {
+                                              Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (_) => JogoMapaDetalhe(pos: pos, titulo: local),
+                                                ),
+                                              );
+                                            },
+                                            icon: const Icon(Icons.map_outlined),
+                                            label: const Text('Mapa interativo'),
+                                          ),
                                       ],
-                                    ],
+                                    ),
                                   );
                                 },
                               ),
