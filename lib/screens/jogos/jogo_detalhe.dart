@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
+import 'jogo_mapa_detalhe.dart';
 
 import '../../services/presenca_service.dart';
 import 'jogo_editar.dart';
@@ -205,24 +206,57 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                           if (pos == null) {
                             return const Text('Não foi possível localizar o endereço no mapa.');
                           }
-                          return SizedBox(
-                            height: 260,
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: GoogleMap(
-                                mapType: MapType.normal,
-                                initialCameraPosition: CameraPosition(target: pos, zoom: 15),
-                                markers: {
-                                  Marker(markerId: const MarkerId('local'), position: pos),
-                                },
-                                zoomControlsEnabled: false,
-                                myLocationButtonEnabled: false,
-                                myLocationEnabled: false,
-                                compassEnabled: false,
-                                tiltGesturesEnabled: false,
-                                liteModeEnabled: true,
+                          final width = 640; // Static Maps free tier máx.
+                          final height = 320;
+                          const key = String.fromEnvironment(
+                            'PLACES_API_KEY',
+                            defaultValue: 'AIzaSyAPRZImkhwXKE0lqBhYAUvlBXKLN-UbnYk',
+                          );
+                          final url = Uri.https(
+                            'maps.googleapis.com',
+                            '/maps/api/staticmap',
+                            {
+                              'center': '${pos.latitude},${pos.longitude}',
+                              'zoom': '15',
+                              'size': '${width}x$height',
+                              'scale': '2',
+                              'maptype': 'roadmap',
+                              'markers': 'color:green|${pos.latitude},${pos.longitude}',
+                              'key': key,
+                            },
+                          ).toString();
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  url,
+                                  height: 220,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (c, e, s) => const SizedBox(
+                                    height: 220,
+                                    child: Center(child: Text('Falha ao carregar mapa.')),
+                                  ),
+                                ),
                               ),
-                            ),
+                              const SizedBox(height: 8),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton.icon(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => JogoMapaDetalhe(pos: pos, titulo: local),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.map_outlined),
+                                  label: const Text('Abrir mapa'),
+                                ),
+                              ),
+                            ],
                           );
                         },
                       ),
