@@ -220,6 +220,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                                 myLocationEnabled: false,
                                 compassEnabled: false,
                                 tiltGesturesEnabled: false,
+                                liteModeEnabled: true,
                               ),
                             ),
                           );
