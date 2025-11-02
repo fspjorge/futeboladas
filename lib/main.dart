@@ -207,6 +207,43 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _forgotPassword() async {
+    String email = _emailCtrl.text.trim();
+    if (email.isEmpty) {
+      final ctrl = TextEditingController();
+      final entered = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Recuperar password'),
+          content: TextField(
+            controller: ctrl,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(labelText: 'Email da conta'),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+            TextButton(onPressed: () => Navigator.pop(ctx, ctrl.text.trim()), child: const Text('Enviar')),
+          ],
+        ),
+      );
+      if (entered == null || entered.isEmpty) return;
+      email = entered;
+    }
+
+    setState(() => _isBusy = true);
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+      if (!mounted) return;
+      _showInfo('Se existir uma conta para $email, enviámos um email de recuperação.');
+    } on FirebaseAuthException catch (e) {
+      _showError(_mapFirebaseError(e));
+    } catch (e) {
+      _showError('Erro ao enviar recuperação: $e');
+    } finally {
+      if (mounted) setState(() => _isBusy = false);
+    }
+  }
+
   String _mapFirebaseError(FirebaseAuthException e) {
     switch (e.code) {
       case 'email-already-in-use':
@@ -311,6 +348,14 @@ class _LoginPageState extends State<LoginPage> {
                     prefixIcon: Icon(Icons.lock_outline),
                   ),
                 ),
+                if (_isLoginMode)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _isBusy ? null : _forgotPassword,
+                      child: const Text('Esqueci-me da password'),
+                    ),
+                  ),
                 if (!_isLoginMode) ...[
                   const SizedBox(height: 12),
                   TextField(
