@@ -123,6 +123,7 @@ class JogosLista extends StatelessWidget {
             final createdByName = data['createdByName'] as String? ?? 'Desconhecido';
             final createdBy = data['createdBy'] as String?;
 
+            final cs = Theme.of(context).colorScheme;
             return Card(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: InkWell(
@@ -140,12 +141,12 @@ class JogosLista extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.sports_soccer, color: Colors.green),
+                          Icon(Icons.sports_soccer, color: cs.primary),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               local,
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -162,7 +163,8 @@ class JogosLista extends StatelessWidget {
                             ),
                           Chip(
                             label: Text('$jogadores'),
-                            backgroundColor: Colors.green.shade100,
+                            backgroundColor: cs.primaryContainer,
+                            labelStyle: TextStyle(color: cs.onPrimaryContainer),
                             visualDensity: VisualDensity.compact,
                             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
@@ -171,19 +173,19 @@ class JogosLista extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         formatoData.format(date),
-                        style: const TextStyle(fontSize: 13, color: Colors.grey),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          const Icon(Icons.person_outline, size: 16, color: Colors.grey),
+                          Icon(Icons.person_outline, size: 16, color: cs.onSurfaceVariant),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               'Organizador: $createdByName',
-                              style: const TextStyle(fontSize: 12, color: Colors.grey),
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -200,7 +202,7 @@ class JogosLista extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                   'Confirmados: $confirmados/${jogadores > 0 ? jogadores : '-'}',
-                                  style: const TextStyle(fontSize: 13, color: Colors.black87),
+                                  style: Theme.of(context).textTheme.bodyMedium,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -246,7 +248,7 @@ class JogosLista extends StatelessWidget {
                           if (snap.connectionState == ConnectionState.waiting) {
                             return const Text(
                               'A obter previsão do tempo...',
-                              style: TextStyle(fontSize: 12, color: Colors.grey),
+                              style: TextStyle(fontSize: 12),
                             );
                           }
                           if (snap.hasError || !snap.hasData || snap.data == null) {
@@ -257,7 +259,7 @@ class JogosLista extends StatelessWidget {
                           final temp = info['temp'];
                           return Text(
                             '${descricao.isNotEmpty ? '${descricao[0].toUpperCase()}${descricao.substring(1)}' : ''} - $temp°C',
-                            style: const TextStyle(fontSize: 13, color: Colors.blueGrey),
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           );

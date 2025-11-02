@@ -64,6 +64,20 @@ class FuteboladasApp extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           ),
         ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: seed,
+            side: BorderSide(color: seed),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        inputDecorationTheme: const InputDecorationTheme(
+          border: OutlineInputBorder(),
+        ),
+        chipTheme: const ChipThemeData(
+          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+          visualDensity: VisualDensity.compact,
+        ),
       ),
       home: const AuthGate(),
       routes: {

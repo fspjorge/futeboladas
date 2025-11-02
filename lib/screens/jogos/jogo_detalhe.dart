@@ -107,12 +107,12 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.place_outlined, color: Colors.green),
+                          Icon(Icons.place_outlined, color: Theme.of(context).colorScheme.primary),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               local,
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                             ),
                           ),
                         ],
@@ -120,7 +120,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Icon(Icons.schedule_outlined, size: 18),
+                          Icon(Icons.schedule_outlined, size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
                           const SizedBox(width: 6),
                           Text(
                             date != null
@@ -335,7 +335,8 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        Text('Criado por: ${data['createdByName'] ?? 'Desconhecido'}'),
+                        Text('Criado por: ${data['createdByName'] ?? 'Desconhecido'}',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                         const SizedBox(height: 12),
                         StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                           stream: jogoRef.collection('admin').doc('privado').snapshots(),
