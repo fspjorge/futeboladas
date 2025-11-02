@@ -155,9 +155,12 @@ class _JogoDetalheState extends State<JogoDetalhe> {
           final isOwner = uid != null && createdBy == uid;
 
           final cs = Theme.of(context).colorScheme;
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 840),
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
               // Header estilo Google Calendar
               Container(
                 decoration: BoxDecoration(
@@ -487,7 +490,9 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                     ),
                   ),
                 ),
-            ],
+                ],
+              ),
+            ),
           );
         },
       ),
