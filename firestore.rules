@@ -1,55 +1,61 @@
 ﻿rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Jogos pÃºblicos: leitura aberta; cria§Ã£o com validaÃ§Ã£o bÃ¡sica
-    // - bloqueia update/delete (ajuste quando houver ownership/moderaÃ§Ã£o)
     match /jogos/{id} {
-      // Leitura pÃºblica
+      // Leitura pública
       allow read: if true;
 
-      // cria jogo: autenticado + campos vÃ¡lidos
+      // Criar jogo: autenticado + campos válidos
       allow create: if request.auth != null
-        && request.resource.data.keys().hasOnly(['ativo','local','jogadores','data','lat','lon','createdBy','createdAt','createdByName','createdByPhoto'])
+        && request.resource.data.keys().hasOnly(['ativo','titulo','local','jogadores','data','lat','lon','createdBy','createdAt','createdByName','createdByPhoto'])
         && request.resource.data.ativo is bool
         && request.resource.data.local is string
         && request.resource.data.jogadores is int
         && request.resource.data.data is timestamp
-        && request.resource.data.createdBy is string
+        && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.createdAt is timestamp
         && (
-          // lat/lon opcionais e do tipo double
-          (
-            !(request.resource.data.keys().hasAny(['lat','lon']))
-          ) || (
-            request.resource.data.lat is double && request.resource.data.lon is double
-          )
+          !(request.resource.data.keys().hasAny(['lat','lon']))
+          || (request.resource.data.lat is float && request.resource.data.lon is float)
         );
-            allow delete: if false;
 
-      // permitir update ao criador do jogo, com validação básica
+      // Editar jogo: apenas o criador, sem alterar o createdBy
       allow update: if request.auth != null
         && resource.data.createdBy == request.auth.uid
-        && request.resource.data.keys().hasOnly(['ativo','local','jogadores','data','lat','lon','createdBy','createdAt','createdByName','createdByPhoto'])
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.keys().hasOnly(['ativo','titulo','local','jogadores','data','lat','lon','createdBy','createdAt','createdByName','createdByPhoto'])
         && request.resource.data.local is string
         && request.resource.data.jogadores is int
         && request.resource.data.data is timestamp
-        && request.resource.data.createdBy == resource.data.createdBy
-        && request.resource.data.createdAt is timestamp
         && (
-          (!(request.resource.data.keys().hasAny(['lat','lon'])) ) || (request.resource.data.lat is double && request.resource.data.lon is double)
+          !(request.resource.data.keys().hasAny(['lat','lon']))
+          || (request.resource.data.lat is float && request.resource.data.lon is float)
         );
 
-      // SubcoleçãoÃ£o de presenÃ§as: cada utilizador sÃ³ pode gerir a sua doc (uid)
+      // Apagar jogo: apenas o criador
+      allow delete: if request.auth != null
+        && resource.data.createdBy == request.auth.uid;
+
+      // Subcoleção de presenças
       match /presencas/{uid} {
-        // Leitura pÃºblica
         allow read: if true;
-        allow create, update, delete: if request.auth != null && request.auth.uid == uid
+        // Cada utilizador gere a sua própria presença
+        allow create, update: if request.auth != null
+          && request.auth.uid == uid
           && request.resource.data.keys().hasOnly(['vai','updatedAt','name','photo'])
           && request.resource.data.vai is bool;
+        // O utilizador pode apagar a sua, ou o dono do jogo pode apagar todas
+        allow delete: if request.auth != null
+          && (request.auth.uid == uid || get(/databases/$(database)/documents/jogos/$(id)).data.createdBy == request.auth.uid);
+      }
+
+      // Subcoleção admin: apenas o criador do jogo
+      match /admin/{doc} {
+        allow read: if request.auth != null
+          && get(/databases/$(database)/documents/jogos/$(id)).data.createdBy == request.auth.uid;
+        allow write: if request.auth != null
+          && get(/databases/$(database)/documents/jogos/$(id)).data.createdBy == request.auth.uid;
       }
     }
   }
 }
-
-
-
