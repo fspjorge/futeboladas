@@ -11,7 +11,7 @@ Aplicação móvel Flutter para gestão e marcação de jogos de futebol entre a
 - Criação/edição de jogo (local, data/hora, número de jogadores)
 - Confirmação de presenças por utilizador
 - Previsão do tempo (OpenWeather: atual e previsão aproximada)
-- Autocomplete de locais (Flutter Google Places SDK) com fallback REST (Google Places API)
+- Autocomplete de locais: Integrado com **Photon API (OpenStreetMap)** - solução gratuita e sem necessidade de chaves de API.
 
 ---
 
@@ -19,8 +19,9 @@ Aplicação móvel Flutter para gestão e marcação de jogos de futebol entre a
 
 - Flutter 3.x, Dart 3.x
 - Firebase (Auth, Firestore)
-- flutter_google_places_sdk + REST Places API
+- **Photon API** (via `OsmService`) para pesquisa de locais
 - OpenWeather API
+- Layout Responsive & Glassmorphism design
 
 ---
 
@@ -32,70 +33,42 @@ Aplicação móvel Flutter para gestão e marcação de jogos de futebol entre a
    cd futeboladas
    ```
 2. Configurar Firebase (Auth + Firestore) e colocar os ficheiros de configuração nas plataformas.
+3. Executar a app: `flutter run`
 
 ---
 
 ## Configuração de Chaves/API
 
-### Google Places API
-
-A app suporta passar a chave via `--dart-define` usando a variável `PLACES_API_KEY`. Esta chave é usada tanto pelo SDK (`flutter_google_places_sdk`) como pelo serviço REST (`PlacesService`).
-
-Exemplos:
-
-```
-flutter run --dart-define=PLACES_API_KEY=YOUR_GOOGLE_PLACES_API_KEY
-
-# Build Android
-flutter build apk --dart-define=PLACES_API_KEY=YOUR_GOOGLE_PLACES_API_KEY
-
-# Build iOS
-flutter build ios --dart-define=PLACES_API_KEY=YOUR_GOOGLE_PLACES_API_KEY
-```
-
-Se não definir, existe um valor por omissão no código. Recomenda-se usar a sua própria chave de API.
+### Pesquisa de Locais (Custo Zero)
+A app utiliza a API do Photon (baseada em OpenStreetMap). Não é necessária qualquer configuração de chaves de API ou cartões de crédito para esta funcionalidade.
 
 ### OpenWeather
-
 O `WeatherService` usa uma chave definida no código. Para alterar, edite `lib/services/weather_service.dart`.
 
 ---
 
-## Android
+## Android / iOS
 
 - Permissão de rede (`INTERNET`) no `android/app/src/main/AndroidManifest.xml`.
-- Coloque o `google-services.json` do Firebase em `android/app`.
-
-## iOS
-
-- Coloque o `GoogleService-Info.plist` do Firebase no projeto iOS.
-- Verifique os requisitos do `flutter_google_places_sdk` em iOS.
-
----
-
-## Executar localmente
-
-```
-flutter pub get
-flutter run --dart-define=PLACES_API_KEY=YOUR_GOOGLE_PLACES_API_KEY
-```
+- Coloque as configurações do Firebase (`google-services.json` para Android e `GoogleService-Info.plist` para iOS).
+- O cabeçalho de detalhe do jogo (`JogoDetalhe`) foi ajustado para evitar overflows em moradas longas.
 
 ---
 
 ## Notas de Desenvolvimento
 
-- A listagem de jogos está em ListView (vertical). Experiências de grelha (GridView) devem ser feitas em branch separada.
-- O autocomplete usa primeiro o SDK nativo; se falhar, faz fallback ao REST com a mesma chave.
-- O serviço REST de Places faz logging de erros (status e corpo).
+- O autocomplete de locais prioriza resultados em **Portugal** através de bias de localização (latitude/longitude) configurados no `OsmService`.
+- O layout utiliza efeitos de blur e transparência (Glassmorphism) para um visual moderno.
 
 ## Estrutura relevante
 
 - lib/screens/jogos/jogos_lista.dart — listagem de jogos
-- lib/screens/jogos/jogos_form.dart — criação de jogo (autocomplete)
-- lib/screens/jogos/jogo_editar.dart — edição de jogo (autocomplete)
-- lib/services/places_service.dart — REST Google Places
+- lib/screens/jogos/jogos_form.dart — criação de jogo
+- lib/screens/jogos/jogo_editar.dart — edição de jogo
+- lib/services/osm_service.dart — Pesquisa de locais (Photon)
 - lib/services/weather_service.dart — OpenWeather
 
 ## Licença
 
 Uso interno. Não foi atribuída uma licença pública.
+

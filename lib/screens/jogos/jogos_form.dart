@@ -1,18 +1,19 @@
-﻿import 'dart:ui';
+﻿import 'dart:async';
+import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../../services/places_service.dart';
-import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart';
+import '../../services/osm_service.dart';
 import 'jogo_detalhe.dart';
 
 class _Suggestion {
-  final String placeId;
-  final String description;
-  const _Suggestion(this.placeId, this.description);
+  final String local;
+  final double lat;
+  final double lon;
+  const _Suggestion(this.local, this.lat, this.lon);
 }
 
 class JogosForm extends StatefulWidget {
@@ -29,30 +30,34 @@ class _JogosFormState extends State<JogosForm> {
   final _jogadoresCtrl = TextEditingController(text: '10');
   DateTime? _data;
   bool _busy = false;
-  final _restPlaces = PlacesService();
-  late final FlutterGooglePlacesSdk _placesSdk = FlutterGooglePlacesSdk(
-    const String.fromEnvironment('PLACES_API_KEY'),
-  );
-  String? _placesToken;
+  final _osmService = OsmService();
   List<_Suggestion> _sugestoes = [];
   double? _selLat;
   double? _selLon;
   bool _showSuggestions = false;
   String? _searchError;
   final FocusNode _localFocusNode = FocusNode();
+  Timer? _debounceSug;
+  String? _lastQuery;
 
   @override
   void initState() {
     super.initState();
     _localFocusNode.addListener(() {
       if (!_localFocusNode.hasFocus) {
-        setState(() => _showSuggestions = false);
+        // Pequeno delay para permitir o clique nas sugestões antes de fechar o menu
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (mounted && !_localFocusNode.hasFocus) {
+            setState(() => _showSuggestions = false);
+          }
+        });
       }
     });
   }
 
   @override
   void dispose() {
+    _debounceSug?.cancel();
     _tituloCtrl.dispose();
     _localCtrl.dispose();
     _jogadoresCtrl.dispose();
@@ -106,78 +111,70 @@ class _JogosFormState extends State<JogosForm> {
   }
 
   Future<void> _fetchSuggestions(String query) async {
-    if (query.trim().length < 3) {
+    _debounceSug?.cancel();
+    _debounceSug = Timer(const Duration(milliseconds: 500), () async {
+      try {
+        await _doFetchSuggestions(query);
+      } catch (e) {
+        debugPrint('Debounce Timer Error: $e');
+        if (mounted) {
+          setState(() {
+            _searchError = 'Erro ao pesquisar local.';
+            _showSuggestions = true;
+          });
+        }
+      }
+    });
+  }
+
+  Future<void> _doFetchSuggestions(String query) async {
+    final q = query.trim();
+    if (q.length < 3) {
       setState(() {
         _sugestoes = [];
         _showSuggestions = false;
+        _searchError = null;
       });
       return;
     }
 
-    _placesToken ??= DateTime.now().millisecondsSinceEpoch.toString();
-    List<_Suggestion> list = [];
-
+    _lastQuery = q;
     try {
-      setState(() => _searchError = null);
-      final res = await _placesSdk.findAutocompletePredictions(
-        query.trim(),
-        countries: const ['pt'],
-      );
-      list = res.predictions
-          .map((p) => _Suggestion(p.placeId, p.fullText ?? p.primaryText ?? ''))
-          .toList();
-    } catch (e) {
-      debugPrint('Places SDK Error: $e');
-    }
+      setState(() {
+        _searchError = null;
+        if (_sugestoes.isEmpty) _showSuggestions = true;
+      });
 
-    if (list.isEmpty && _restPlaces.isConfigured) {
-      try {
-        final preds = await _restPlaces.autocomplete(
-          query.trim(),
-          sessionToken: _placesToken,
-        );
-        list = preds.map((p) => _Suggestion(p.placeId, p.description)).toList();
-      } catch (e) {
-        if (mounted) setState(() => _searchError = PlacesService.mapError(e));
+      final results = await _osmService.search(q);
+
+      if (_lastQuery != q) return; // Proteção race condition
+
+      if (!mounted) return;
+      setState(() {
+        _sugestoes = results
+            .map((r) => _Suggestion(r.displayName, r.lat, r.lon))
+            .toList();
+        _searchError = _sugestoes.isEmpty ? 'Nenhum local encontrado.' : null;
+        _showSuggestions = true;
+      });
+    } catch (e) {
+      debugPrint('OSM Fetch Error: $e');
+      if (mounted && _lastQuery == q) {
+        setState(() {
+          _searchError = 'Erro na pesquisa de locais.';
+          _showSuggestions = true;
+        });
       }
     }
-
-    if (!mounted) return;
-    setState(() {
-      _sugestoes = list;
-      _showSuggestions = list.isNotEmpty || _searchError != null;
-    });
   }
 
   Future<void> _selectSuggestion(_Suggestion suggestion) async {
-    _localCtrl.text = suggestion.description;
-    double? lat;
-    double? lon;
-
-    try {
-      final det = await _placesSdk.fetchPlace(
-        suggestion.placeId,
-        fields: const [PlaceField.Location],
-      );
-      lat = det.place?.latLng?.lat;
-      lon = det.place?.latLng?.lng;
-    } catch (_) {
-      try {
-        final loc = await _restPlaces.fetchPlaceLatLng(
-          suggestion.placeId,
-          sessionToken: _placesToken,
-        );
-        lat = loc?.lat;
-        lon = loc?.lon;
-      } catch (_) {}
-    }
-
-    _placesToken = null;
     setState(() {
+      _localCtrl.text = suggestion.local;
       _sugestoes = [];
       _showSuggestions = false;
-      _selLat = lat;
-      _selLon = lon;
+      _selLat = suggestion.lat;
+      _selLon = suggestion.lon;
     });
     _localFocusNode.unfocus();
   }
@@ -415,25 +412,41 @@ class _JogosFormState extends State<JogosForm> {
                     ),
                   )
                 : Column(
-                    children: _sugestoes
-                        .map(
-                          (s) => ListTile(
-                            leading: const Icon(
-                              Icons.location_on_outlined,
-                              size: 18,
-                              color: Colors.white38,
+                    children: [
+                      ..._sugestoes.map(
+                        (s) => ListTile(
+                          dense: true,
+                          visualDensity: VisualDensity.compact,
+                          leading: const Icon(
+                            Icons.location_on_outlined,
+                            size: 18,
+                            color: Colors.white38,
+                          ),
+                          title: Text(
+                            s.local,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
                             ),
-                            title: Text(
-                              s.description,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
+                          ),
+                          onTap: () => _selectSuggestion(s),
+                        ),
+                      ),
+                      if (_sugestoes.isEmpty && _searchError == null)
+                        const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white24,
                               ),
                             ),
-                            onTap: () => _selectSuggestion(s),
                           ),
-                        )
-                        .toList(),
+                        ),
+                    ],
                   ),
           ),
       ],

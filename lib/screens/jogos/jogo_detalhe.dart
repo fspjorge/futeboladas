@@ -235,7 +235,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
 
   Widget _buildHeroHeader(String local, DateTime? date, ColorScheme cs) {
     return Container(
-      height: 280,
+      constraints: const BoxConstraints(minHeight: 280),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,

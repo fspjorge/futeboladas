@@ -1,16 +1,17 @@
-﻿import 'dart:ui';
+﻿import 'dart:async';
+import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../../services/places_service.dart';
-import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart';
+import '../../services/osm_service.dart';
 
 class _Suggestion {
-  final String placeId;
-  final String description;
-  const _Suggestion(this.placeId, this.description);
+  final String local;
+  final double lat;
+  final double lon;
+  const _Suggestion(this.local, this.lat, this.lon);
 }
 
 class JogoEditar extends StatefulWidget {
@@ -30,16 +31,15 @@ class _JogoEditarState extends State<JogoEditar> {
   bool _busy = false;
   bool _loading = true;
 
-  final _restPlaces = PlacesService();
-  late final FlutterGooglePlacesSdk _placesSdk = FlutterGooglePlacesSdk(
-    const String.fromEnvironment('PLACES_API_KEY'),
-  );
-  String? _placesToken;
+  final _osmService = OsmService();
   List<_Suggestion> _placesSug = [];
   double? _selLat;
   double? _selLon;
   bool _showSuggestions = false;
   final FocusNode _localFocusNode = FocusNode();
+  Timer? _debounceSug;
+  String? _lastQuery;
+  String? _searchError;
 
   @override
   void initState() {
@@ -47,13 +47,18 @@ class _JogoEditarState extends State<JogoEditar> {
     _carregarInicial();
     _localFocusNode.addListener(() {
       if (!_localFocusNode.hasFocus) {
-        setState(() => _showSuggestions = false);
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (mounted && !_localFocusNode.hasFocus) {
+            setState(() => _showSuggestions = false);
+          }
+        });
       }
     });
   }
 
   @override
   void dispose() {
+    _debounceSug?.cancel();
     _tituloCtrl.dispose();
     _localCtrl.dispose();
     _jogadoresCtrl.dispose();
@@ -85,73 +90,71 @@ class _JogoEditarState extends State<JogoEditar> {
   }
 
   Future<void> _fetchSuggestions(String query) async {
-    if (query.trim().length < 3) {
+    _debounceSug?.cancel();
+    _debounceSug = Timer(const Duration(milliseconds: 500), () async {
+      try {
+        await _doFetchSuggestions(query);
+      } catch (e) {
+        debugPrint('Debounce Timer Error: $e');
+        if (mounted) {
+          setState(() {
+            _searchError = 'Erro ao pesquisar local.';
+            _showSuggestions = true;
+          });
+        }
+      }
+    });
+  }
+
+  Future<void> _doFetchSuggestions(String query) async {
+    final q = query.trim();
+    if (q.length < 3) {
       setState(() {
         _placesSug = [];
         _showSuggestions = false;
+        _searchError = null;
       });
       return;
     }
-    _placesToken ??= DateTime.now().millisecondsSinceEpoch.toString();
+
+    _lastQuery = q;
+
     try {
-      final res = await _placesSdk.findAutocompletePredictions(
-        query,
-        countries: const ['pt'],
-      );
+      setState(() {
+        _searchError = null;
+        if (_placesSug.isEmpty) _showSuggestions = true;
+      });
+
+      final results = await _osmService.search(q);
+
+      if (_lastQuery != q) return; // Proteção race condition
+
       if (!mounted) return;
       setState(() {
-        _placesSug = res.predictions
-            .map(
-              (p) => _Suggestion(p.placeId, p.fullText ?? p.primaryText ?? ''),
-            )
+        _placesSug = results
+            .map((r) => _Suggestion(r.displayName, r.lat, r.lon))
             .toList();
-        _showSuggestions = _placesSug.isNotEmpty;
+        _searchError = _placesSug.isEmpty ? 'Nenhum local encontrado.' : null;
+        _showSuggestions = true;
       });
     } catch (e) {
-      if (_restPlaces.isConfigured) {
-        final preds = await _restPlaces.autocomplete(
-          query,
-          sessionToken: _placesToken,
-        );
-        if (mounted) {
-          setState(() {
-            _placesSug = preds
-                .map((p) => _Suggestion(p.placeId, p.description))
-                .toList();
-            _showSuggestions = _placesSug.isNotEmpty;
-          });
-        }
+      debugPrint('OSM Fetch Error: $e');
+      if (mounted && _lastQuery == q) {
+        setState(() {
+          _searchError = 'Erro na pesquisa de locais.';
+          _showSuggestions = true;
+        });
       }
     }
   }
 
   Future<void> _selectSuggestion(_Suggestion suggestion) async {
-    _localCtrl.text = suggestion.description;
-    double? lat;
-    double? lon;
-    try {
-      final det = await _placesSdk.fetchPlace(
-        suggestion.placeId,
-        fields: const [PlaceField.Location],
-      );
-      lat = det.place?.latLng?.lat;
-      lon = det.place?.latLng?.lng;
-    } catch (_) {
-      try {
-        final loc = await _restPlaces.fetchPlaceLatLng(
-          suggestion.placeId,
-          sessionToken: _placesToken,
-        );
-        lat = loc?.lat;
-        lon = loc?.lon;
-      } catch (_) {}
-    }
-    _placesToken = null;
     setState(() {
+      _localCtrl.text = suggestion.local;
       _placesSug = [];
       _showSuggestions = false;
-      _selLat = lat;
-      _selLon = lon;
+      _selLat = suggestion.lat;
+      _selLon = suggestion.lon;
     });
     _localFocusNode.unfocus();
   }
@@ -405,27 +408,53 @@ class _JogoEditarState extends State<JogoEditar> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.white10),
             ),
-            child: Column(
-              children: _placesSug
-                  .map(
-                    (s) => ListTile(
-                      leading: const Icon(
-                        Icons.location_on_outlined,
-                        size: 18,
-                        color: Colors.white38,
+            child: _searchError != null
+                ? ListTile(
+                    title: Text(
+                      _searchError!,
+                      style: const TextStyle(
+                        color: Colors.redAccent,
+                        fontSize: 13,
                       ),
-                      title: Text(
-                        s.description,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                        ),
-                      ),
-                      onTap: () => _selectSuggestion(s),
                     ),
                   )
-                  .toList(),
-            ),
+                : Column(
+                    children: [
+                      ..._placesSug.map(
+                        (s) => ListTile(
+                          dense: true,
+                          visualDensity: VisualDensity.compact,
+                          leading: const Icon(
+                            Icons.location_on_outlined,
+                            size: 18,
+                            color: Colors.white38,
+                          ),
+                          title: Text(
+                            s.local,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
+                          ),
+                          onTap: () => _selectSuggestion(s),
+                        ),
+                      ),
+                      if (_placesSug.isEmpty && _searchError == null)
+                        const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white24,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
           ),
       ],
     );
