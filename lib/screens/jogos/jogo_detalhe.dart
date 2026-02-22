@@ -1,16 +1,20 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'dart:ui';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:google_fonts/google_fonts.dart';
 import 'jogo_mapa_detalhe.dart';
 import 'confirmacao_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/presenca_service.dart';
+import '../../services/jogo_service.dart';
 import 'jogo_editar.dart';
 
 class JogoDetalhe extends StatefulWidget {
@@ -26,25 +30,50 @@ class _JogoDetalheState extends State<JogoDetalhe> {
   final _historicoCtrl = TextEditingController();
   bool _adminLoaded = false;
   bool _saving = false;
+  bool _deleting = false;
   int _reminderMin = 5;
+
+  @override
+  void dispose() {
+    _contactosCtrl.dispose();
+    _historicoCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickReminder() async {
     final opts = const [0, 5, 10, 15, 30, 60];
     final picked = await showModalBottomSheet<int>(
       context: context,
+      backgroundColor: const Color(0xFF0F172A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) {
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Padding(
-                padding: EdgeInsets.all(12.0),
-                child: Text('Lembrete', style: TextStyle(fontWeight: FontWeight.bold)),
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Text(
+                  'DEFINIR LEMBRETE',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1,
+                    color: Colors.white,
+                  ),
+                ),
               ),
-              ...opts.map((m) => ListTile(
-                    title: Text(m == 0 ? 'No momento do evento' : '$m minutos antes'),
-                    onTap: () => Navigator.pop(ctx, m),
-                  )),
+              ...opts.map(
+                (m) => ListTile(
+                  title: Text(
+                    m == 0 ? 'No momento do evento' : '$m minutos antes',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  onTap: () => Navigator.pop(ctx, m),
+                ),
+              ),
+              const SizedBox(height: 20),
             ],
           ),
         );
@@ -55,449 +84,696 @@ class _JogoDetalheState extends State<JogoDetalhe> {
     }
   }
 
-  Future<LatLng?> _obterLatLng(String local, Map<String, dynamic> data) async {
-    final lat = (data['lat'] as num?)?.toDouble();
-    final lon = (data['lon'] as num?)?.toDouble();
-    if (lat != null && lon != null) {
-      return LatLng(lat, lon);
-    }
+  Future<void> _eliminarJogo() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        title: Text(
+          'Apagar Jogo',
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        content: const Text(
+          'Tens a certeza? Esta ação é permanente e irá remover todas as presenças.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('CANCELAR'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('APAGAR'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    setState(() => _deleting = true);
     try {
-      final res = await locationFromAddress('$local, Portugal');
-      if (res.isEmpty) return null;
-      return LatLng(res.first.latitude, res.first.longitude);
-    } catch (_) {
-      return null;
+      await JogoService.instance.apagarJogo(widget.jogoId);
+      if (mounted) {
+        Navigator.of(context).pop(); // Back to dashboard
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Jogo apagado com sucesso.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _deleting = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erro ao apagar: $e')));
+      }
     }
-  }
-
-  Future<void> _abrirNoGoogleMaps(LatLng pos, String label) async {
-    final q = Uri.encodeComponent(label);
-    // Prefer geo: scheme (mais direto nas apps de mapas)
-    final geo = Uri.parse('geo:${pos.latitude},${pos.longitude}?q=${pos.latitude},${pos.longitude}($q)');
-    if (await canLaunchUrl(geo)) {
-      final ok = await launchUrl(geo, mode: LaunchMode.externalApplication);
-      if (ok) return;
-    }
-    // Fallback universal link
-    final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}');
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-
-  Future<bool> _supportsInteractiveMap() async {
-    if (kIsWeb) return true;
-    if (defaultTargetPlatform != TargetPlatform.android) return true;
-    try {
-      final info = await DeviceInfoPlugin().androidInfo;
-      final sdk = info.version.sdkInt ?? 0;
-      return sdk >= 29; // Android 10+
-    } catch (_) {
-      return false;
-    }
-  }
-
-  @override
-  void dispose() {
-    _contactosCtrl.dispose();
-    _historicoCtrl.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     final presencas = PresencaService();
-    final jogoRef = FirebaseFirestore.instance.collection('jogos').doc(widget.jogoId);
+    final jogoRef = FirebaseFirestore.instance
+        .collection('jogos')
+        .doc(widget.jogoId);
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Detalhe do Jogo'),
-        actions: [
-          if (uid != null)
-            StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-              stream: jogoRef.snapshots(),
-              builder: (context, s) {
-                if (!s.hasData) return const SizedBox.shrink();
-                final isOwner = (s.data!.data()?['createdBy'] == uid);
-                if (!isOwner) return const SizedBox.shrink();
-                return IconButton(
-                  tooltip: 'Editar',
-                  icon: const Icon(Icons.edit_outlined),
-                  onPressed: () async {
-                    final ok = await Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => JogoEditar(jogoId: widget.jogoId)),
-                    );
-                    if (ok == true && context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Jogo atualizado.')),
-                      );
-                    }
-                  },
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Stack(
+        children: [
+          // Background Backdrop
+          Positioned.fill(child: Container(color: const Color(0xFF0F172A))),
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.03,
+              child: CustomPaint(painter: _GridBackdropPainter()),
+            ),
+          ),
+          StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            stream: jogoRef.snapshots(),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (!snap.hasData || !snap.data!.exists) {
+                return Center(
+                  child: Text(
+                    'Jogo não encontrado.',
+                    style: GoogleFonts.outfit(
+                      color: Colors.white38,
+                      fontSize: 18,
+                    ),
+                  ),
                 );
-              },
+              }
+              final data = snap.data!.data()!;
+              final local = data['local'] as String? ?? 'Local desconhecido';
+              final date = (data['data'] as Timestamp?)?.toDate();
+              final createdBy = data['createdBy'] as String?;
+              final isOwner = uid != null && createdBy == uid;
+              final cs = Theme.of(context).colorScheme;
+
+              return Column(
+                children: [
+                  Expanded(
+                    child: ListView(
+                      padding: EdgeInsets.zero,
+                      children: [
+                        _buildHeroHeader(local, date, cs),
+                        Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildInfoSection(context, data, presencas, cs),
+                              const SizedBox(height: 24),
+                              if (uid != null)
+                                _buildPlayersList(jogoRef, createdBy, uid, cs),
+                              const SizedBox(height: 24),
+                              if (isOwner)
+                                _buildAdminSection(jogoRef, data, cs),
+                              const SizedBox(
+                                height: 100,
+                              ), // Space for action button
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _buildBottomAction(presencas, widget.jogoId, local, date, cs),
+                ],
+              );
+            },
+          ),
+          if (_deleting)
+            Container(
+              color: Colors.black54,
+              child: const Center(child: CircularProgressIndicator()),
             ),
         ],
       ),
-      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-        stream: jogoRef.snapshots(),
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snap.hasData || !snap.data!.exists) {
-            return const Center(child: Text('Jogo nÃ£o encontrado.'));
-          }
-          final data = snap.data!.data()!;
-          final local = data['local'] as String? ?? 'Local desconhecido';
-          final date = (data['data'] as Timestamp?)?.toDate();
-          final maxJogadores = (data['jogadores'] as num?)?.toInt();
-          final createdBy = data['createdBy'] as String?;
-          final createdByName = data['createdByName'] as String? ?? 'Desconhecido';
-          final isOwner = uid != null && createdBy == uid;
+    );
+  }
 
-          final cs = Theme.of(context).colorScheme;
-          return Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 840),
-              child: ListView(
-                padding: const EdgeInsets.all(16),
+  Widget _buildHeroHeader(String local, DateTime? date, ColorScheme cs) {
+    return Container(
+      height: 280,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [cs.primary.withOpacity(0.2), const Color(0xFF0F172A)],
+        ),
+      ),
+      child: Stack(
+        children: [
+          // Background Grid Detail
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.05,
+              child: CustomPaint(painter: _GridBackdropPainter()),
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-              // Header estilo Google Calendar
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  gradient: LinearGradient(
-                    colors: [cs.primary, cs.primaryContainer],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: cs.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'PARTIDA CONFIRMADA',
+                      style: GoogleFonts.outfit(
+                        color: cs.primary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    local,
+                    style: GoogleFonts.outfit(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.schedule,
+                        size: 16,
+                        color: Colors.white38,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        date != null
+                            ? DateFormat(
+                                "EEEE, d 'de' MMMM 'às' HH:mm",
+                                'pt_PT',
+                              ).format(date)
+                            : 'Sem data',
+                        style: GoogleFonts.outfit(
+                          color: Colors.white38,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoSection(
+    BuildContext context,
+    Map<String, dynamic> data,
+    PresencaService presencas,
+    ColorScheme cs,
+  ) {
+    final local = data['local'] as String? ?? '';
+    final maxJogadores = (data['jogadores'] as num?)?.toInt() ?? 0;
+    final createdByName = data['createdByName'] as String? ?? 'Desconhecido';
+
+    return GlassCard(
+      child: Column(
+        children: [
+          _infoRow(
+            Icons.place_outlined,
+            'Localização',
+            local,
+            trailing: IconButton(
+              icon: const Icon(Icons.directions, color: Colors.white70),
+              onPressed: () async {
+                // Obter LatLng e abrir no maps (preservando lógica original)
+                final res = await locationFromAddress('$local, Portugal');
+                if (res.isNotEmpty) {
+                  final pos = LatLng(res.first.latitude, res.first.longitude);
+                  final q = Uri.encodeComponent(local);
+                  final uri = Uri.parse(
+                    'https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}',
+                  );
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+            ),
+          ),
+          const Divider(color: Colors.white10, height: 1),
+          StreamBuilder<int>(
+            stream: presencas.countConfirmados(widget.jogoId),
+            builder: (context, snap) {
+              final count = snap.data ?? 0;
+              return _infoRow(
+                Icons.people_outline,
+                'Equipas',
+                '$count / $maxJogadores jogadores',
+              );
+            },
+          ),
+          const Divider(color: Colors.white10, height: 1),
+          _infoRow(Icons.person_outline, 'Organizador', createdByName),
+          const Divider(color: Colors.white10, height: 1),
+          InkWell(
+            onTap: _pickReminder,
+            child: _infoRow(
+              Icons.notifications_none,
+              'Lembrete',
+              _reminderMin == 0 ? 'No momento' : '$_reminderMin min antes',
+              trailing: const Icon(Icons.chevron_right, color: Colors.white24),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(
+    IconData icon,
+    String label,
+    String value, {
+    Widget? trailing,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 20, color: Colors.white60),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                ),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              ],
+            ),
+          ),
+          if (trailing != null) trailing,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlayersList(
+    DocumentReference<Map<String, dynamic>> jogoRef,
+    String? createdBy,
+    String uid,
+    ColorScheme cs,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          child: Text(
+            'JOGADORES CONFIRMADOS',
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.w900,
+              color: Colors.white38,
+              fontSize: 12,
+              letterSpacing: 1,
+            ),
+          ),
+        ),
+        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: jogoRef
+              .collection('presencas')
+              .where('vai', isEqualTo: true)
+              .snapshots(),
+          builder: (context, snap) {
+            final docs = snap.data?.docs ?? [];
+            if (docs.isEmpty) {
+              return Text(
+                'Ninguém confirmou ainda.',
+                style: TextStyle(color: Colors.white24),
+              );
+            }
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 3,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+              ),
+              itemCount: docs.length,
+              itemBuilder: (context, i) {
+                final d = docs[i];
+                final name = d.data()['name'] as String? ?? 'Jogador';
+                final photo = d.data()['photo'] as String?;
+                final isOrg = d.id == createdBy;
+
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.04),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white.withOpacity(0.05)),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 14,
+                        backgroundImage: photo != null
+                            ? NetworkImage(photo)
+                            : null,
+                        child: photo == null
+                            ? const Icon(Icons.person, size: 14)
+                            : null,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: isOrg
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      if (isOrg)
+                        Icon(Icons.verified, size: 14, color: cs.primary),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAdminSection(
+    DocumentReference<Map<String, dynamic>> jogoRef,
+    Map<String, dynamic> gameData,
+    ColorScheme cs,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          child: Text(
+            'ÁREA DO ORGANIZADOR',
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.w900,
+              color: Colors.white38,
+              fontSize: 12,
+              letterSpacing: 1,
+            ),
+          ),
+        ),
+        GlassCard(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                Row(
                   children: [
-                    // imagem/banner placeholder
-                    Container(height: 120, color: Colors.white.withOpacity(0.05)),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.circle, size: 12, color: Colors.white),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  local,
-                                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ],
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => JogoEditar(jogoId: widget.jogoId),
                           ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              const Icon(Icons.schedule_outlined, size: 16, color: Colors.white70),
-                              const SizedBox(width: 6),
-                              Text(
-                                date != null
-                                    ? DateFormat('EEEE, d MMM â€¢ HH:mm', 'pt_PT').format(date)
-                                    : 'Sem data',
-                                style: const TextStyle(color: Colors.white70),
-                              ),
-                            ],
+                        ),
+                        icon: const Icon(Icons.edit_outlined, size: 16),
+                        label: const Text('EDITAR'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white10,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.zero,
+                          textStyle: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
                           ),
-                        ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _eliminarJogo,
+                        icon: const Icon(Icons.delete_outline, size: 16),
+                        label: const Text('APAGAR'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent.withOpacity(0.1),
+                          foregroundColor: Colors.redAccent,
+                          padding: EdgeInsets.zero,
+                          textStyle: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 12),
-              // PÃºblico: local, data, organizador, confirmados
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.place_outlined, color: Theme.of(context).colorScheme.primary),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              local,
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: 'Abrir no Maps',
-                            icon: const Icon(Icons.directions),
-                            onPressed: () async {
-                              final pos = await _obterLatLng(local, data);
-                              if (pos != null) {
-                                await _abrirNoGoogleMaps(pos, local);
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Icon(Icons.schedule_outlined, size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                          const SizedBox(width: 6),
-                          Text(
-                            date != null
-                                ? '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}'
-                                : 'Sem data',
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      InkWell(
-                        onTap: _pickReminder,
-                        child: Row(
-                          children: [
-                            const Icon(Icons.notifications_none, size: 18),
-                            const SizedBox(width: 6),
-                            Text(_reminderMin == 0 ? 'No momento do evento' : '$_reminderMin minutos antes',
-                                style: Theme.of(context).textTheme.bodyMedium),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(Icons.person_outline, size: 18),
-                          const SizedBox(width: 6),
-                          Text('Organizador: $createdByName'),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      StreamBuilder<int>(
-                        stream: presencas.countConfirmados(widget.jogoId),
-                        builder: (context, countSnap) {
-                          final confirmados = countSnap.data ?? 0;
-                          return Row(
-                            children: [
-                              const Icon(Icons.people_outline, size: 18),
-                              const SizedBox(width: 6),
-                              Text('Confirmados: $confirmados/${maxJogadores ?? '-'}'),
-                            ],
-                          );
-                        },
-                      ),
-                      if (isOwner)
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton.icon(
-                            icon: const Icon(Icons.edit_outlined),
-                            label: const Text('Editar jogo'),
-                            onPressed: () async {
-                              final ok = await Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => JogoEditar(jogoId: widget.jogoId)),
-                              );
-                              if (ok == true && context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Jogo atualizado.')),
-                                );
-                              }
-                            },
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // (Mapa removido deliberadamente â€“ abrir via Ã­cone no bloco acima)
-
-              const SizedBox(height: 12),
-
-              // Autenticados: lista de jogadores confirmados
-              if (uid != null) ...[
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(height: 20),
+                StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                  stream: jogoRef
+                      .collection('admin')
+                      .doc('privado')
+                      .snapshots(),
+                  builder: (context, asnap) {
+                    final adata = asnap.data?.data() ?? {};
+                    if (!_adminLoaded && adata.isNotEmpty) {
+                      _contactosCtrl.text =
+                          (adata['contactos'] as String?) ?? '';
+                      _historicoCtrl.text =
+                          (adata['historico'] as String?) ?? '';
+                      _adminLoaded = true;
+                    }
+                    return Column(
                       children: [
-                        const Text('Jogadores confirmados', style: TextStyle(fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
-                        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                          stream: jogoRef.collection('presencas').where('vai', isEqualTo: true).snapshots(),
-                          builder: (context, psnap) {
-                            if (psnap.connectionState == ConnectionState.waiting) {
-                              return const Center(child: CircularProgressIndicator());
-                            }
-                            final docs = psnap.data?.docs ?? [];
-                            if (docs.isEmpty) {
-                              return const Text('Ainda sem confirmaÃ§Ãµes.');
-                            }
-                            return Column(
-                              children: docs.map((d) {
-                                final n = d.data()['name'] as String? ?? 'Jogador';
-                                final p = d.data()['photo'] as String?;
-                                final isOrganizer = d.id == (createdBy ?? '');
-                                final title = isOrganizer ? '$n (organizador)' : n;
-                                return ListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  leading: CircleAvatar(
-                                    backgroundImage: p != null ? NetworkImage(p) : null,
-                                    child: p == null ? const Icon(Icons.person_outline) : null,
-                                  ),
-                                  title: Text(title),
-                                );
-                              }).toList(),
-                            );
-                          },
+                        TextField(
+                          controller: _contactosCtrl,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(
+                            labelText: 'Contactos Privados',
+                            hintText: 'ex: Telemóvel do responsável do campo',
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _historicoCtrl,
+                          maxLines: 2,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(
+                            labelText: 'Notas / Histórico',
+                            hintText: 'ex: Ficou pago adiantado',
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _saving
+                                ? null
+                                : () async {
+                                    setState(() => _saving = true);
+                                    try {
+                                      await JogoService.instance.guardarAdmin(
+                                        widget.jogoId,
+                                        contactos: _contactosCtrl.text,
+                                        historico: _historicoCtrl.text,
+                                      );
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Notas guardadas.'),
+                                          ),
+                                        );
+                                      }
+                                    } finally {
+                                      if (mounted)
+                                        setState(() => _saving = false);
+                                    }
+                                  },
+                            child: _saving
+                                ? const CircularProgressIndicator()
+                                : const Text('GUARDAR NOTAS'),
+                          ),
                         ),
                       ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-
-              // BotÃ£o Vou/Desmarcar
-              if (uid != null)
-                StreamBuilder<bool>(
-                  stream: presencas.minhaPresenca(widget.jogoId),
-                  builder: (context, meSnap) {
-                    final vou = meSnap.data ?? false;
-                    return SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          try {
-                            await presencas.marcarPresenca(widget.jogoId, !vou); if (!vou) { if (!context.mounted) return; Navigator.of(context).push(MaterialPageRoute(builder: (_) => ConfirmacaoJogoPage(titulo: local, data: date ?? DateTime.now(), local: local))); }
-                          } catch (e) {
-                            if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Erro ao atualizar presenÃ§a: $e')),
-                            );
-                          }
-                        },
-                        icon: Icon(vou ? Icons.event_busy : Icons.check_circle_outline),
-                        label: Text(vou ? 'Desmarcar' : 'Vou'),
-                      ),
                     );
                   },
                 ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
-              const SizedBox(height: 12),
-
-              // Organizador: Ã¡rea privada (admin/privado)
-              if (isOwner)
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Text('Ãrea do organizador', style: TextStyle(fontWeight: FontWeight.bold)),
-                            const Spacer(),
-                            TextButton.icon(
-                              icon: const Icon(Icons.edit_outlined),
-                              label: const Text('Editar jogo'),
-                              onPressed: () async {
-                                final ok = await Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (_) => JogoEditar(jogoId: widget.jogoId)),
-                                );
-                                if (ok == true && context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Jogo atualizado.')),
-                                  );
-                                }
-                              },
-                            ),
-                          ],
+  Widget _buildBottomAction(
+    PresencaService presencas,
+    String jogoId,
+    String local,
+    DateTime? date,
+    ColorScheme cs,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.05))),
+      ),
+      child: SafeArea(
+        top: false,
+        child: StreamBuilder<bool>(
+          stream: presencas.minhaPresenca(jogoId),
+          builder: (context, snap) {
+            final isGoing = snap.data ?? false;
+            return SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: () async {
+                  await presencas.marcarPresenca(jogoId, !isGoing);
+                  if (!isGoing && mounted) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ConfirmacaoJogoPage(
+                          titulo: local,
+                          data: date ?? DateTime.now(),
+                          local: local,
                         ),
-                        const SizedBox(height: 8),
-                        Text('Criado por: ${data['createdByName'] ?? 'Desconhecido'}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                        const SizedBox(height: 12),
-                        StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                          stream: jogoRef.collection('admin').doc('privado').snapshots(),
-                          builder: (context, asnap) {
-                            final adata = asnap.data?.data() ?? {};
-                            if (!_adminLoaded && adata.isNotEmpty) {
-                              _contactosCtrl.text = (adata['contactos'] as String?) ?? '';
-                              _historicoCtrl.text = (adata['historico'] as String?) ?? '';
-                              _adminLoaded = true;
-                            }
-
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                TextField(
-                                  controller: _contactosCtrl,
-                                  decoration: const InputDecoration(labelText: 'Contactos'),
-                                ),
-                                const SizedBox(height: 8),
-                                TextField(
-                                  controller: _historicoCtrl,
-                                  maxLines: 3,
-                                  decoration: const InputDecoration(labelText: 'HistÃ³rico'),
-                                ),
-                                const SizedBox(height: 12),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton.icon(
-                                    onPressed: _saving
-                                        ? null
-                                        : () async {
-                                            setState(() => _saving = true);
-                                            try {
-                                              await jogoRef
-                                                  .collection('admin')
-                                                  .doc('privado')
-                                                  .set(
-                                                {
-                                                  'contactos': _contactosCtrl.text.trim(),
-                                                  'historico': _historicoCtrl.text.trim(),
-                                                },
-                                                SetOptions(merge: true),
-                                              );
-                                              if (!mounted) return;
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(content: Text('Guardado.')),
-                                              );
-                                            } catch (e) {
-                                              if (!mounted) return;
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(content: Text('Erro: $e')),
-                                              );
-                                            } finally {
-                                              if (mounted) setState(() => _saving = false);
-                                            }
-                                          },
-                                    icon: _saving
-                                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                                        : const Icon(Icons.save_outlined),
-                                    label: const Text('Guardar'),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ],
-                    ),
+                      ),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isGoing ? Colors.white12 : cs.primary,
+                  foregroundColor: isGoing
+                      ? Colors.white
+                      : const Color(0xFF0F172A),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                ],
+                child: Text(
+                  isGoing ? 'DESMARCAR PRESENÇA' : 'CONFIRMAR PRESENÇA',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1,
+                  ),
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
 }
 
+class GlassCard extends StatelessWidget {
+  final Widget child;
+  const GlassCard({super.key, required this.child});
 
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.1),
+              width: 1.5,
+            ),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _GridBackdropPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.05)
+      ..strokeWidth = 0.5;
+
+    for (double i = 0; i < size.width; i += 40) {
+      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
+    }
+    for (double i = 0; i < size.height; i += 40) {
+      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
+}

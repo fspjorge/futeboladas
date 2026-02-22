@@ -1,10 +1,13 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'dart:ui';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../../services/places_service.dart';
 import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart';
-import 'jogo_detalhe.dart'; // ou o nome do teu ficheiro
+import 'jogo_detalhe.dart';
 
 class _Suggestion {
   final String placeId;
@@ -36,16 +39,14 @@ class _JogosFormState extends State<JogosForm> {
   double? _selLon;
   bool _showSuggestions = false;
   String? _searchError;
-  FocusNode _localFocusNode = FocusNode();
+  final FocusNode _localFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
     _localFocusNode.addListener(() {
       if (!_localFocusNode.hasFocus) {
-        setState(() {
-          _showSuggestions = false;
-        });
+        setState(() => _showSuggestions = false);
       }
     });
   }
@@ -66,11 +67,37 @@ class _JogosFormState extends State<JogosForm> {
       firstDate: now.subtract(const Duration(days: 1)),
       lastDate: DateTime(now.year + 2),
       initialDate: now,
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: Theme.of(context).colorScheme.primary,
+              onPrimary: const Color(0xFF0F172A),
+              surface: const Color(0xFF1E293B),
+              onSurface: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (date == null) return;
+    if (!mounted) return;
     final time = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: Theme.of(context).colorScheme.primary,
+              onPrimary: const Color(0xFF0F172A),
+              surface: const Color(0xFF1E293B),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (time == null) return;
     setState(() {
@@ -88,16 +115,6 @@ class _JogosFormState extends State<JogosForm> {
     }
 
     _placesToken ??= DateTime.now().millisecondsSinceEpoch.toString();
-    const key = String.fromEnvironment('PLACES_API_KEY');
-    debugPrint('DEBUG: PLACES_API_KEY length: ${key.length}');
-    if (key.isNotEmpty) {
-      final showCount = key.length < 6 ? key.length : 6;
-      debugPrint(
-        'DEBUG: PLACES_API_KEY starts with: ${key.substring(0, showCount)}...',
-      );
-    } else {
-      debugPrint('DEBUG: PLACES_API_KEY is EMPTY in Dart environment!');
-    }
     List<_Suggestion> list = [];
 
     try {
@@ -106,37 +123,22 @@ class _JogosFormState extends State<JogosForm> {
         query.trim(),
         countries: const ['pt'],
       );
-      debugPrint('DEBUG: SDK predictions count: ${res.predictions.length}');
       list = res.predictions
-          .map(
-            (p) => _Suggestion(
-              p.placeId,
-              p.fullText ??
-                  ([
-                    p.primaryText,
-                    p.secondaryText,
-                  ].whereType<String>().join(' ').trim()),
-            ),
-          )
+          .map((p) => _Suggestion(p.placeId, p.fullText ?? p.primaryText ?? ''))
           .toList();
     } catch (e) {
-      debugPrint('DEBUG: SDK Error (Attempting REST): $e');
+      debugPrint('Places SDK Error: $e');
     }
 
-    // Tentar REST se o list estiver vazio (ou se o SDK falhou no catch acima)
     if (list.isEmpty && _restPlaces.isConfigured) {
       try {
-        debugPrint('DEBUG: Calling REST fallback...');
         final preds = await _restPlaces.autocomplete(
           query.trim(),
           sessionToken: _placesToken,
         );
-        debugPrint('DEBUG: REST predictions count: ${preds.length}');
         list = preds.map((p) => _Suggestion(p.placeId, p.description)).toList();
       } catch (e) {
-        debugPrint('DEBUG: REST fallback failed: $e');
-        final errorMsg = PlacesService.mapError(e);
-        if (mounted) setState(() => _searchError = errorMsg);
+        if (mounted) setState(() => _searchError = PlacesService.mapError(e));
       }
     }
 
@@ -181,16 +183,14 @@ class _JogosFormState extends State<JogosForm> {
   }
 
   Future<void> _submit() async {
-    setState(() {
-      _showSuggestions = false;
-    });
+    setState(() => _showSuggestions = false);
     _localFocusNode.unfocus();
 
     if (!_formKey.currentState!.validate()) return;
     if (_data == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Seleciona data e hora.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor, indica a data e hora.')),
+      );
       return;
     }
 
@@ -230,35 +230,25 @@ class _JogosFormState extends State<JogosForm> {
       final docRef = await FirebaseFirestore.instance
           .collection('jogos')
           .add(data);
-      final novoJogoId = docRef.id;
-
       if (!mounted) return;
 
-      // Fechar TODOS os ecrãs até chegar à lista principal
-      // e depois abrir os detalhes do novo jogo
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => JogoDetalhe(jogoId: novoJogoId)),
-        (route) => false, // Remove todas as rotas anteriores
+        MaterialPageRoute(builder: (_) => JogoDetalhe(jogoId: docRef.id)),
+        (route) => route.isFirst,
       );
 
-      // Opcional: Mensagem de sucesso
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Jogo criado com sucesso!'),
+          content: Text('Jogo agendado com sucesso!'),
           backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
         ),
       );
-    } on FirebaseException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? 'Falha ao agendar jogo')),
-      );
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro inesperado: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erro ao criar jogo: $e')));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -269,357 +259,308 @@ class _JogosFormState extends State<JogosForm> {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Agendar Jogo'),
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        surfaceTintColor: Colors.transparent,
+        title: Text(
+          'Agendar Partida',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.w800),
+        ),
       ),
-      body: GestureDetector(
-        onTap: () {
-          setState(() {
-            _showSuggestions = false;
-          });
-          _localFocusNode.unfocus();
-        },
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Campo Título
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[900],
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey[700]!, width: 1),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: TextFormField(
-                    controller: _tituloCtrl,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    decoration: InputDecoration(
-                      labelText: 'Título do Jogo',
-                      labelStyle: TextStyle(color: Colors.grey[400]),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 16,
-                      ),
-                      suffixIcon: Icon(
-                        Icons.sports_soccer,
-                        color: Colors.grey[400],
-                      ),
-                    ),
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Indica um título para o jogo'
-                        : null,
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Campo Local com autocomplete - CORRIGIDO PARA FICAR POR CIMA
-                Stack(
+      body: Stack(
+        children: [
+          Positioned.fill(child: Container(color: const Color(0xFF0F172A))),
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.03,
+              child: CustomPaint(painter: _GridBackdropPainter()),
+            ),
+          ),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Column(
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey[900],
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.grey[700]!,
-                              width: 1,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: TextFormField(
-                            controller: _localCtrl,
-                            focusNode: _localFocusNode,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            decoration: InputDecoration(
-                              labelText: 'Local',
-                              labelStyle: TextStyle(color: Colors.grey[400]),
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 16,
-                              ),
-                              suffixIcon: Icon(
-                                Icons.location_on_outlined,
-                                color: Colors.grey[400],
-                              ),
-                            ),
-                            validator: (v) => (v == null || v.trim().isEmpty)
-                                ? 'Indica o local'
-                                : null,
-                            onChanged: (txt) async {
-                              await _fetchSuggestions(txt);
-                            },
-                            onTap: () {
-                              if (_localCtrl.text.isNotEmpty &&
-                                  _sugestoes.isNotEmpty) {
-                                setState(() {
-                                  _showSuggestions = true;
-                                });
-                              }
-                            },
-                          ),
-                        ),
-                        // ESPAÇO RESERVADO PARA AS SUGESTÕES
-                        if (_showSuggestions &&
-                            (_sugestoes.isNotEmpty || _searchError != null))
-                          SizedBox(
-                            height: _searchError != null
-                                ? 80.0
-                                : _sugestoes.length * 50.0,
-                          ),
-                      ],
+                    _buildStepTitle('DEFINIR DETALHES'),
+                    const SizedBox(height: 16),
+                    _buildGlassInput(
+                      controller: _tituloCtrl,
+                      label: 'Nome da Partida',
+                      hint: 'ex: Futebolada Semanal',
+                      icon: Icons.sports_soccer,
+                      validator: (v) =>
+                          v!.isEmpty ? 'Título obrigatório' : null,
                     ),
-
-                    // Sugestões do Google Maps - AGORA FICAM POR CIMA
-                    if (_showSuggestions &&
-                        (_sugestoes.isNotEmpty || _searchError != null))
-                      Positioned(
-                        top: 60, // Ajuste para ficar logo abaixo do campo
-                        left: 0,
-                        right: 0,
-                        child: Material(
-                          elevation: 8, // Elevação maior para ficar por cima
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.grey[800],
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey[600]!),
-                            ),
-                            constraints: BoxConstraints(
-                              maxHeight:
-                                  MediaQuery.of(context).size.height * 0.4,
-                            ),
-                            child: _searchError != null
-                                ? Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.error_outline,
-                                          color: Colors.amber,
-                                          size: 20,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            _searchError!,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                : ListView.builder(
-                                    shrinkWrap: true,
-                                    physics: const ClampingScrollPhysics(),
-                                    itemCount: _sugestoes.length,
-                                    itemBuilder: (context, index) {
-                                      final suggestion = _sugestoes[index];
-                                      return ListTile(
-                                        dense: true,
-                                        leading: Icon(
-                                          Icons.place_outlined,
-                                          size: 20,
-                                          color: Colors.blue[400],
-                                        ),
-                                        title: Text(
-                                          suggestion.description,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                        onTap: () {
-                                          _selectSuggestion(suggestion);
-                                        },
-                                      );
-                                    },
-                                  ),
-                          ),
-                        ),
-                      ),
+                    const SizedBox(height: 16),
+                    _buildAutocompleteLocal(cs),
+                    const SizedBox(height: 16),
+                    _buildGlassInput(
+                      controller: _jogadoresCtrl,
+                      label: 'Nº de Jogadores',
+                      hint: 'ex: 10',
+                      icon: Icons.people_outline,
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 32),
+                    _buildStepTitle('QUANDO'),
+                    const SizedBox(height: 16),
+                    _buildDateTimePicker(cs),
+                    const SizedBox(height: 48),
+                    _buildSubmitButton(cs),
                   ],
                 ),
-                const SizedBox(height: 20),
-
-                // Campo Número de Jogadores
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[900],
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey[700]!, width: 1),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: TextFormField(
-                    controller: _jogadoresCtrl,
-                    keyboardType: TextInputType.number,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    decoration: InputDecoration(
-                      labelText: 'N.º de jogadores',
-                      labelStyle: TextStyle(color: Colors.grey[400]),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 16,
-                      ),
-                      suffixIcon: Icon(
-                        Icons.people_outline,
-                        color: Colors.grey[400],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Seletor de Data/Hora
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[900],
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey[700]!, width: 1),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Data e Hora',
-                                style: TextStyle(
-                                  color: Colors.grey[400],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _data == null
-                                    ? 'Sem data selecionada'
-                                    : '${_data!.day.toString().padLeft(2, '0')}/${_data!.month.toString().padLeft(2, '0')} ${_data!.hour.toString().padLeft(2, '0')}:${_data!.minute.toString().padLeft(2, '0')}',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        FilledButton.tonal(
-                          onPressed: _pickDateTime,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: Colors.blue[800],
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.calendar_today, size: 16),
-                              SizedBox(width: 6),
-                              Text('Escolher'),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                // Botão de Agendar
-                SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: FilledButton(
-                    onPressed: _busy ? null : _submit,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.blue[600],
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 2,
-                    ),
-                    child: _busy
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.check_circle_outline, size: 20),
-                              SizedBox(width: 8),
-                              Text(
-                                'Agendar Jogo',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                  ),
-                ),
-              ],
+              ),
             ),
+          ),
+          if (_busy)
+            Container(
+              color: Colors.black54,
+              child: const Center(child: CircularProgressIndicator()),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        title,
+        style: GoogleFonts.outfit(
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+          color: Colors.white38,
+          letterSpacing: 1.5,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlassInput({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+    FocusNode? focusNode,
+    void Function(String)? onChanged,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
+          ),
+          child: TextFormField(
+            controller: controller,
+            focusNode: focusNode,
+            keyboardType: keyboardType,
+            onChanged: onChanged,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              labelText: label,
+              hintText: hint,
+              prefixIcon: Icon(icon, color: Colors.white38, size: 20),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 16,
+              ),
+            ),
+            validator: validator,
           ),
         ),
       ),
     );
   }
+
+  Widget _buildAutocompleteLocal(ColorScheme cs) {
+    return Column(
+      children: [
+        _buildGlassInput(
+          controller: _localCtrl,
+          focusNode: _localFocusNode,
+          label: 'Localização',
+          hint: 'ex: Urban Pitch Alvalade',
+          icon: Icons.place_outlined,
+          onChanged: _fetchSuggestions,
+          validator: (v) => v!.isEmpty ? 'Local obrigatório' : null,
+        ),
+        if (_showSuggestions)
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white10),
+            ),
+            child: _searchError != null
+                ? ListTile(
+                    title: Text(
+                      _searchError!,
+                      style: const TextStyle(
+                        color: Colors.redAccent,
+                        fontSize: 13,
+                      ),
+                    ),
+                  )
+                : Column(
+                    children: _sugestoes
+                        .map(
+                          (s) => ListTile(
+                            leading: const Icon(
+                              Icons.location_on_outlined,
+                              size: 18,
+                              color: Colors.white38,
+                            ),
+                            title: Text(
+                              s.description,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                              ),
+                            ),
+                            onTap: () => _selectSuggestion(s),
+                          ),
+                        )
+                        .toList(),
+                  ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildDateTimePicker(ColorScheme cs) {
+    return InkWell(
+      onTap: _pickDateTime,
+      borderRadius: BorderRadius.circular(16),
+      child: GlassCard(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: cs.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.calendar_month_outlined, color: cs.primary),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'DATA E HORA',
+                    style: TextStyle(
+                      color: Colors.white38,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _data == null
+                        ? 'Selecione o horário'
+                        : DateFormat(
+                            "EEEE, d 'de' MMMM 'às' HH:mm",
+                            'pt_PT',
+                          ).format(_data!),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Colors.white24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubmitButton(ColorScheme cs) {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton(
+        onPressed: _busy ? null : _submit,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: cs.primary,
+          foregroundColor: const Color(0xFF0F172A),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        child: Text(
+          'CRIAR JOGO AGORA',
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class GlassCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+  const GlassCard({super.key, required this.child, this.padding});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.1),
+              width: 1.5,
+            ),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _GridBackdropPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.05)
+      ..strokeWidth = 0.5;
+
+    for (double i = 0; i < size.width; i += 40) {
+      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
+    }
+    for (double i = 0; i < size.height; i += 40) {
+      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

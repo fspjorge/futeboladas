@@ -1,4 +1,5 @@
-﻿import 'package:flutter/foundation.dart' show kIsWeb;
+﻿import 'dart:ui';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,19 +12,19 @@ import 'screens/auth/reset_password.dart';
 import 'package:futeboladas/screens/jogos/jogos_form.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import 'package:google_fonts/google_fonts.dart';
+
 import 'firebase_options.dart';
 
 final GlobalKey<NavigatorState> _navKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   // Locale data for Intl (pt_PT) used in DateFormat across the app
   Intl.defaultLocale = 'pt_PT';
   await initializeDateFormatting('pt_PT', null);
-  // Tenta capturar links de redefiniÃ§Ã£o de password (Dynamic Links ou link direto no web)
+  // Tenta capturar links de redefinição de password (Dynamic Links ou link direto no web)
   await _setupPasswordResetLinkHandling();
   runApp(const FuteboladasApp());
 }
@@ -33,56 +34,104 @@ class FuteboladasApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final seed = const Color(0xFF2ECC71); // verde relva
+    const primaryGreen = Color(0xFF22C55E); // Pitch Green
+    const deepSlate = Color(0xFF0F172A); // Background
+    const slateBlue = Color(0xFF1E293B); // Surface
+
+    final theme = ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: primaryGreen,
+        primary: primaryGreen,
+        secondary: const Color(0xFF38BDF8), // Urban Sky Blue
+        surface: slateBlue,
+        onSurface: Colors.white,
+        onSurfaceVariant: Colors.white70,
+        error: const Color(0xFFEF4444),
+        brightness: Brightness.dark,
+      ),
+      scaffoldBackgroundColor: deepSlate,
+      textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
+      appBarTheme: AppBarTheme(
+        backgroundColor: deepSlate,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: false,
+        titleTextStyle: GoogleFonts.outfit(
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      ),
+      cardTheme: CardThemeData(
+        color: slateBlue,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: Colors.white.withOpacity(0.05), width: 1),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primaryGreen,
+          foregroundColor: deepSlate,
+          textStyle: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          elevation: 0,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: primaryGreen,
+          side: const BorderSide(color: primaryGreen, width: 2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          textStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: slateBlue,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(
+            color: Colors.white.withOpacity(0.05),
+            width: 1,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: primaryGreen, width: 2),
+        ),
+        labelStyle: const TextStyle(color: Colors.white70),
+        prefixIconColor: Colors.white70,
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: slateBlue,
+        labelStyle: const TextStyle(color: Colors.white),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        side: BorderSide.none,
+      ),
+    );
 
     return MaterialApp(
       navigatorKey: _navKey,
       title: 'Futeboladas',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: seed,
-          primary: seed,
-          secondary: const Color(0xFF34495E), // urbano
-          surface: const Color(0xFFEAEDED),
-          brightness: Brightness.light,
-        ),
-        scaffoldBackgroundColor: const Color(0xFFEAEDED),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF2ECC71),
-          foregroundColor: Colors.white,
-          elevation: 4,
-          titleTextStyle: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: seed,
-            foregroundColor: Colors.white,
-            textStyle: const TextStyle(fontWeight: FontWeight.bold),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          ),
-        ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: seed,
-            side: BorderSide(color: seed),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-        inputDecorationTheme: const InputDecorationTheme(
-          border: OutlineInputBorder(),
-        ),
-        chipTheme: const ChipThemeData(
-          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 0),
-        ),
-      ),
+      theme: theme,
       home: const AuthGate(),
       routes: {
         '/jogos/mapa': (_) => const JogosMapa(),
@@ -92,7 +141,9 @@ class FuteboladasApp extends StatelessWidget {
           final uri = Uri.base;
           final code = uri.queryParameters['oobCode'];
           if (code == null || code.isEmpty) {
-            return const Scaffold(body: Center(child: Text('CÃ³digo em falta.')));
+            return const Scaffold(
+              body: Center(child: Text('Código em falta.')),
+            );
           }
           return ResetPasswordPage(oobCode: code);
         },
@@ -104,11 +155,14 @@ class FuteboladasApp extends StatelessWidget {
 Future<void> _setupPasswordResetLinkHandling() async {
   if (kIsWeb) {
     final uri = Uri.base;
-    if (uri.queryParameters['mode'] == 'resetPassword' && uri.queryParameters['oobCode'] != null) {
+    if (uri.queryParameters['mode'] == 'resetPassword' &&
+        uri.queryParameters['oobCode'] != null) {
       final code = uri.queryParameters['oobCode']!;
-      // Abre a pÃ¡gina de reset dentro da app (no web funciona com rotas)
+      // Abre a página de reset dentro da app (no web funciona com rotas)
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _navKey.currentState?.push(MaterialPageRoute(builder: (_) => ResetPasswordPage(oobCode: code)));
+        _navKey.currentState?.push(
+          MaterialPageRoute(builder: (_) => ResetPasswordPage(oobCode: code)),
+        );
       });
     }
     return;
@@ -121,23 +175,23 @@ Future<void> _setupPasswordResetLinkHandling() async {
     final params = link.queryParameters;
     if (params['mode'] == 'resetPassword' && params['oobCode'] != null) {
       final code = params['oobCode']!;
-      _navKey.currentState?.push(MaterialPageRoute(builder: (_) => ResetPasswordPage(oobCode: code)));
+      _navKey.currentState?.push(
+        MaterialPageRoute(builder: (_) => ResetPasswordPage(oobCode: code)),
+      );
     }
   }
+
   handle(initial);
   FirebaseDynamicLinks.instance.onLink.listen(handle);
 }
 
-/// Mostra login se nÃ£o estiver autenticado.
-/// Se estiver autenticado mas o email nÃ£o estiver verificado (e for email/password),
-/// mostra ecrÃ£ para verificar.
+/// Mostra login se não estiver autenticado.
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
   bool _needsEmailVerification(User user) {
     final providerData = user.providerData;
-    final isEmailUser =
-        providerData.any((p) => p.providerId == 'password'); // email/pass
+    final isEmailUser = providerData.any((p) => p.providerId == 'password');
     return isEmailUser && !user.emailVerified;
   }
 
@@ -154,17 +208,14 @@ class AuthGate extends StatelessWidget {
           );
         }
 
-        // nÃ£o autenticado
         if (user == null) {
           return const LoginPage();
         }
 
-        // autenticado mas sem email verificado
         if (_needsEmailVerification(user)) {
           return VerifyEmailPage(user: user);
         }
 
-        // autenticado e ok
         return HomeDashboard(user: user);
       },
     );
@@ -181,7 +232,6 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _auth = FirebaseAuth.instance;
 
-  // para login/registo por email
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _nameCtrl = TextEditingController();
@@ -189,7 +239,6 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoginMode = true;
   bool _isBusy = false;
 
-  // Google Sign-In
   late final GoogleSignIn _googleSignIn = kIsWeb
       ? GoogleSignIn(
           clientId:
@@ -201,7 +250,6 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isBusy = true);
     try {
       if (kIsWeb) {
-        // no web o Firebase Auth jÃ¡ faz o popup
         final googleProvider = GoogleAuthProvider();
         await _auth.signInWithPopup(googleProvider);
         return;
@@ -238,24 +286,17 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isBusy = true);
     try {
       if (_isLoginMode) {
-        // login
-        await _auth.signInWithEmailAndPassword(
-          email: email,
-          password: pass,
-        );
+        await _auth.signInWithEmailAndPassword(email: email, password: pass);
       } else {
-        // registo
         final cred = await _auth.createUserWithEmailAndPassword(
           email: email,
           password: pass,
         );
 
-        // atualizar nome
         if (name.isNotEmpty) {
           await cred.user?.updateDisplayName(name);
         }
 
-        // enviar email de verificaÃ§Ã£o
         await cred.user?.sendEmailVerification();
         _showInfo('Conta criada. Verifica o teu email.');
       }
@@ -282,8 +323,14 @@ class _LoginPageState extends State<LoginPage> {
             decoration: const InputDecoration(labelText: 'Email da conta'),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-            TextButton(onPressed: () => Navigator.pop(ctx, ctrl.text.trim()), child: const Text('Enviar')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+              child: const Text('Enviar'),
+            ),
           ],
         ),
       );
@@ -295,11 +342,13 @@ class _LoginPageState extends State<LoginPage> {
     try {
       await _auth.sendPasswordResetEmail(email: email);
       if (!mounted) return;
-      _showInfo('Se existir uma conta para $email, enviÃ¡mos um email de recuperaÃ§Ã£o.');
+      _showInfo(
+        'Se existir uma conta para $email, enviámos um email de recuperação.',
+      );
     } on FirebaseAuthException catch (e) {
       _showError(_mapFirebaseError(e));
     } catch (e) {
-      _showError('Erro ao enviar recuperaÃ§Ã£o: $e');
+      _showError('Erro ao enviar recuperação: $e');
     } finally {
       if (mounted) setState(() => _isBusy = false);
     }
@@ -308,12 +357,12 @@ class _LoginPageState extends State<LoginPage> {
   String _mapFirebaseError(FirebaseAuthException e) {
     switch (e.code) {
       case 'email-already-in-use':
-        return 'JÃ¡ existe uma conta com esse email.';
+        return 'Já existe uma conta com esse email.';
       case 'invalid-email':
-        return 'Email invÃ¡lido.';
+        return 'Email inválido.';
       case 'user-not-found':
       case 'wrong-password':
-        return 'Credenciais invÃ¡lidas.';
+        return 'Credenciais inválidas.';
       case 'weak-password':
         return 'Password demasiado fraca.';
       default:
@@ -322,15 +371,11 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _showError(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg)),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   void _showInfo(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg)),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   @override
@@ -346,145 +391,258 @@ class _LoginPageState extends State<LoginPage> {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 420),
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.94),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: cs.primary.withValues(alpha: 0.15),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.sports_soccer, size: 34, color: Color(0xFF2ECC71)),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Futeboladas',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: const Color(0xFF2C3E50),
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  _isLoginMode ? 'Entrar' : 'Criar conta',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2C3E50),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // email
-                TextField(
-                  controller: _emailCtrl,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _passwordCtrl,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: Icon(Icons.lock_outline),
-                  ),
-                ),
-                if (_isLoginMode)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: _isBusy ? null : _forgotPassword,
-                      child: const Text('Esqueci-me da password'),
-                    ),
-                  ),
-                if (!_isLoginMode) ...[
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _nameCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Nome',
-                      prefixIcon: Icon(Icons.person_outline),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'SerÃ¡ enviado um email de verificaÃ§Ã£o.',
-                    style: TextStyle(fontSize: 12),
-                  ),
+      body: Stack(
+        children: [
+          // Background Gradient - Urban Night Feel
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF0F172A), // Deep Slate
+                  Color(0xFF020617), // Near Black
                 ],
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _isBusy ? null : _submitEmail,
-                    icon: _isBusy
-                        ? const SizedBox(
-                            width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.login),
-                    label: Text(_isLoginMode ? 'Entrar' : 'Criar conta'),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(_isLoginMode ? 'Ainda nÃ£o tens conta?' : 'JÃ¡ tens conta?'),
-                    TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _isLoginMode = !_isLoginMode;
-                        });
-                      },
-                      child: Text(_isLoginMode ? 'Registar' : 'Entrar'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                const Divider(),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _isBusy ? null : _signInWithGoogle,
-                    icon: Image.network(
-                      'https://developers.google.com/identity/images/g-logo.png',
-                      width: 18,
-                      height: 18,
-                    ),
-                    label: const Text('Entrar com Google'),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.03,
+              child: CustomPaint(painter: _GridPainter()),
+            ),
+          ),
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Hero(
+                      tag: 'app_logo',
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: cs.primary.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.sports_soccer,
+                          size: 64,
+                          color: cs.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Futeboladas',
+                      style: GoogleFonts.outfit(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -1,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      'O teu jogo, a tua cidade.',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        color: Colors.white60,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    const SizedBox(height: 48),
+
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(28),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        child: Container(
+                          padding: const EdgeInsets.all(32),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(28),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.1),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                _isLoginMode
+                                    ? 'Bem-vindo de volta'
+                                    : 'Cria a tua conta',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+
+                              TextField(
+                                controller: _emailCtrl,
+                                keyboardType: TextInputType.emailAddress,
+                                decoration: const InputDecoration(
+                                  labelText: 'Email',
+                                  prefixIcon: Icon(Icons.email_outlined),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              TextField(
+                                controller: _passwordCtrl,
+                                obscureText: true,
+                                decoration: const InputDecoration(
+                                  labelText: 'Password',
+                                  prefixIcon: Icon(Icons.lock_outline),
+                                ),
+                              ),
+
+                              if (_isLoginMode)
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: _isBusy ? null : _forgotPassword,
+                                    child: Text(
+                                      'Esqueci-me da password',
+                                      style: TextStyle(
+                                        color: cs.primary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                              if (!_isLoginMode) ...[
+                                const SizedBox(height: 16),
+                                TextField(
+                                  controller: _nameCtrl,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Nome completo',
+                                    prefixIcon: Icon(Icons.person_outline),
+                                  ),
+                                ),
+                              ],
+
+                              const SizedBox(height: 32),
+
+                              ElevatedButton(
+                                onPressed: _isBusy ? null : _submitEmail,
+                                child: _isBusy
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 3,
+                                          color: Color(0xFF0F172A),
+                                        ),
+                                      )
+                                    : Text(
+                                        _isLoginMode ? 'Entrar' : 'Continuar',
+                                      ),
+                              ),
+
+                              const SizedBox(height: 24),
+
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    _isLoginMode
+                                        ? 'Ainda não tens conta?'
+                                        : 'Já tens conta?',
+                                    style: const TextStyle(
+                                      color: Colors.white60,
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => setState(
+                                      () => _isLoginMode = !_isLoginMode,
+                                    ),
+                                    child: Text(
+                                      _isLoginMode ? 'Regista-te' : 'Entra',
+                                      style: TextStyle(
+                                        color: cs.primary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Divider(color: Colors.white.withOpacity(0.1)),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'OU CONTINUA COM',
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              color: Colors.white30,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Divider(color: Colors.white.withOpacity(0.1)),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.white.withOpacity(0.05),
+                          side: BorderSide(
+                            color: Colors.white.withOpacity(0.1),
+                          ),
+                        ),
+                        onPressed: _isBusy ? null : _signInWithGoogle,
+                        icon: Image.network(
+                          'https://developers.google.com/identity/images/g-logo.png',
+                          width: 20,
+                          height: 20,
+                        ),
+                        label: Text(
+                          'Google',
+                          style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-/// EcrÃ£ mostrado quando a conta de email existe mas ainda nÃ£o foi verificada.
 class VerifyEmailPage extends StatefulWidget {
   final User user;
   const VerifyEmailPage({super.key, required this.user});
@@ -498,9 +656,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
   bool _busy = false;
 
   Future<void> _resend() async {
-    setState(() {
-      _busy = true;
-    });
+    setState(() => _busy = true);
     await widget.user.sendEmailVerification();
     setState(() {
       _sent = true;
@@ -508,7 +664,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     });
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Email de verificaÃ§Ã£o enviado.')),
+      const SnackBar(content: Text('Email de verificação enviado.')),
     );
   }
 
@@ -517,64 +673,144 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     final refreshed = FirebaseAuth.instance.currentUser;
     if (refreshed != null && refreshed.emailVerified) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email verificado.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Email verificado.')));
     } else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ainda nÃ£o estÃ¡ verificado.')),
+        const SnackBar(content: Text('Ainda não está verificado.')),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final email = widget.user.email ?? '(sem email)';
+    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Verificar email'),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'EnviÃ¡mos um email de verificaÃ§Ã£o para:',
-                style: Theme.of(context).textTheme.titleMedium,
-                textAlign: TextAlign.center,
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF0F172A), Color(0xFF020617)],
               ),
-              const SizedBox(height: 8),
-              Text(
-                email,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _busy ? null : _resend,
-                child: Text(_sent ? 'Reenviar novamente' : 'Reenviar email'),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton(
-                onPressed: _refresh,
-                child: const Text('JÃ¡ confirmei'),
-              ),
-              const SizedBox(height: 24),
-              TextButton(
-                onPressed: () async {
-                  await FirebaseAuth.instance.signOut();
-                },
-                child: const Text('Sair'),
-              ),
-            ],
+            ),
           ),
-        ),
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.03,
+              child: CustomPaint(painter: _GridPainter()),
+            ),
+          ),
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(28),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Container(
+                      padding: const EdgeInsets.all(32),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.1),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.mark_email_unread_outlined,
+                            size: 64,
+                            color: cs.primary,
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            'Verifica o teu email',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.outfit(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Enviámos um link de confirmação para:\n${widget.user.email}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white60),
+                          ),
+                          const SizedBox(height: 32),
+                          ElevatedButton(
+                            onPressed: _busy ? null : _refresh,
+                            child: _busy
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 3,
+                                      color: Color(0xFF0F172A),
+                                    ),
+                                  )
+                                : const Text('Já verifiquei'),
+                          ),
+                          const SizedBox(height: 16),
+                          TextButton(
+                            onPressed: _busy ? null : _resend,
+                            child: Text(
+                              _sent ? 'Reenviado!' : 'Reenviar email',
+                              style: TextStyle(
+                                color: _sent ? Colors.white30 : cs.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          TextButton.icon(
+                            onPressed: () => FirebaseAuth.instance.signOut(),
+                            icon: const Icon(Icons.logout, size: 18),
+                            label: const Text('Sair'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
+}
+
+class _GridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.05)
+      ..strokeWidth = 0.5;
+
+    for (double i = 0; i < size.width; i += 40) {
+      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
+    }
+    for (double i = 0; i < size.height; i += 40) {
+      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
 
 class HomePage extends StatefulWidget {
@@ -624,8 +860,14 @@ class _HomePageState extends State<HomePage> {
             decoration: const InputDecoration(labelText: 'Nome'),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-            TextButton(onPressed: () => Navigator.pop(ctx, ctrl.text.trim()), child: const Text('Guardar')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+              child: const Text('Guardar'),
+            ),
           ],
         );
       },
@@ -640,13 +882,12 @@ class _HomePageState extends State<HomePage> {
     setState(() => _busy = false);
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Nome atualizado.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Nome atualizado.')));
   }
 
   Future<void> _changePassword() async {
-    // sÃ³ para email/pass
     if (!_isEmailUser) return;
 
     final currentPassCtrl = TextEditingController();
@@ -674,8 +915,14 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Guardar')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Guardar'),
+            ),
           ],
         );
       },
@@ -689,22 +936,19 @@ class _HomePageState extends State<HomePage> {
 
     setState(() => _busy = true);
     try {
-      // reautenticar
       final cred = EmailAuthProvider.credential(
         email: _user.email!,
         password: currentPass,
       );
       await _user.reauthenticateWithCredential(cred);
-
-      // alterar
       await _user.updatePassword(newPass);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password alterada.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Password alterada.')));
     } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro: ${e.message}')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro: ${e.message}')));
     } finally {
       setState(() => _busy = false);
     }
@@ -717,12 +961,20 @@ class _HomePageState extends State<HomePage> {
         return AlertDialog(
           title: const Text('Eliminar conta'),
           content: const Text(
-              'Tens a certeza? Isto elimina a tua conta desta app.'),
+            'Tens a certeza? Isto elimina a tua conta desta app.',
+          ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
             TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Eliminar', style: TextStyle(color: Colors.red))),
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text(
+                'Eliminar',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
           ],
         );
       },
@@ -733,11 +985,9 @@ class _HomePageState extends State<HomePage> {
     setState(() => _busy = true);
     try {
       await _user.delete();
-      // terminar sessÃ£o tambÃ©m
       await _signOut();
     } on FirebaseAuthException catch (e) {
       if (e.code == 'requires-recent-login') {
-        // temos de reautenticar
         await _handleReauthForDelete();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -751,7 +1001,6 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _handleReauthForDelete() async {
     if (_isEmailUser) {
-      // pedir password
       final passCtrl = TextEditingController();
       final ok = await showDialog<bool>(
         context: context,
@@ -764,8 +1013,14 @@ class _HomePageState extends State<HomePage> {
               decoration: const InputDecoration(labelText: 'Password'),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-              TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Confirmar')),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Confirmar'),
+              ),
             ],
           );
         },
@@ -784,12 +1039,11 @@ class _HomePageState extends State<HomePage> {
         await _user.delete();
         await _signOut();
       } on FirebaseAuthException catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro: ${e.message}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erro: ${e.message}')));
       }
     } else {
-      // Google
       try {
         final googleUser = await _googleSignIn.signIn();
         if (googleUser == null) return;
@@ -802,9 +1056,9 @@ class _HomePageState extends State<HomePage> {
         await _user.delete();
         await _signOut();
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao reautenticar: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erro ao reautenticar: $e')));
       }
     }
   }
@@ -814,8 +1068,9 @@ class _HomePageState extends State<HomePage> {
     final email = _user.email ?? '(sem email)';
     final name = _user.displayName ?? 'Sem nome';
     final photo = _user.photoURL;
-    final provider =
-        _isEmailUser ? 'Email/Password' : 'Google (${_user.providerData.first.providerId})';
+    final provider = _isEmailUser
+        ? 'Email/Password'
+        : 'Google (${_user.providerData.first.providerId})';
 
     return Scaffold(
       appBar: AppBar(
@@ -824,7 +1079,7 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             onPressed: _busy ? null : _signOut,
             icon: const Icon(Icons.logout),
-            tooltip: 'Terminar sessÃ£o',
+            tooltip: 'Terminar sessão',
           ),
         ],
       ),
@@ -832,7 +1087,9 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.all(16),
         children: [
           Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
             elevation: 2,
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -843,7 +1100,11 @@ class _HomePageState extends State<HomePage> {
                     backgroundColor: const Color(0xFF2ECC71),
                     backgroundImage: photo != null ? NetworkImage(photo) : null,
                     child: photo == null
-                        ? const Icon(Icons.person, color: Colors.white, size: 34)
+                        ? const Icon(
+                            Icons.person,
+                            color: Colors.white,
+                            size: 34,
+                          )
                         : null,
                   ),
                   const SizedBox(width: 16),
@@ -851,14 +1112,21 @@ class _HomePageState extends State<HomePage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(name,
-                            style: const TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.w600)),
+                        Text(
+                          name,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         Text(email),
                         const SizedBox(height: 4),
                         Text(
                           provider,
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
                         ),
                       ],
                     ),
@@ -888,7 +1156,7 @@ class _HomePageState extends State<HomePage> {
           if (_isEmailUser && !_user.emailVerified)
             ListTile(
               leading: const Icon(Icons.mark_email_unread_outlined),
-              title: const Text('Reenviar email de verificaÃ§Ã£o'),
+              title: const Text('Reenviar email de verificação'),
               onTap: _busy
                   ? null
                   : () async {
@@ -902,7 +1170,11 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 24),
           const Text(
             'Zona perigosa',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.red),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.red,
+            ),
           ),
           const SizedBox(height: 8),
           ListTile(
@@ -917,5 +1189,3 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
-
-
