@@ -1,5 +1,4 @@
-﻿import 'dart:ui';
-import 'package:flutter/foundation.dart' show kIsWeb;
+﻿import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -71,7 +70,10 @@ class FuteboladasApp extends StatelessWidget {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: Colors.white.withOpacity(0.05), width: 1),
+          side: BorderSide(
+            color: Colors.white.withValues(alpha: 0.05),
+            width: 1,
+          ),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -110,7 +112,7 @@ class FuteboladasApp extends StatelessWidget {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(
-            color: Colors.white.withOpacity(0.05),
+            color: Colors.white.withValues(alpha: 0.05),
             width: 1,
           ),
         ),
@@ -162,9 +164,11 @@ Future<void> _setupPasswordResetLinkHandling() async {
       final code = uri.queryParameters['oobCode']!;
       // Abre a página de reset dentro da app (no web funciona com rotas)
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _navKey.currentState?.push(
-          MaterialPageRoute(builder: (_) => ResetPasswordPage(oobCode: code)),
-        );
+        if (_navKey.currentState?.context.mounted ?? false) {
+          _navKey.currentState?.push(
+            MaterialPageRoute(builder: (_) => ResetPasswordPage(oobCode: code)),
+          );
+        }
       });
     }
     return;
@@ -304,6 +308,7 @@ class _HomePageState extends State<HomePage> {
     final currentPassCtrl = TextEditingController();
     final newPassCtrl = TextEditingController();
 
+    final localContext = context;
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) {
@@ -343,7 +348,8 @@ class _HomePageState extends State<HomePage> {
 
     final currentPass = currentPassCtrl.text.trim();
     final newPass = newPassCtrl.text.trim();
-    if (currentPass.isEmpty || newPass.isEmpty) return;
+    if (!localContext.mounted) return;
+    final scaffoldMessenger = ScaffoldMessenger.of(localContext);
 
     setState(() => _busy = true);
     try {
@@ -352,14 +358,17 @@ class _HomePageState extends State<HomePage> {
         password: currentPass,
       );
       await _user.reauthenticateWithCredential(cred);
+      if (!context.mounted) return;
       await _user.updatePassword(newPass);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Password alterada.')));
+      if (!context.mounted) return;
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(content: Text('Password alterada.')),
+      );
     } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro: ${e.message}')));
+      if (!context.mounted) return;
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('Erro: ${e.message}')),
+      );
     } finally {
       setState(() => _busy = false);
     }
@@ -396,12 +405,15 @@ class _HomePageState extends State<HomePage> {
     setState(() => _busy = true);
     try {
       await _user.delete();
+      if (!context.mounted) return;
       await _signOut();
     } on FirebaseAuthException catch (e) {
+      if (!context.mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
       if (e.code == 'requires-recent-login') {
         await _handleReauthForDelete();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(content: Text('Erro ao eliminar: ${e.message}')),
         );
       }
@@ -442,6 +454,7 @@ class _HomePageState extends State<HomePage> {
       if (pass.isEmpty) return;
 
       try {
+        final localContext = context;
         final cred = EmailAuthProvider.credential(
           email: _user.email!,
           password: pass,
@@ -450,6 +463,7 @@ class _HomePageState extends State<HomePage> {
         await _user.delete();
         await _signOut();
       } on FirebaseAuthException catch (e) {
+        if (!context.mounted) return;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Erro: ${e.message}')));
@@ -467,6 +481,7 @@ class _HomePageState extends State<HomePage> {
         await _user.delete();
         await _signOut();
       } catch (e) {
+        if (!context.mounted) return;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Erro ao reautenticar: $e')));
@@ -572,10 +587,11 @@ class _HomePageState extends State<HomePage> {
                   ? null
                   : () async {
                       await _user.sendEmailVerification();
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Email enviado.')),
-                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Email enviado.')),
+                        );
+                      }
                     },
             ),
           const SizedBox(height: 24),

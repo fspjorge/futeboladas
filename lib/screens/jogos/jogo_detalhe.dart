@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+﻿import 'dart:ui' show ImageFilter;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -46,7 +46,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
-            color: const Color(0xFF0F172A).withOpacity(0.95),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.95),
             child: SafeArea(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -293,7 +293,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [cs.primary.withOpacity(0.2), const Color(0xFF0F172A)],
+          colors: [cs.primary.withValues(alpha: 0.2), const Color(0xFF0F172A)],
         ),
       ),
       child: Stack(
@@ -315,7 +315,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: cs.primary.withOpacity(0.1),
+                          color: cs.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -335,13 +335,13 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                         ),
                         decoration: BoxDecoration(
                           color: preco > 0
-                              ? Colors.green.withOpacity(0.2)
-                              : Colors.blue.withOpacity(0.2),
+                              ? Colors.green.withValues(alpha: 0.2)
+                              : Colors.blue.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: preco > 0
-                                ? Colors.green.withOpacity(0.3)
-                                : Colors.blue.withOpacity(0.3),
+                                ? Colors.green.withValues(alpha: 0.3)
+                                : Colors.blue.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Text(
@@ -431,7 +431,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                                   ? Icons.nightlight_round
                                   : Icons.wb_sunny_rounded,
                               size: 16,
-                              color: Colors.amber.withOpacity(0.8),
+                              color: Colors.amber.withValues(alpha: 0.8),
                             ),
                             const SizedBox(width: 4),
                             Text(
@@ -538,7 +538,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, size: 20, color: Colors.white60),
@@ -633,9 +633,11 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.04),
+                      color: Colors.white.withValues(alpha: 0.04),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withOpacity(0.05)),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.05),
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -691,7 +693,9 @@ class _JogoDetalheState extends State<JogoDetalhe> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: const Color(0xFF0F172A),
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.05))),
+        border: Border(
+          top: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
+        ),
       ),
       child: SafeArea(
         top: false,
@@ -709,7 +713,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                     : () async {
                         await presencas.marcarPresenca(jogoId, !isGoing);
 
-                        if (isGoing && mounted) {
+                        if (isGoing && context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
@@ -738,7 +742,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                           );
                         }
 
-                        if (!isGoing && mounted) {
+                        if (!isGoing && context.mounted) {
                           String? weatherStr;
                           if (lat != null && lon != null && date != null) {
                             final w = await WeatherService().getForecastAt(
@@ -755,7 +759,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                             }
                           }
 
-                          if (mounted) {
+                          if (context.mounted) {
                             Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (_) => ConfirmacaoJogoPage(
@@ -775,7 +779,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                       ? Colors.white
                       : const Color(0xFF0F172A),
                   elevation: isGoing ? 0 : 2,
-                  shadowColor: cs.primary.withOpacity(0.3),
+                  shadowColor: cs.primary.withValues(alpha: 0.3),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),

@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+﻿import 'dart:ui' show ImageFilter;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -73,11 +73,13 @@ class _JogosListaState extends State<JogosLista> {
               child: Container(
                 padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B).withOpacity(0.95),
+                  color: const Color(0xFF1E293B).withValues(alpha: 0.95),
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(24),
                   ),
-                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.08),
+                  ),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -266,13 +268,13 @@ class _JogosListaState extends State<JogosLista> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: selected
-              ? cs.primary.withOpacity(0.15)
-              : Colors.white.withOpacity(0.05),
+              ? cs.primary.withValues(alpha: 0.15)
+              : Colors.white.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected
-                ? cs.primary.withOpacity(0.6)
-                : Colors.white.withOpacity(0.08),
+                ? cs.primary.withValues(alpha: 0.6)
+                : Colors.white.withValues(alpha: 0.08),
             width: selected ? 1.5 : 1,
           ),
         ),
@@ -315,14 +317,18 @@ class _JogosListaState extends State<JogosLista> {
       }
 
       if (uid != null) {
-        if (_filterMode == FilterMode.meus && data['createdBy'] != uid)
+        if (_filterMode == FilterMode.meus && data['createdBy'] != uid) {
           continue;
+        }
         if (_filterMode == FilterMode.participo &&
-            !_jogosOndeVou.contains(d.id))
+            !_jogosOndeVou.contains(d.id)) {
           continue;
+        }
         if (_filterMode == FilterMode.gratuitos) {
           final preco = data['preco'] as num? ?? 0;
-          if (preco > 0) continue;
+          if (preco > 0) {
+            continue;
+          }
         }
       }
 
@@ -428,13 +434,13 @@ class _JogosListaState extends State<JogosLista> {
         height: 44,
         decoration: BoxDecoration(
           color: _hasActiveFilter
-              ? cs.primary.withOpacity(0.15)
-              : Colors.white.withOpacity(0.05),
+              ? cs.primary.withValues(alpha: 0.15)
+              : Colors.white.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: _hasActiveFilter
-                ? cs.primary.withOpacity(0.5)
-                : Colors.white.withOpacity(0.08),
+                ? cs.primary.withValues(alpha: 0.5)
+                : Colors.white.withValues(alpha: 0.08),
             width: _hasActiveFilter ? 1.5 : 1,
           ),
         ),
@@ -510,10 +516,11 @@ class _JogosListaState extends State<JogosLista> {
   }) {
     String msg = message;
     if (isSmall) {
-      if (_filterMode == FilterMode.meus)
+      if (_filterMode == FilterMode.meus) {
         msg = 'Não criaste nenhum jogo.';
-      else if (_filterMode == FilterMode.participo)
+      } else if (_filterMode == FilterMode.participo) {
         msg = 'Não tens jogos confirmados.';
+      }
     }
     return Center(
       child: Padding(
@@ -567,7 +574,7 @@ class _JogosListaState extends State<JogosLista> {
             style: GoogleFonts.outfit(
               fontSize: 10,
               fontWeight: FontWeight.w900,
-              color: cs.primary.withOpacity(0.5),
+              color: cs.primary.withValues(alpha: 0.5),
               letterSpacing: 1.5,
             ),
           ),
@@ -599,21 +606,21 @@ class _JogosListaState extends State<JogosLista> {
                       color: selected
                           ? cs.primary
                           : isToday
-                          ? cs.primary.withOpacity(0.1)
-                          : Colors.white.withOpacity(0.04),
+                          ? cs.primary.withValues(alpha: 0.1)
+                          : Colors.white.withValues(alpha: 0.04),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: selected
                             ? cs.primary
                             : isToday
-                            ? cs.primary.withOpacity(0.4)
-                            : Colors.white.withOpacity(0.07),
+                            ? cs.primary.withValues(alpha: 0.4)
+                            : Colors.white.withValues(alpha: 0.07),
                         width: isToday && !selected ? 1.5 : 1,
                       ),
                       boxShadow: selected
                           ? [
                               BoxShadow(
-                                color: cs.primary.withOpacity(0.25),
+                                color: cs.primary.withValues(alpha: 0.25),
                                 blurRadius: 8,
                                 offset: const Offset(0, 3),
                               ),
@@ -653,9 +660,9 @@ class _JogosListaState extends State<JogosLista> {
                             fontSize: 9,
                             fontWeight: FontWeight.w900,
                             color: selected
-                                ? const Color(0xFF0F172A).withOpacity(0.6)
+                                ? const Color(0xFF0F172A).withValues(alpha: 0.6)
                                 : isToday
-                                ? cs.primary.withOpacity(0.7)
+                                ? cs.primary.withValues(alpha: 0.7)
                                 : Colors.white30,
                           ),
                         ),
@@ -734,9 +741,9 @@ class _JogosListaState extends State<JogosLista> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.04),
+                color: Colors.white.withValues(alpha: 0.04),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white.withOpacity(0.07)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
               ),
               child: Row(
                 children: [
@@ -754,7 +761,7 @@ class _JogosListaState extends State<JogosLista> {
                   Container(
                     width: 1,
                     height: 30,
-                    color: Colors.white.withOpacity(0.08),
+                    color: Colors.white.withValues(alpha: 0.08),
                     margin: const EdgeInsets.symmetric(horizontal: 10),
                   ),
                   Expanded(
@@ -800,8 +807,8 @@ class _JogosListaState extends State<JogosLista> {
                                             shape: BoxShape.circle,
                                             color: i < confirmados
                                                 ? dotColor
-                                                : Colors.white.withOpacity(
-                                                    0.12,
+                                                : Colors.white.withValues(
+                                                    alpha: 0.12,
                                                   ),
                                           ),
                                         ),
@@ -836,8 +843,8 @@ class _JogosListaState extends State<JogosLista> {
                                   ),
                                   decoration: BoxDecoration(
                                     color: preco > 0
-                                        ? Colors.green.withOpacity(0.1)
-                                        : Colors.blue.withOpacity(0.1),
+                                        ? Colors.green.withValues(alpha: 0.1)
+                                        : Colors.blue.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
@@ -914,10 +921,11 @@ class _JogosListaState extends State<JogosLista> {
                                   jogoId,
                                   !isGoing,
                                 );
-                                if (_filterMode == FilterMode.participo)
+                                if (_filterMode == FilterMode.participo) {
                                   _loadJogosOndeVou();
+                                }
 
-                                if (isGoing && mounted) {
+                                if (isGoing && context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
@@ -953,9 +961,7 @@ class _JogosListaState extends State<JogosLista> {
                                   String? weatherStr;
                                   final lat = (data['lat'] as num?)?.toDouble();
                                   final lon = (data['lon'] as num?)?.toDouble();
-                                  if (lat != null &&
-                                      lon != null &&
-                                      date != null) {
+                                  if (lat != null && lon != null) {
                                     final w = await WeatherService()
                                         .getForecastAt(lat, lon, date);
                                     if (w != null) {
@@ -968,7 +974,7 @@ class _JogosListaState extends State<JogosLista> {
                                     }
                                   }
 
-                                  if (mounted) {
+                                  if (context.mounted) {
                                     Navigator.of(context).push(
                                       MaterialPageRoute(
                                         builder: (_) => ConfirmacaoJogoPage(
@@ -985,9 +991,11 @@ class _JogosListaState extends State<JogosLista> {
                                   }
                                 }
                               } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Erro: $e')),
-                                );
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Erro: $e')),
+                                  );
+                                }
                               }
                             }, cs);
                           },

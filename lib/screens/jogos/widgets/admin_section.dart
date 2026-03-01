@@ -87,7 +87,9 @@ class _AdminSectionState extends State<AdminSection> {
                         icon: const Icon(Icons.delete_outline, size: 16),
                         label: const Text('APAGAR'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.redAccent.withOpacity(0.1),
+                          backgroundColor: Colors.redAccent.withValues(
+                            alpha: 0.1,
+                          ),
                           foregroundColor: Colors.redAccent,
                           textStyle: GoogleFonts.outfit(
                             fontSize: 12,
@@ -147,7 +149,7 @@ class _AdminSectionState extends State<AdminSection> {
                                         contactos: _contactosCtrl.text,
                                         historico: _historicoCtrl.text,
                                       );
-                                      if (mounted) {
+                                      if (context.mounted) {
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(
@@ -164,7 +166,7 @@ class _AdminSectionState extends State<AdminSection> {
                                         );
                                       }
                                     } catch (e) {
-                                      if (mounted) {
+                                      if (context.mounted) {
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(
@@ -179,8 +181,9 @@ class _AdminSectionState extends State<AdminSection> {
                                         );
                                       }
                                     } finally {
-                                      if (mounted)
+                                      if (mounted) {
                                         setState(() => _saving = false);
+                                      }
                                     }
                                   },
                             child: _saving

@@ -54,10 +54,10 @@ class PerfilPage extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
+                        color: Colors.white.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.1),
+                          color: Colors.white.withValues(alpha: 0.1),
                           width: 1.5,
                         ),
                       ),
@@ -65,7 +65,7 @@ class PerfilPage extends StatelessWidget {
                         children: [
                           CircleAvatar(
                             radius: 50,
-                            backgroundColor: cs.primary.withOpacity(0.2),
+                            backgroundColor: cs.primary.withValues(alpha: 0.2),
                             backgroundImage: user.photoURL != null
                                 ? NetworkImage(user.photoURL!)
                                 : null,
@@ -138,7 +138,7 @@ class PerfilPage extends StatelessWidget {
         style: GoogleFonts.outfit(
           fontSize: 11,
           fontWeight: FontWeight.w900,
-          color: cs.primary.withOpacity(0.5),
+          color: cs.primary.withValues(alpha: 0.5),
           letterSpacing: 1.2,
         ),
       ),
@@ -164,16 +164,16 @@ class PerfilPage extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.04),
+                color: Colors.white.withValues(alpha: 0.04),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withOpacity(0.07)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: (color ?? Colors.white).withOpacity(0.1),
+                      color: (color ?? Colors.white).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(icon, color: color ?? cs.primary, size: 20),
@@ -209,7 +209,7 @@ class _GridBackdropPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.05)
+      ..color = Colors.white.withValues(alpha: 0.05)
       ..strokeWidth = 0.5;
     for (double i = 0; i < size.width; i += 40) {
       canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);

@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+﻿import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -117,8 +117,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: hasText
-              ? cs.primary.withOpacity(0.5)
-              : Colors.white.withOpacity(0.2),
+              ? cs.primary.withValues(alpha: 0.5)
+              : Colors.white.withValues(alpha: 0.2),
           width: hasText ? 1.5 : 1,
         ),
       ),
@@ -132,8 +132,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                 child: Container(
                   color: hasText
-                      ? cs.primary.withOpacity(0.08)
-                      : Colors.white.withOpacity(0.05),
+                      ? cs.primary.withValues(alpha: 0.08)
+                      : Colors.white.withValues(alpha: 0.05),
                 ),
               ),
             ),
@@ -145,7 +145,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               decoration: InputDecoration(
                 hintText: 'Pesquisar jogos...',
                 hintStyle: TextStyle(
-                  color: Colors.white.withOpacity(0.3),
+                  color: Colors.white.withValues(alpha: 0.3),
                   fontSize: 14,
                 ),
                 prefixIcon: Icon(
@@ -205,9 +205,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF0F172A).withOpacity(0.85),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.85),
             border: Border(
-              top: BorderSide(color: Colors.white.withOpacity(0.06)),
+              top: BorderSide(color: Colors.white.withValues(alpha: 0.06)),
             ),
           ),
           child: SafeArea(
@@ -236,7 +236,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? cs.primary.withOpacity(0.1) : Colors.transparent,
+          color: selected
+              ? cs.primary.withValues(alpha: 0.1)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -269,7 +271,7 @@ class _GridBackdropPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.05)
+      ..color = Colors.white.withValues(alpha: 0.05)
       ..strokeWidth = 0.5;
     for (double i = 0; i < size.width; i += 40) {
       canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);

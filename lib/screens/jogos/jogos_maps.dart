@@ -263,7 +263,7 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
           // Loading overlay
           if (_loading)
             Container(
-              color: const Color(0xFF0F172A).withOpacity(0.9),
+              color: const Color(0xFF0F172A).withValues(alpha: 0.9),
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -334,12 +334,14 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0F172A).withOpacity(0.8),
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.8),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withOpacity(0.15)),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.15),
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -388,8 +390,6 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
     final local = data['local'] as String;
     final dataJogo = data['dataJogo'] as DateTime?;
     final preco = data['preco'] as num? ?? 0;
-    final lat = data['lat'] as double?;
-    final lon = data['lon'] as double?;
 
     return Positioned(
       bottom: 20,
@@ -465,8 +465,8 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
                       ),
                       decoration: BoxDecoration(
                         color: preco > 0
-                            ? Colors.green.withOpacity(0.2)
-                            : Colors.blue.withOpacity(0.2),
+                            ? Colors.green.withValues(alpha: 0.2)
+                            : Colors.blue.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -500,7 +500,7 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
+        color: Colors.white.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(

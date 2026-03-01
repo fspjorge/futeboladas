@@ -18,7 +18,9 @@ class OsmService {
   /// Pesquisa locais no OpenStreetMap (Nominatim)
   /// Gratuito e sem necessidade de chave de API.
   Future<List<OsmSuggestion>> search(String query) async {
-    if (query.trim().isEmpty) return [];
+    if (query.trim().isEmpty) {
+      return [];
+    }
 
     try {
       // Usamos coordenadas centrais de Portugal para dar prioridade a resultados locais
@@ -79,7 +81,7 @@ class OsmService {
             lat: coords != null && coords.length > 1
                 ? (coords[1] as num).toDouble()
                 : 0.0,
-            lon: coords != null && coords.length > 0
+            lon: coords != null && coords.isNotEmpty
                 ? (coords[0] as num).toDouble()
                 : 0.0,
           );

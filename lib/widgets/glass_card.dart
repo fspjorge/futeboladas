@@ -25,10 +25,10 @@ class GlassCard extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
         child: Container(
           decoration: BoxDecoration(
-            color: (color ?? Colors.white).withOpacity(opacity),
+            color: (color ?? Colors.white).withValues(alpha: opacity),
             borderRadius: BorderRadius.circular(borderRadius),
             border: Border.all(
-              color: (color ?? Colors.white).withOpacity(0.1),
+              color: (color ?? Colors.white).withValues(alpha: 0.1),
               width: 1.5,
             ),
           ),
@@ -48,7 +48,7 @@ class GridBackdropPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color.withOpacity(0.05)
+      ..color = color.withValues(alpha: 0.05)
       ..strokeWidth = 0.5;
 
     for (double i = 0; i < size.width; i += spacing) {

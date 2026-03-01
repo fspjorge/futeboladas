@@ -34,11 +34,15 @@ class WeatherService {
         '$_forecastUrl?lat=$lat&lon=$lon&appid=$_apiKey&units=metric&lang=pt',
       );
       final res = await http.get(uri);
-      if (res.statusCode != 200) return null;
+      if (res.statusCode != 200) {
+        return null;
+      }
 
       final data = json.decode(res.body) as Map<String, dynamic>;
       final list = (data['list'] as List<dynamic>?);
-      if (list == null || list.isEmpty) return null;
+      if (list == null || list.isEmpty) {
+        return null;
+      }
       // Comparar sempre em UTC para evitar erros de timezone
       final whenUtc = whenLocal.toUtc();
 
@@ -60,7 +64,9 @@ class WeatherService {
         }
       }
 
-      if (best == null) return null;
+      if (best == null) {
+        return null;
+      }
 
       final weather = (best['weather'] as List).first as Map<String, dynamic>;
       final desc = weather['description'] as String? ?? '';

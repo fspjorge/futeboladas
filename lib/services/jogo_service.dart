@@ -24,7 +24,9 @@ class JogoService {
   /// Stream de um jogo específico.
   Stream<Jogo?> jogoStream(String jogoId) {
     return _col.doc(jogoId).snapshots().map((doc) {
-      if (!doc.exists) return null;
+      if (!doc.exists) {
+        return null;
+      }
       return Jogo.fromFirestore(doc);
     });
   }
@@ -44,7 +46,9 @@ class JogoService {
   Future<void> apagarJogo(String jogoId) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) throw StateError('Sem sessão iniciada');
+      if (user == null) {
+        throw StateError('Sem sessão iniciada');
+      }
 
       final docRef = _col.doc(jogoId);
       final docSnap = await docRef.get();
