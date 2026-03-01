@@ -41,6 +41,15 @@ class _JogosFormState extends State<JogosForm> {
   final FocusNode _localFocusNode = FocusNode();
   Timer? _debounceSug;
   String? _lastQuery;
+  String? _campoSelected;
+
+  final List<String> _campoOptions = [
+    'Pavilhão',
+    'Relva Sintética',
+    'Relva Natural',
+    'Terra Batida',
+    'Outro',
+  ];
 
   @override
   void initState() {
@@ -200,8 +209,8 @@ class _JogosFormState extends State<JogosForm> {
       final local = _localCtrl.text.trim();
       final jogadores = int.tryParse(_jogadoresCtrl.text.trim()) ?? 0;
       final preco =
-          double.tryParse(_precoCtrl.text.trim().replaceFirst(',', '.')) ??
-          0.0; // ← NOVO
+          double.tryParse(_precoCtrl.text.trim().replaceFirst(',', '.')) ?? 0.0;
+      final campo = _campoSelected ?? 'Relva Sintética';
 
       double? lat = _selLat;
       double? lon = _selLon;
@@ -227,6 +236,7 @@ class _JogosFormState extends State<JogosForm> {
         'createdAt': Timestamp.now(),
         'createdByName': user?.displayName ?? '',
         'createdByPhoto': user?.photoURL ?? '',
+        'campo': campo,
         if (lat != null && lon != null) 'lat': lat,
         if (lat != null && lon != null) 'lon': lon,
       };
@@ -324,6 +334,8 @@ class _JogosFormState extends State<JogosForm> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 16),
+                    _buildFieldTypePicker(),
                     const SizedBox(height: 32),
                     _buildStepTitle('QUANDO'),
                     const SizedBox(height: 16),
@@ -548,6 +560,47 @@ class _JogosFormState extends State<JogosForm> {
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.w900,
             letterSpacing: 1,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFieldTypePicker() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
+          ),
+          child: DropdownButtonFormField<String>(
+            value: _campoSelected,
+            dropdownColor: const Color(0xFF1E293B),
+            style: const TextStyle(color: Colors.white, fontSize: 16),
+            decoration: const InputDecoration(
+              labelText: 'Tipo de Campo',
+              labelStyle: TextStyle(color: Colors.white38),
+              border: InputBorder.none,
+              prefixIcon: Icon(
+                Icons.stadium_outlined,
+                color: Colors.white38,
+                size: 20,
+              ),
+            ),
+            items: _campoOptions.map((String value) {
+              return DropdownMenuItem<String>(value: value, child: Text(value));
+            }).toList(),
+            onChanged: (newValue) {
+              setState(() {
+                _campoSelected = newValue;
+              });
+            },
+            validator: (v) => v == null ? 'Seleção obrigatória' : null,
           ),
         ),
       ),

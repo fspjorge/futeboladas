@@ -6,7 +6,6 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../../services/weather_service.dart';
 import 'jogo_detalhe.dart';
 import '../../widgets/glass_card.dart';
 
@@ -125,10 +124,18 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(
+          message,
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.w600,
+            color: color != null ? Colors.white : const Color(0xFF111827),
+            fontSize: 14,
+          ),
+        ),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: color ?? Colors.redAccent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        backgroundColor: color ?? const Color(0xFFF3F4F6),
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -157,7 +164,8 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
           final local = data['local'] as String? ?? 'Local desconhecido';
           final dataJogo = (data['data'] as Timestamp?)?.toDate();
           final maxJogadores = (data['jogadores'] as num?)?.toInt() ?? 0;
-          final preco = data['preco'] as num? ?? 0;
+          final preco = (data['preco'] as num?)?.toDouble() ?? 0.0;
+
           double? lat = (data['lat'] as num?)?.toDouble();
           double? lon = (data['lon'] as num?)?.toDouble();
 
@@ -387,6 +395,9 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
       left: 16,
       right: 16,
       child: GlassCard(
+        color: const Color(0xFF0F172A),
+        opacity: 0.6,
+        blur: 20,
         child: InkWell(
           onTap: () => _abrirDetalheJogo(_selectedJogoId!),
           borderRadius: BorderRadius.circular(20), // Matches GlassCard default
@@ -439,25 +450,12 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
                           ? DateFormat('dd/MM HH:mm').format(dataJogo)
                           : '---',
                     ),
-                    if (lat != null && lon != null && dataJogo != null) ...[
-                      const SizedBox(width: 8),
-                      FutureBuilder<Map<String, dynamic>?>(
-                        future: WeatherService().getForecastAt(
-                          lat,
-                          lon,
-                          dataJogo,
-                        ),
-                        builder: (context, snap) {
-                          if (!snap.hasData || snap.data == null)
-                            return const SizedBox.shrink();
-                          final w = snap.data!;
-                          return _buildMiniInfo(
-                            _getWeatherIcon(w['main'] as String? ?? ''),
-                            '${w['temp']}°C',
-                          );
-                        },
-                      ),
-                    ],
+                    const SizedBox(width: 8),
+                    _buildMiniInfo(
+                      Icons.stadium_outlined,
+                      (data['campo'] as String? ?? 'Relva Sintética')
+                          .replaceAll('Relva ', ''),
+                    ),
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -520,20 +518,5 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
         ],
       ),
     );
-  }
-
-  IconData _getWeatherIcon(String main) {
-    switch (main.toLowerCase()) {
-      case 'clouds':
-        return Icons.cloud_outlined;
-      case 'rain':
-        return Icons.umbrella_outlined;
-      case 'clear':
-        return Icons.wb_sunny_outlined;
-      case 'snow':
-        return Icons.ac_unit_outlined;
-      default:
-        return Icons.wb_cloudy_outlined;
-    }
   }
 }

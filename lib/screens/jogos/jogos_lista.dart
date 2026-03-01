@@ -24,9 +24,12 @@ class _JogosListaState extends State<JogosLista> {
   Set<String> _jogosOndeVou = {};
   bool _loadingVou = false;
   DateTime? _selectedDay;
+  String? _selectedCampo;
 
   bool get _hasActiveFilter =>
-      _filterMode != FilterMode.todos || _selectedDay != null;
+      _filterMode != FilterMode.todos ||
+      _selectedDay != null ||
+      _selectedCampo != null;
 
   String _formatarPreco(num? preco) {
     if (preco == null || preco <= 0) return 'Grátis';
@@ -162,6 +165,62 @@ class _JogosListaState extends State<JogosLista> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'TIPO DE CAMPO',
+                      style: GoogleFonts.outfit(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white38,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 10,
+                      children: [
+                        _sheetChip(
+                          'Pavilhão',
+                          Icons.stairs_outlined,
+                          _selectedCampo == 'Pavilhão',
+                          cs,
+                          () {
+                            final val = _selectedCampo == 'Pavilhão'
+                                ? null
+                                : 'Pavilhão';
+                            setSheetState(() => _selectedCampo = val);
+                            setState(() => _selectedCampo = val);
+                          },
+                        ),
+                        _sheetChip(
+                          'Sintética',
+                          Icons.grass,
+                          _selectedCampo == 'Relva Sintética',
+                          cs,
+                          () {
+                            final val = _selectedCampo == 'Relva Sintética'
+                                ? null
+                                : 'Relva Sintética';
+                            setSheetState(() => _selectedCampo = val);
+                            setState(() => _selectedCampo = val);
+                          },
+                        ),
+                        _sheetChip(
+                          'Natural',
+                          Icons.eco_outlined,
+                          _selectedCampo == 'Relva Natural',
+                          cs,
+                          () {
+                            final val = _selectedCampo == 'Relva Natural'
+                                ? null
+                                : 'Relva Natural';
+                            setSheetState(() => _selectedCampo = val);
+                            setState(() => _selectedCampo = val);
+                          },
+                        ),
+                      ],
+                    ),
                     if (_hasActiveFilter) ...[
                       const SizedBox(height: 20),
                       TextButton.icon(
@@ -170,6 +229,7 @@ class _JogosListaState extends State<JogosLista> {
                           setState(() {
                             _filterMode = FilterMode.todos;
                             _selectedDay = null;
+                            _selectedCampo = null;
                           });
                           Navigator.pop(context);
                         },
@@ -266,6 +326,10 @@ class _JogosListaState extends State<JogosLista> {
           final preco = data['preco'] as num? ?? 0;
           if (preco > 0) continue;
         }
+      }
+
+      if (_selectedCampo != null) {
+        if (data['campo'] != _selectedCampo) continue;
       }
 
       if (_selectedDay != null) {
@@ -720,39 +784,51 @@ class _JogosListaState extends State<JogosLista> {
                             ),
                             const SizedBox(height: 4),
                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                if (hasLimit) ...[
-                                  ...List.generate(
-                                    maxJogadores.clamp(0, 8),
-                                    (i) => Container(
-                                      margin: const EdgeInsets.only(right: 2),
-                                      width: 5,
-                                      height: 5,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: i < confirmados
-                                            ? dotColor
-                                            : Colors.white.withOpacity(0.12),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (hasLimit) ...[
+                                      ...List.generate(
+                                        maxJogadores.clamp(0, 8),
+                                        (i) => Container(
+                                          margin: const EdgeInsets.only(
+                                            right: 2,
+                                          ),
+                                          width: 5,
+                                          height: 5,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: i < confirmados
+                                                ? dotColor
+                                                : Colors.white.withOpacity(
+                                                    0.12,
+                                                  ),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    '$confirmados/$maxJogadores',
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      color: isFull ? cs.error : Colors.white30,
-                                    ),
-                                  ),
-                                ] else
-                                  Text(
-                                    '$confirmados jogadores',
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 10,
-                                      color: Colors.white30,
-                                    ),
-                                  ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        '$confirmados/$maxJogadores',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: isFull
+                                              ? cs.error
+                                              : Colors.white30,
+                                        ),
+                                      ),
+                                    ] else
+                                      Text(
+                                        '$confirmados jogadores',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 10,
+                                          color: Colors.white30,
+                                        ),
+                                      ),
+                                  ],
+                                ),
                                 const SizedBox(width: 8),
                                 // Preço ao lado do número de jogadores
                                 Container(
@@ -777,47 +853,34 @@ class _JogosListaState extends State<JogosLista> {
                                     ),
                                   ),
                                 ),
-                                if (data['lat'] != null &&
-                                    data['lon'] != null &&
-                                    data['data'] != null) ...[
-                                  const SizedBox(width: 8),
-                                  FutureBuilder<Map<String, dynamic>?>(
-                                    future: WeatherService().getForecastAt(
-                                      (data['lat'] as num).toDouble(),
-                                      (data['lon'] as num).toDouble(),
-                                      (data['data'] as Timestamp).toDate(),
-                                    ),
-                                    builder: (context, weatherSnap) {
-                                      if (!weatherSnap.hasData ||
-                                          weatherSnap.data == null) {
-                                        return const SizedBox.shrink();
-                                      }
-                                      final w = weatherSnap.data!;
-                                      return Row(
-                                        children: [
-                                          Icon(
-                                            w['diaNoite'] == 'Noite'
-                                                ? Icons.nightlight_round
-                                                : Icons.wb_sunny_rounded,
-                                            size: 10,
-                                            color: Colors.amber.withOpacity(
-                                              0.6,
-                                            ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.stadium_outlined,
+                                        size: 10,
+                                        color: Colors.white38,
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Flexible(
+                                        child: Text(
+                                          (data['campo'] as String? ??
+                                                  'Relva Sintética')
+                                              .replaceAll('Relva ', ''),
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white30,
                                           ),
-                                          const SizedBox(width: 2),
-                                          Text(
-                                            '${w['temp']}°C',
-                                            style: GoogleFonts.outfit(
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.white30,
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    },
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
+                                ),
                               ],
                             ),
                           ],
@@ -855,6 +918,39 @@ class _JogosListaState extends State<JogosLista> {
                                 );
                                 if (_filterMode == FilterMode.participo)
                                   _loadJogosOndeVou();
+
+                                if (isGoing && mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Presença removida de: ${data['titulo'] as String? ?? local}',
+                                        style: GoogleFonts.outfit(
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF111827),
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      behavior: SnackBarBehavior.floating,
+                                      backgroundColor: const Color(0xFFF3F4F6),
+                                      elevation: 4,
+                                      duration: const Duration(seconds: 4),
+                                      action: SnackBarAction(
+                                        label: 'ANULAR',
+                                        textColor: cs.primary,
+                                        onPressed: () {
+                                          presencas.marcarPresenca(
+                                            jogoId,
+                                            true,
+                                          );
+                                        },
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                  );
+                                }
+
                                 if (!isGoing && mounted) {
                                   String? weatherStr;
                                   final lat = (data['lat'] as num?)?.toDouble();

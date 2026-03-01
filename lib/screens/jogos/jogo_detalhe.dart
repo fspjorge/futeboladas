@@ -235,6 +235,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                           cs,
                           (data['lat'] as num?)?.toDouble(),
                           (data['lon'] as num?)?.toDouble(),
+                          data['campo'] as String?,
                         ),
                         Padding(
                           padding: const EdgeInsets.all(20),
@@ -287,6 +288,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
     ColorScheme cs,
     double? lat,
     double? lon,
+    String? campo,
   ) {
     return Container(
       constraints: const BoxConstraints(minHeight: 280),
@@ -367,65 +369,86 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Row(
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 12,
+                    runSpacing: 8,
                     children: [
-                      const Icon(
-                        Icons.schedule,
-                        size: 16,
-                        color: Colors.white38,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        date != null
-                            ? DateFormat(
-                                "EEEE, d 'de' MMMM 'às' HH:mm",
-                                'pt_PT',
-                              ).format(date)
-                            : 'Sem data',
-                        style: GoogleFonts.outfit(
-                          color: Colors.white38,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      if (lat != null && lon != null && date != null) ...[
-                        const SizedBox(width: 12),
-                        FutureBuilder<Map<String, dynamic>?>(
-                          future: WeatherService().getForecastAt(
-                            lat,
-                            lon,
-                            date,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.schedule,
+                            size: 16,
+                            color: Colors.white38,
                           ),
-                          builder: (context, weatherSnap) {
-                            if (!weatherSnap.hasData ||
-                                weatherSnap.data == null) {
-                              return const SizedBox.shrink();
-                            }
-                            final w = weatherSnap.data!;
-                            return Row(
-                              children: [
-                                Icon(
-                                  w['diaNoite'] == 'Noite'
-                                      ? Icons.nightlight_round
-                                      : Icons.wb_sunny_rounded,
-                                  size: 16,
-                                  color: Colors.amber.withOpacity(0.8),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${w['temp']}°C',
-                                  style: GoogleFonts.outfit(
-                                    color: Colors.white70,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Text(
+                            date != null
+                                ? DateFormat(
+                                    "EEEE, d 'de' MMMM 'às' HH:mm",
+                                    'pt_PT',
+                                  ).format(date)
+                                : 'Sem data',
+                            style: GoogleFonts.outfit(
+                              color: Colors.white38,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.stadium_outlined,
+                            size: 16,
+                            color: Colors.white38,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            campo ?? 'Relva Sintética',
+                            style: GoogleFonts.outfit(
+                              color: Colors.white70,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+                  if (lat != null && lon != null && date != null)
+                    FutureBuilder<Map<String, dynamic>?>(
+                      future: WeatherService().getForecastAt(lat, lon, date),
+                      builder: (context, weatherSnap) {
+                        if (!weatherSnap.hasData || weatherSnap.data == null) {
+                          return const SizedBox.shrink();
+                        }
+                        final w = weatherSnap.data!;
+                        return Row(
+                          children: [
+                            Icon(
+                              w['diaNoite'] == 'Noite'
+                                  ? Icons.nightlight_round
+                                  : Icons.wb_sunny_rounded,
+                              size: 16,
+                              color: Colors.amber.withOpacity(0.8),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${w['temp']}°C • ${w['desc']}',
+                              style: GoogleFonts.outfit(
+                                color: Colors.white70,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
                 ],
               ),
             ),
@@ -460,6 +483,12 @@ class _JogoDetalheState extends State<JogoDetalhe> {
           ),
           const Divider(color: Colors.white10, height: 1),
           _infoRow(Icons.euro_rounded, 'Preço', _formatarPreco(preco)),
+          const Divider(color: Colors.white10, height: 1),
+          _infoRow(
+            Icons.stadium_outlined,
+            'Tipo de Campo',
+            data['campo'] as String? ?? 'Relva Sintética',
+          ),
           const Divider(color: Colors.white10, height: 1),
           StreamBuilder<int>(
             stream: presencas.countConfirmados(widget.jogoId),
@@ -879,6 +908,36 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                     ? null
                     : () async {
                         await presencas.marcarPresenca(jogoId, !isGoing);
+
+                        if (isGoing && mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Presença removida de: $titulo',
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF111827),
+                                  fontSize: 14,
+                                ),
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: const Color(0xFFF3F4F6),
+                              elevation: 4,
+                              duration: const Duration(seconds: 4),
+                              action: SnackBarAction(
+                                label: 'ANULAR',
+                                textColor: cs.primary,
+                                onPressed: () {
+                                  presencas.marcarPresenca(jogoId, true);
+                                },
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          );
+                        }
+
                         if (!isGoing && mounted) {
                           String? weatherStr;
                           if (lat != null && lon != null && date != null) {
