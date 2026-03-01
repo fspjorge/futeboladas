@@ -17,7 +17,7 @@ class JogosLista extends StatefulWidget {
   State<JogosLista> createState() => _JogosListaState();
 }
 
-enum FilterMode { todos, meus, participo }
+enum FilterMode { todos, meus, participo, gratuitos }
 
 class _JogosListaState extends State<JogosLista> {
   FilterMode _filterMode = FilterMode.todos;
@@ -104,7 +104,9 @@ class _JogosListaState extends State<JogosLista> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 10,
                       children: [
                         _sheetChip(
                           'Todos',
@@ -116,29 +118,46 @@ class _JogosListaState extends State<JogosLista> {
                             setState(() => _filterMode = FilterMode.todos);
                           },
                         ),
-                        const SizedBox(width: 8),
                         _sheetChip(
                           'Meus',
                           Icons.person_outline_rounded,
                           _filterMode == FilterMode.meus,
                           cs,
                           () {
-                            setSheetState(() => _filterMode = FilterMode.meus);
-                            setState(() => _filterMode = FilterMode.meus);
+                            final newMode = _filterMode == FilterMode.meus
+                                ? FilterMode.todos
+                                : FilterMode.meus;
+                            setSheetState(() => _filterMode = newMode);
+                            setState(() => _filterMode = newMode);
                           },
                         ),
-                        const SizedBox(width: 8),
                         _sheetChip(
                           'Confirmados',
                           Icons.check_circle_outline_rounded,
                           _filterMode == FilterMode.participo,
                           cs,
                           () {
-                            setSheetState(
-                              () => _filterMode = FilterMode.participo,
-                            );
-                            setState(() => _filterMode = FilterMode.participo);
-                            _loadJogosOndeVou();
+                            final newMode = _filterMode == FilterMode.participo
+                                ? FilterMode.todos
+                                : FilterMode.participo;
+                            setSheetState(() => _filterMode = newMode);
+                            setState(() => _filterMode = newMode);
+                            if (newMode == FilterMode.participo) {
+                              _loadJogosOndeVou();
+                            }
+                          },
+                        ),
+                        _sheetChip(
+                          'Gratuitos',
+                          Icons.money_off_csred_outlined,
+                          _filterMode == FilterMode.gratuitos,
+                          cs,
+                          () {
+                            final newMode = _filterMode == FilterMode.gratuitos
+                                ? FilterMode.todos
+                                : FilterMode.gratuitos;
+                            setSheetState(() => _filterMode = newMode);
+                            setState(() => _filterMode = newMode);
                           },
                         ),
                       ],
@@ -243,6 +262,10 @@ class _JogosListaState extends State<JogosLista> {
         if (_filterMode == FilterMode.participo &&
             !_jogosOndeVou.contains(d.id))
           continue;
+        if (_filterMode == FilterMode.gratuitos) {
+          final preco = data['preco'] as num? ?? 0;
+          if (preco > 0) continue;
+        }
       }
 
       if (_selectedDay != null) {
