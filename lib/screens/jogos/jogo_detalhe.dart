@@ -196,7 +196,6 @@ class _JogoDetalheState extends State<JogoDetalhe> {
               final createdBy = data['createdBy'] as String?;
               final isOwner = uid != null && createdBy == uid;
               final preco = data['preco'] as num? ?? 0;
-              final cs = Theme.of(context).colorScheme;
 
               return Column(
                 children: [
