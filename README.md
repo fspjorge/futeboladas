@@ -10,7 +10,8 @@ Aplicação móvel Flutter para gestão e marcação de jogos de futebol entre a
 - Lista de jogos ativos (Firestore)
 - Criação/edição de jogo (local, data/hora, número de jogadores)
 - Confirmação de presenças por utilizador
-- Previsão do tempo (OpenWeather: atual e previsão aproximada)
+- **Previsão do Tempo**: Integração com OpenWeather em múltiplos ecrãs (Lista, Detalhe e Confirmação).
+- **Layout Moderno**: Glassmorphism design com indicadores de estado em tempo real.
 - Autocomplete de locais: Integrado com **Photon API (OpenStreetMap)** - solução gratuita e sem necessidade de chaves de API.
 
 ---
@@ -51,7 +52,8 @@ O `WeatherService` usa uma chave definida no código. Para alterar, edite `lib/s
 
 - Permissão de rede (`INTERNET`) no `android/app/src/main/AndroidManifest.xml`.
 - Coloque as configurações do Firebase (`google-services.json` para Android e `GoogleService-Info.plist` para iOS).
-- O cabeçalho de detalhe do jogo (`JogoDetalhe`) foi ajustado para evitar overflows em moradas longas.
+- O cabeçalho de detalhe do jogo (`JogoDetalhe`) e as listas foram ajustados para melhor legibilidade e evitar overflows.
+- Filtro de dias abreviado (3 letras) para melhor aproveitamento de espaço em ecrãs pequenos.
 
 ---
 
