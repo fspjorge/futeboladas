@@ -3,18 +3,21 @@ import 'package:http/http.dart' as http;
 import '../config.dart';
 
 class WeatherService {
+  final http.Client _client;
   static const String _apiKey = Config.weatherApiKey;
   static const String _baseUrl =
       'https://api.openweathermap.org/data/2.5/weather';
   static const String _forecastUrl =
       'https://api.openweathermap.org/data/2.5/forecast';
 
+  WeatherService({http.Client? client}) : _client = client ?? http.Client();
+
   // Meteo atual (fallback)
   Future<Map<String, dynamic>?> getWeather(double lat, double lon) async {
     final uri = Uri.parse(
       '$_baseUrl?lat=$lat&lon=$lon&appid=$_apiKey&units=metric&lang=pt',
     );
-    final res = await http.get(uri);
+    final res = await _client.get(uri);
 
     if (res.statusCode == 200) {
       return json.decode(res.body) as Map<String, dynamic>;
@@ -33,7 +36,7 @@ class WeatherService {
       final uri = Uri.parse(
         '$_forecastUrl?lat=$lat&lon=$lon&appid=$_apiKey&units=metric&lang=pt',
       );
-      final res = await http.get(uri);
+      final res = await _client.get(uri);
       if (res.statusCode != 200) {
         return null;
       }

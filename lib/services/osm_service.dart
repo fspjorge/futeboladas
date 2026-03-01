@@ -15,6 +15,10 @@ class OsmSuggestion {
 }
 
 class OsmService {
+  final http.Client _client;
+
+  OsmService({http.Client? client}) : _client = client ?? http.Client();
+
   /// Pesquisa locais no OpenStreetMap (Nominatim)
   /// Gratuito e sem necessidade de chave de API.
   Future<List<OsmSuggestion>> search(String query) async {
@@ -36,7 +40,7 @@ class OsmService {
       final uri = Uri.https('photon.komoot.io', '/api', queryParams);
       debugPrint('Photon Request: $uri');
 
-      final response = await http
+      final response = await _client
           .get(
             uri,
             headers: {
