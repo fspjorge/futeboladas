@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'jogo_detalhe.dart';
 import '../../widgets/glass_card.dart';
+import '../../utils/format_utils.dart';
 
 class JogosMapa extends StatefulWidget {
   const JogosMapa({super.key});
@@ -31,10 +32,7 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
     zoom: 7,
   );
 
-  String _formatarPreco(num? preco) {
-    if (preco == null || preco <= 0) return 'Grátis';
-    return '€ ${preco.toStringAsFixed(2)}';
-  }
+  String _formatarPreco(num? preco) => FormatUtils.formatarPreco(preco);
 
   @override
   void initState() {
@@ -178,7 +176,7 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
               if (posicoes.isNotEmpty) {
                 lat = posicoes.first.latitude;
                 lon = posicoes.first.longitude;
-                unawaited(doc.reference.update({'lat': lat, 'lon': lon}));
+                // Removida atualização automática de Firestore para evitar side-effects em leitura
               }
             } catch (e) {
               debugPrint('Erro na geocodificação de $local: $e');
@@ -256,7 +254,10 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
                 }
               },
               minMaxZoomPreference: const MinMaxZoomPreference(3, 18),
-              padding: const EdgeInsets.only(top: 40),
+              padding: EdgeInsets.only(
+                top: 40,
+                bottom: _selectedJogoId != null ? 170 : 0,
+              ),
             ),
 
           // Loading overlay
@@ -363,15 +364,15 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
           // Botão de localização
           if (_mapInitialized && _errorMessage == null && !_loading)
             Positioned(
-              bottom: _selectedJogoId != null ? 220 : 20,
-              right: 20,
+              top: 64,
+              right: 16,
               child: FloatingActionButton(
-                mini: _selectedJogoId != null,
+                mini: true,
                 heroTag: 'btn-localizacao',
                 backgroundColor: Colors.white,
                 foregroundColor: const Color(0xFF0F172A),
                 onPressed: _goToUserLocation,
-                child: const Icon(Icons.my_location_rounded),
+                child: const Icon(Icons.my_location_rounded, size: 20),
               ),
             ),
         ],

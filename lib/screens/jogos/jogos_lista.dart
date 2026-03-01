@@ -7,7 +7,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'jogo_detalhe.dart';
 import 'confirmacao_page.dart';
 import '../../services/presenca_service.dart';
-import '../../services/weather_service.dart'; // ← NOVO
+import '../../services/weather_service.dart';
+import '../../utils/format_utils.dart';
 
 class JogosLista extends StatefulWidget {
   final String searchQuery;
@@ -31,10 +32,7 @@ class _JogosListaState extends State<JogosLista> {
       _selectedDay != null ||
       _selectedCampo != null;
 
-  String _formatarPreco(num? preco) {
-    if (preco == null || preco <= 0) return 'Grátis';
-    return '€${preco.toStringAsFixed(2)}';
-  }
+  String _formatarPreco(num? preco) => FormatUtils.formatarPreco(preco);
 
   Future<void> _loadJogosOndeVou() async {
     if (!mounted) return;

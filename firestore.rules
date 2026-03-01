@@ -2,8 +2,8 @@
 service cloud.firestore {
   match /databases/{database}/documents {
     match /jogos/{id} {
-      // Leitura pública
-      allow read: if true;
+      // Leitura apenas para autenticados
+      allow read: if request.auth != null;
 
       // Criar jogo: autenticado + campos válidos
       allow create: if request.auth != null
@@ -38,7 +38,7 @@ service cloud.firestore {
 
       // Subcoleção de presenças
       match /presencas/{uid} {
-        allow read: if true;
+        allow read: if request.auth != null;
         // Cada utilizador gere a sua própria presença
         allow create, update: if request.auth != null
           && request.auth.uid == uid

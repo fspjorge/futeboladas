@@ -1,14 +1,19 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../config.dart';
 
 class WeatherService {
-  static const String _apiKey = '95b510c31a587dd623df9ec238d300cd';
-  static const String _baseUrl = 'https://api.openweathermap.org/data/2.5/weather';
-  static const String _forecastUrl = 'https://api.openweathermap.org/data/2.5/forecast';
+  static const String _apiKey = Config.weatherApiKey;
+  static const String _baseUrl =
+      'https://api.openweathermap.org/data/2.5/weather';
+  static const String _forecastUrl =
+      'https://api.openweathermap.org/data/2.5/forecast';
 
   // Meteo atual (fallback)
   Future<Map<String, dynamic>?> getWeather(double lat, double lon) async {
-    final uri = Uri.parse('$_baseUrl?lat=$lat&lon=$lon&appid=$_apiKey&units=metric&lang=pt');
+    final uri = Uri.parse(
+      '$_baseUrl?lat=$lat&lon=$lon&appid=$_apiKey&units=metric&lang=pt',
+    );
     final res = await http.get(uri);
 
     if (res.statusCode == 200) {
@@ -25,7 +30,9 @@ class WeatherService {
     DateTime whenLocal,
   ) async {
     try {
-      final uri = Uri.parse('$_forecastUrl?lat=$lat&lon=$lon&appid=$_apiKey&units=metric&lang=pt');
+      final uri = Uri.parse(
+        '$_forecastUrl?lat=$lat&lon=$lon&appid=$_apiKey&units=metric&lang=pt',
+      );
       final res = await http.get(uri);
       if (res.statusCode != 200) return null;
 
@@ -40,8 +47,13 @@ class WeatherService {
 
       for (final item in list) {
         final mp = item as Map<String, dynamic>;
-        final dtUtc = DateTime.fromMillisecondsSinceEpoch(((mp['dt'] as num).toInt()) * 1000, isUtc: true);
-        final diff = (dtUtc.millisecondsSinceEpoch - whenUtc.millisecondsSinceEpoch).abs();
+        final dtUtc = DateTime.fromMillisecondsSinceEpoch(
+          ((mp['dt'] as num).toInt()) * 1000,
+          isUtc: true,
+        );
+        final diff =
+            (dtUtc.millisecondsSinceEpoch - whenUtc.millisecondsSinceEpoch)
+                .abs();
         if (diff < bestDiff) {
           bestDiff = diff;
           best = mp;
@@ -56,14 +68,9 @@ class WeatherService {
       final pod = (best['sys']?['pod'] as String?) ?? 'd'; // 'd' ou 'n'
       final diaNoite = pod == 'n' ? 'Noite' : 'Dia';
 
-      return {
-        'desc': desc,
-        'temp': temp,
-        'diaNoite': diaNoite,
-      };
+      return {'desc': desc, 'temp': temp, 'diaNoite': diaNoite};
     } catch (_) {
       return null;
     }
   }
 }
-
