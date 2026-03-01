@@ -7,13 +7,20 @@ class ConfirmacaoJogoPage extends StatelessWidget {
   final String titulo;
   final DateTime data;
   final String local;
+  final double? preco; // ← NOVO (opcional)
 
   const ConfirmacaoJogoPage({
     super.key,
     required this.titulo,
     required this.data,
     required this.local,
+    this.preco, // ← NOVO
   });
+
+  String _formatarPreco(double? preco) {
+    if (preco == null || preco <= 0) return 'Grátis';
+    return '€ ${preco.toStringAsFixed(2)}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -103,9 +110,14 @@ class ConfirmacaoJogoPage extends StatelessWidget {
                         ),
                         child: Column(
                           children: [
+                            _buildInfoMini(Icons.sports_soccer, titulo),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                              child: Divider(color: Colors.white10, height: 1),
+                            ),
                             _buildInfoMini(Icons.place_outlined, local),
                             const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 16),
+                              padding: EdgeInsets.symmetric(vertical: 12),
                               child: Divider(color: Colors.white10, height: 1),
                             ),
                             _buildInfoMini(
@@ -115,6 +127,22 @@ class ConfirmacaoJogoPage extends StatelessWidget {
                                 'pt_PT',
                               ).format(data),
                             ),
+                            if (preco != null) ...[
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                child: Divider(
+                                  color: Colors.white10,
+                                  height: 1,
+                                ),
+                              ),
+                              _buildInfoMini(
+                                Icons.euro_rounded,
+                                _formatarPreco(preco),
+                                valorCor: preco! > 0
+                                    ? Colors.green
+                                    : Colors.blue,
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -154,7 +182,7 @@ class ConfirmacaoJogoPage extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoMini(IconData icon, String text) {
+  Widget _buildInfoMini(IconData icon, String text, {Color? valorCor}) {
     return Row(
       children: [
         Icon(icon, size: 18, color: Colors.white38),
@@ -162,8 +190,8 @@ class ConfirmacaoJogoPage extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: valorCor ?? Colors.white,
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),

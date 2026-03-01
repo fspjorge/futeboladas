@@ -27,6 +27,7 @@ class _JogoEditarState extends State<JogoEditar> {
   final _tituloCtrl = TextEditingController();
   final _localCtrl = TextEditingController();
   final _jogadoresCtrl = TextEditingController();
+  final _precoCtrl = TextEditingController(); // ← NOVO
   DateTime? _data;
   bool _busy = false;
   bool _loading = true;
@@ -62,6 +63,7 @@ class _JogoEditarState extends State<JogoEditar> {
     _tituloCtrl.dispose();
     _localCtrl.dispose();
     _jogadoresCtrl.dispose();
+    _precoCtrl.dispose(); // ← NOVO
     _localFocusNode.dispose();
     super.dispose();
   }
@@ -78,6 +80,11 @@ class _JogoEditarState extends State<JogoEditar> {
         _localCtrl.text = (data['local'] as String?) ?? '';
         _jogadoresCtrl.text = ((data['jogadores'] as num?)?.toInt() ?? 0)
             .toString();
+
+        // Carregar preço
+        final preco = data['preco'] as num? ?? 0;
+        _precoCtrl.text = preco > 0 ? preco.toString() : '';
+
         _data = (data['data'] as Timestamp?)?.toDate();
         _selLat = data['lat'] as double?;
         _selLon = data['lon'] as double?;
@@ -212,6 +219,8 @@ class _JogoEditarState extends State<JogoEditar> {
       final local = _localCtrl.text.trim();
       final titulo = _tituloCtrl.text.trim();
       final jogadores = int.tryParse(_jogadoresCtrl.text.trim()) ?? 0;
+      final preco =
+          double.tryParse(_precoCtrl.text.trim().replaceFirst(',', '.')) ?? 0.0;
 
       double? lat = _selLat;
       double? lon = _selLon;
@@ -229,6 +238,7 @@ class _JogoEditarState extends State<JogoEditar> {
         'titulo': titulo,
         'local': local,
         'jogadores': jogadores,
+        'preco': preco, // ← NOVO
         'data': Timestamp.fromDate(_data!),
         if (lat != null) 'lat': lat,
         if (lon != null) 'lon': lon,
@@ -302,12 +312,32 @@ class _JogoEditarState extends State<JogoEditar> {
                     const SizedBox(height: 16),
                     _buildAutocompleteLocal(cs),
                     const SizedBox(height: 16),
-                    _buildGlassInput(
-                      controller: _jogadoresCtrl,
-                      label: 'Nº de Jogadores',
-                      hint: 'ex: 10',
-                      icon: Icons.people_outline,
-                      keyboardType: TextInputType.number,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: _buildGlassInput(
+                            controller: _jogadoresCtrl,
+                            label: 'Nº Jogadores',
+                            hint: 'ex: 10',
+                            icon: Icons.people_outline,
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildGlassInput(
+                            controller: _precoCtrl,
+                            label: 'Preço (€)',
+                            hint: '0.00',
+                            icon: Icons.euro_rounded,
+                            keyboardType: TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 32),
                     _buildStepTitle('DATA E HORA'),

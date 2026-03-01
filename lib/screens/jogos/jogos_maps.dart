@@ -33,6 +33,11 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
     zoom: 7,
   );
 
+  String _formatarPreco(num? preco) {
+    if (preco == null || preco <= 0) return 'Grátis';
+    return '€ ${preco.toStringAsFixed(2)}';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -189,6 +194,7 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
           final local = data['local'] as String? ?? 'Local desconhecido';
           final dataJogo = (data['data'] as Timestamp?)?.toDate();
           final maxJogadores = (data['jogadores'] as num?)?.toInt() ?? 0;
+          final preco = data['preco'] as num? ?? 0;
           final lat = (data['lat'] as num?)?.toDouble();
           final lon = (data['lon'] as num?)?.toDouble();
 
@@ -196,6 +202,7 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
             'local': local,
             'dataJogo': dataJogo,
             'maxJogadores': maxJogadores,
+            'preco': preco,
           };
 
           double? useLat = lat;
@@ -259,18 +266,18 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
               dataHoraInfo = 'Data não definida';
             }
 
+            // Formatar preço para a tooltip
+            final precoInfo = ' • ${_formatarPreco(preco)}';
+
             newMarkers.add(
               Marker(
                 markerId: MarkerId(jogoId),
                 position: LatLng(useLat, useLon),
-                // REMOVIDO: onTap já não abre o detalhe
-                // onTap: () => _abrirDetalheJogo(jogoId),
                 infoWindow: InfoWindow(
                   title: local,
                   snippet:
-                      '$dataHoraInfo$weatherInfo', // Mostra data/hora + tempo
-                  onTap: () =>
-                      _abrirDetalheJogo(jogoId), // Só abre ao clicar na tooltip
+                      '$dataHoraInfo$weatherInfo$precoInfo', // Mostra data/hora + tempo + preço
+                  onTap: () => _abrirDetalheJogo(jogoId),
                 ),
               ),
             );

@@ -27,6 +27,11 @@ class _JogosListaState extends State<JogosLista> {
   bool get _hasActiveFilter =>
       _filterMode != FilterMode.todos || _selectedDay != null;
 
+  String _formatarPreco(num? preco) {
+    if (preco == null || preco <= 0) return 'Grátis';
+    return '€${preco.toStringAsFixed(2)}';
+  }
+
   Future<void> _loadJogosOndeVou() async {
     if (!mounted) return;
     setState(() => _loadingVou = true);
@@ -623,6 +628,7 @@ class _JogosListaState extends State<JogosLista> {
     final data = doc.data();
     final local = data['local'] as String? ?? 'Local desconhecido';
     final maxJogadores = (data['jogadores'] as num?)?.toInt() ?? 0;
+    final preco = data['preco'] as num? ?? 0;
     final date = (data['data'] as Timestamp).toDate();
     final jogoId = doc.id;
     final hora = DateFormat('HH:mm').format(date);
@@ -691,7 +697,7 @@ class _JogosListaState extends State<JogosLista> {
                               children: [
                                 if (hasLimit) ...[
                                   ...List.generate(
-                                    maxJogadores.clamp(0, 10),
+                                    maxJogadores.clamp(0, 8),
                                     (i) => Container(
                                       margin: const EdgeInsets.only(right: 2),
                                       width: 5,
@@ -721,6 +727,30 @@ class _JogosListaState extends State<JogosLista> {
                                       color: Colors.white30,
                                     ),
                                   ),
+                                const SizedBox(width: 8),
+                                // Preço ao lado do número de jogadores
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: preco > 0
+                                        ? Colors.green.withOpacity(0.1)
+                                        : Colors.blue.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    _formatarPreco(preco),
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w700,
+                                      color: preco > 0
+                                          ? Colors.green
+                                          : Colors.blue,
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                           ],
@@ -765,6 +795,7 @@ class _JogosListaState extends State<JogosLista> {
                                         titulo: local,
                                         data: date,
                                         local: local,
+                                        preco: preco.toDouble(),
                                       ),
                                     ),
                                   );
@@ -820,10 +851,7 @@ class _JogosListaState extends State<JogosLista> {
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         backgroundColor: isFull ? Colors.white10 : cs.primary,
         foregroundColor: isFull ? Colors.white24 : const Color(0xFF0F172A),
-        shape: RoundedRectangleBorder(
-          // ← Adicionar
-          borderRadius: BorderRadius.circular(8), // Mesmo dos chips
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         textStyle: GoogleFonts.outfit(
           fontSize: 11,
           fontWeight: FontWeight.w900,
@@ -832,7 +860,7 @@ class _JogosListaState extends State<JogosLista> {
       child: Text(
         isFull ? 'LOTADO' : 'VOU',
         style: GoogleFonts.outfit(
-          fontSize: isFull ? 10 : 11, // Ligeiramente menor se for "LOTADO"
+          fontSize: isFull ? 10 : 11,
           fontWeight: FontWeight.w900,
         ),
       ),

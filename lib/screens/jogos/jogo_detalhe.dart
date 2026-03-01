@@ -36,6 +36,11 @@ class _JogoDetalheState extends State<JogoDetalhe> {
     super.dispose();
   }
 
+  String _formatarPreco(num? preco) {
+    if (preco == null || preco <= 0) return 'Grátis';
+    return '€ ${preco.toStringAsFixed(2)}';
+  }
+
   Future<void> _pickReminder() async {
     final opts = const [0, 5, 10, 15, 30, 60];
     final picked = await showModalBottomSheet<int>(
@@ -216,6 +221,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
               final date = (data['data'] as Timestamp?)?.toDate();
               final createdBy = data['createdBy'] as String?;
               final isOwner = uid != null && createdBy == uid;
+              final preco = data['preco'] as num? ?? 0;
               final cs = Theme.of(context).colorScheme;
 
               return Column(
@@ -224,7 +230,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                     child: ListView(
                       padding: EdgeInsets.zero,
                       children: [
-                        _buildHeroHeader(local, date, cs),
+                        _buildHeroHeader(local, date, preco, cs),
                         Padding(
                           padding: const EdgeInsets.all(20),
                           child: Column(
@@ -259,7 +265,12 @@ class _JogoDetalheState extends State<JogoDetalhe> {
     );
   }
 
-  Widget _buildHeroHeader(String local, DateTime? date, ColorScheme cs) {
+  Widget _buildHeroHeader(
+    String local,
+    DateTime? date,
+    num preco,
+    ColorScheme cs,
+  ) {
     return Container(
       constraints: const BoxConstraints(minHeight: 280),
       decoration: BoxDecoration(
@@ -284,24 +295,54 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: cs.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      'PARTIDA CONFIRMADA',
-                      style: GoogleFonts.outfit(
-                        color: cs.primary,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.5,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: cs.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'PARTIDA CONFIRMADA',
+                          style: GoogleFonts.outfit(
+                            color: cs.primary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
                       ),
-                    ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: preco > 0
+                              ? Colors.green.withOpacity(0.2)
+                              : Colors.blue.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: preco > 0
+                                ? Colors.green.withOpacity(0.3)
+                                : Colors.blue.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Text(
+                          _formatarPreco(preco),
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: preco > 0 ? Colors.green : Colors.blue,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -354,6 +395,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
     final local = data['local'] as String? ?? '';
     final maxJogadores = (data['jogadores'] as num?)?.toInt() ?? 0;
     final createdByName = data['createdByName'] as String? ?? 'Desconhecido';
+    final preco = data['preco'] as num? ?? 0;
 
     return GlassCard(
       child: Column(
@@ -367,6 +409,8 @@ class _JogoDetalheState extends State<JogoDetalhe> {
               onPressed: () => _openMaps(local),
             ),
           ),
+          const Divider(color: Colors.white10, height: 1),
+          _infoRow(Icons.euro_rounded, 'Preço', _formatarPreco(preco)),
           const Divider(color: Colors.white10, height: 1),
           StreamBuilder<int>(
             stream: presencas.countConfirmados(widget.jogoId),
