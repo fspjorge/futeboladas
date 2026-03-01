@@ -8,6 +8,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../widgets/glass_card.dart';
 import '../../services/presenca_service.dart';
 import '../../services/jogo_service.dart';
 import '../../services/weather_service.dart'; // ← NOVO
@@ -194,12 +195,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
         children: [
           // Background
           Positioned.fill(child: Container(color: const Color(0xFF0F172A))),
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.03,
-              child: CustomPaint(painter: _GridBackdropPainter()),
-            ),
-          ),
+          Positioned.fill(child: CustomPaint(painter: GridBackdropPainter())),
           StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
             stream: jogoRef.snapshots(),
             builder: (context, snap) {
@@ -303,12 +299,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
       ),
       child: Stack(
         children: [
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.05,
-              child: CustomPaint(painter: _GridBackdropPainter()),
-            ),
-          ),
+          Positioned.fill(child: CustomPaint(painter: GridBackdropPainter())),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -953,49 +944,4 @@ class _JogoDetalheState extends State<JogoDetalhe> {
       ),
     );
   }
-}
-
-class GlassCard extends StatelessWidget {
-  final Widget child;
-  const GlassCard({super.key, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.1),
-              width: 1.5,
-            ),
-          ),
-          child: child,
-        ),
-      ),
-    );
-  }
-}
-
-class _GridBackdropPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.05)
-      ..strokeWidth = 0.5;
-
-    for (double i = 0; i < size.width; i += 40) {
-      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
-    }
-    for (double i = 0; i < size.height; i += 40) {
-      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

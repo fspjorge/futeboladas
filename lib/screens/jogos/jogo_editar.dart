@@ -6,6 +6,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../services/osm_service.dart';
+import '../../widgets/glass_card.dart';
 
 class _Suggestion {
   final String local;
@@ -285,12 +286,7 @@ class _JogoEditarState extends State<JogoEditar> {
       body: Stack(
         children: [
           Positioned.fill(child: Container(color: const Color(0xFF0F172A))),
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.03,
-              child: CustomPaint(painter: _GridBackdropPainter()),
-            ),
-          ),
+          Positioned.fill(child: CustomPaint(painter: GridBackdropPainter())),
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
@@ -495,49 +491,51 @@ class _JogoEditarState extends State<JogoEditar> {
       onTap: _pickDateTime,
       borderRadius: BorderRadius.circular(16),
       child: GlassCard(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: cs.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: cs.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.calendar_month_outlined, color: cs.primary),
               ),
-              child: Icon(Icons.calendar_month_outlined, color: cs.primary),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'DATA E HORA SELECIONADA',
-                    style: TextStyle(
-                      color: Colors.white38,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'DATA E HORA SELECIONADA',
+                      style: TextStyle(
+                        color: Colors.white38,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _data == null
-                        ? 'Carregando...'
-                        : DateFormat(
-                            "EEEE, d 'de' MMMM 'às' HH:mm",
-                            'pt_PT',
-                          ).format(_data!),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                    const SizedBox(height: 4),
+                    Text(
+                      _data == null
+                          ? 'Carregando...'
+                          : DateFormat(
+                              "EEEE, d 'de' MMMM 'às' HH:mm",
+                              'pt_PT',
+                            ).format(_data!),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const Icon(Icons.chevron_right, color: Colors.white24),
-          ],
+              const Icon(Icons.chevron_right, color: Colors.white24),
+            ],
+          ),
         ),
       ),
     );
@@ -566,51 +564,4 @@ class _JogoEditarState extends State<JogoEditar> {
       ),
     );
   }
-}
-
-class GlassCard extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry? padding;
-  const GlassCard({super.key, required this.child, this.padding});
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.1),
-              width: 1.5,
-            ),
-          ),
-          child: child,
-        ),
-      ),
-    );
-  }
-}
-
-class _GridBackdropPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.05)
-      ..strokeWidth = 0.5;
-
-    for (double i = 0; i < size.width; i += 40) {
-      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
-    }
-    for (double i = 0; i < size.height; i += 40) {
-      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

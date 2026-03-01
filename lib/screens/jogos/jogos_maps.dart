@@ -5,11 +5,10 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../services/presenca_service.dart';
+import 'package:intl/intl.dart';
 import '../../services/weather_service.dart';
 import 'jogo_detalhe.dart';
-import 'confirmacao_page.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../../widgets/glass_card.dart';
 
 class JogosMapa extends StatefulWidget {
   const JogosMapa({super.key});
@@ -26,7 +25,7 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
   bool _hasLocationPermission = false;
   bool _mapInitialized = false;
   String? _errorMessage;
-  final PresencaService _presencaService = PresencaService();
+  String? _selectedJogoId;
 
   static const CameraPosition _inicio = CameraPosition(
     target: LatLng(38.7169, -9.1399),
@@ -134,60 +133,6 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
     );
   }
 
-  Future<void> _togglePresenca(
-    String jogoId,
-    String titulo,
-    String local,
-    DateTime? dataJogo,
-    double? lat,
-    double? lon,
-  ) async {
-    try {
-      final uid = FirebaseAuth.instance.currentUser?.uid;
-      if (uid == null) {
-        _showSnackBar('Precisas de estar autenticado');
-        return;
-      }
-
-      final isGoing = await _presencaService.minhaPresenca(jogoId).first;
-
-      await _presencaService.marcarPresenca(jogoId, !isGoing);
-
-      if (!isGoing && mounted) {
-        String? weatherStr;
-        if (lat != null && lon != null && dataJogo != null) {
-          final w = await WeatherService().getForecastAt(lat, lon, dataJogo);
-          if (w != null) {
-            final desc = w['desc'] as String? ?? '';
-            final capitalizedDesc = desc.isNotEmpty
-                ? '${desc[0].toUpperCase()}${desc.substring(1)}'
-                : '';
-            weatherStr = '$capitalizedDesc, ${w['temp']}°C';
-          }
-        }
-
-        if (mounted) {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => ConfirmacaoJogoPage(
-                titulo: titulo,
-                data: dataJogo ?? DateTime.now(),
-                local: local,
-                weather: weatherStr,
-              ),
-            ),
-          );
-        }
-      } else if (mounted) {
-        _showSnackBar('Presença removida', color: Colors.orangeAccent);
-      }
-
-      setState(() {});
-    } catch (e) {
-      _showSnackBar('Erro ao marcar presença: $e');
-    }
-  }
-
   Future<void> _abrirDetalheJogo(String jogoId) async {
     await Navigator.of(
       context,
@@ -203,7 +148,7 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
           .get();
 
       final List<Marker> newMarkers = [];
-      int processedCount = 0;
+      _jogosData.clear();
 
       for (final doc in snapshot.docs) {
         try {
@@ -213,95 +158,48 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
           final dataJogo = (data['data'] as Timestamp?)?.toDate();
           final maxJogadores = (data['jogadores'] as num?)?.toInt() ?? 0;
           final preco = data['preco'] as num? ?? 0;
-          final lat = (data['lat'] as num?)?.toDouble();
-          final lon = (data['lon'] as num?)?.toDouble();
+          double? lat = (data['lat'] as num?)?.toDouble();
+          double? lon = (data['lon'] as num?)?.toDouble();
 
-          _jogosData[jogoId] = {
-            'titulo': data['titulo'] as String? ?? local,
-            'local': local,
-            'dataJogo': dataJogo,
-            'maxJogadores': maxJogadores,
-            'preco': preco,
-          };
-
-          double? useLat = lat;
-          double? useLon = lon;
-
-          if ((useLat == null || useLon == null) && processedCount < 10) {
+          // Se não tem coordenadas, tenta geocodificar (limite suave para não abusar)
+          if (lat == null || lon == null) {
             try {
               final posicoes = await locationFromAddress(
                 '$local, Portugal',
               ).timeout(const Duration(seconds: 5));
               if (posicoes.isNotEmpty) {
-                useLat = posicoes.first.latitude;
-                useLon = posicoes.first.longitude;
-
-                unawaited(
-                  doc.reference
-                      .update({'lat': useLat, 'lon': useLon})
-                      .catchError(
-                        (e) => debugPrint('Erro ao guardar coordenadas: $e'),
-                      ),
-                );
+                lat = posicoes.first.latitude;
+                lon = posicoes.first.longitude;
+                unawaited(doc.reference.update({'lat': lat, 'lon': lon}));
               }
             } catch (e) {
               debugPrint('Erro na geocodificação de $local: $e');
             }
           }
 
-          if (useLat != null && useLon != null) {
-            // Buscar previsão do tempo
-            String weatherInfo = '';
-            if (dataJogo != null) {
-              try {
-                final forecast = await WeatherService()
-                    .getForecastAt(useLat, useLon, dataJogo)
-                    .timeout(const Duration(seconds: 3));
-
-                if (forecast != null) {
-                  final desc = (forecast['desc'] as String?) ?? '';
-                  final temp = forecast['temp'];
-                  if (desc.isNotEmpty) {
-                    weatherInfo =
-                        ' • ${desc[0].toUpperCase()}${desc.substring(1)} $temp°C';
-                  } else {
-                    weatherInfo = ' • $temp°C';
-                  }
-                }
-              } catch (e) {
-                debugPrint('Erro ao obter previsão do tempo: $e');
-              }
-            }
-
-            // Formatar data e hora
-            String dataHoraInfo = '';
-            if (dataJogo != null) {
-              final dia = dataJogo.day.toString().padLeft(2, '0');
-              final mes = dataJogo.month.toString().padLeft(2, '0');
-              final hora = dataJogo.hour.toString().padLeft(2, '0');
-              final minuto = dataJogo.minute.toString().padLeft(2, '0');
-              dataHoraInfo = '$dia/$mes $hora:$minuto';
-            } else {
-              dataHoraInfo = 'Data não definida';
-            }
-
-            // Formatar preço para a tooltip
-            final precoInfo = ' • ${_formatarPreco(preco)}';
+          if (lat != null && lon != null) {
+            _jogosData[jogoId] = {
+              'titulo': data['titulo'] as String? ?? local,
+              'local': local,
+              'dataJogo': dataJogo,
+              'maxJogadores': maxJogadores,
+              'preco': preco,
+              'lat': lat,
+              'lon': lon,
+            };
 
             newMarkers.add(
               Marker(
                 markerId: MarkerId(jogoId),
-                position: LatLng(useLat, useLon),
-                infoWindow: InfoWindow(
-                  title: local,
-                  snippet:
-                      '$dataHoraInfo$weatherInfo$precoInfo', // Mostra data/hora + tempo + preço
-                  onTap: () => _abrirDetalheJogo(jogoId),
-                ),
+                position: LatLng(lat, lon),
+                onTap: () {
+                  setState(() {
+                    _selectedJogoId = jogoId;
+                  });
+                },
               ),
             );
           }
-          processedCount++;
         } catch (e) {
           debugPrint('Erro ao processar documento ${doc.id}: $e');
         }
@@ -309,6 +207,7 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
 
       if (mounted) {
         setState(() {
+          _marcadores.clear();
           _marcadores.addAll(newMarkers);
         });
       }
@@ -343,10 +242,12 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
               onMapCreated: (GoogleMapController controller) {
                 _controller.complete(controller);
               },
+              onTap: (_) {
+                if (_selectedJogoId != null) {
+                  setState(() => _selectedJogoId = null);
+                }
+              },
               minMaxZoomPreference: const MinMaxZoomPreference(3, 18),
-              trafficEnabled: false,
-              buildingsEnabled: true,
-              indoorViewEnabled: false,
               padding: const EdgeInsets.only(top: 40),
             ),
 
@@ -382,7 +283,7 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.error_outline,
                         size: 48,
                         color: Colors.redAccent,
@@ -405,10 +306,6 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
                             _initializeMap();
                           });
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF0F172A),
-                        ),
                         child: const Text('TENTAR NOVAMENTE'),
                       ),
                     ],
@@ -450,12 +347,18 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
               ),
             ),
 
+          // Floating Jogo Card
+          if (_selectedJogoId != null &&
+              _jogosData.containsKey(_selectedJogoId))
+            _buildSelectedJogoCard(),
+
           // Botão de localização
           if (_mapInitialized && _errorMessage == null && !_loading)
             Positioned(
-              bottom: 20,
+              bottom: _selectedJogoId != null ? 220 : 20,
               right: 20,
               child: FloatingActionButton(
+                mini: _selectedJogoId != null,
                 heroTag: 'btn-localizacao',
                 backgroundColor: Colors.white,
                 foregroundColor: const Color(0xFF0F172A),
@@ -466,5 +369,171 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
         ],
       ),
     );
+  }
+
+  Widget _buildSelectedJogoCard() {
+    final data = _jogosData[_selectedJogoId!];
+    if (data == null) return const SizedBox.shrink();
+
+    final titulo = data['titulo'] as String;
+    final local = data['local'] as String;
+    final dataJogo = data['dataJogo'] as DateTime?;
+    final preco = data['preco'] as num? ?? 0;
+    final lat = data['lat'] as double?;
+    final lon = data['lon'] as double?;
+
+    return Positioned(
+      bottom: 20,
+      left: 16,
+      right: 16,
+      child: GlassCard(
+        child: InkWell(
+          onTap: () => _abrirDetalheJogo(_selectedJogoId!),
+          borderRadius: BorderRadius.circular(20), // Matches GlassCard default
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 12, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        titulo.toUpperCase(),
+                        style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.close,
+                        color: Colors.white38,
+                        size: 18,
+                      ),
+                      onPressed: () => setState(() => _selectedJogoId = null),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                Text(
+                  local,
+                  style: GoogleFonts.outfit(
+                    color: Colors.white70,
+                    fontSize: 13,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _buildMiniInfo(
+                      Icons.calendar_today_outlined,
+                      dataJogo != null
+                          ? DateFormat('dd/MM HH:mm').format(dataJogo)
+                          : '---',
+                    ),
+                    if (lat != null && lon != null && dataJogo != null) ...[
+                      const SizedBox(width: 8),
+                      FutureBuilder<Map<String, dynamic>?>(
+                        future: WeatherService().getForecastAt(
+                          lat,
+                          lon,
+                          dataJogo,
+                        ),
+                        builder: (context, snap) {
+                          if (!snap.hasData || snap.data == null)
+                            return const SizedBox.shrink();
+                          final w = snap.data!;
+                          return _buildMiniInfo(
+                            _getWeatherIcon(w['main'] as String? ?? ''),
+                            '${w['temp']}°C',
+                          );
+                        },
+                      ),
+                    ],
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: preco > 0
+                            ? Colors.green.withOpacity(0.2)
+                            : Colors.blue.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        _formatarPreco(preco),
+                        style: GoogleFonts.outfit(
+                          color: preco > 0
+                              ? Colors.greenAccent
+                              : Colors.blueAccent,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: Colors.white24,
+                      size: 16,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMiniInfo(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white54, size: 14),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: GoogleFonts.outfit(
+              color: Colors.white70,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _getWeatherIcon(String main) {
+    switch (main.toLowerCase()) {
+      case 'clouds':
+        return Icons.cloud_outlined;
+      case 'rain':
+        return Icons.umbrella_outlined;
+      case 'clear':
+        return Icons.wb_sunny_outlined;
+      case 'snow':
+        return Icons.ac_unit_outlined;
+      default:
+        return Icons.wb_cloudy_outlined;
+    }
   }
 }
