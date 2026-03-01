@@ -5,16 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:device_info_plus/device_info_plus.dart';
-import 'package:flutter/foundation.dart'
-    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:google_fonts/google_fonts.dart';
-import 'jogo_mapa_detalhe.dart';
-import 'confirmacao_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/presenca_service.dart';
 import '../../services/jogo_service.dart';
+import 'confirmacao_page.dart';
 import 'jogo_editar.dart';
 
 class JogoDetalhe extends StatefulWidget {
@@ -44,40 +40,44 @@ class _JogoDetalheState extends State<JogoDetalhe> {
     final opts = const [0, 5, 10, 15, 30, 60];
     final picked = await showModalBottomSheet<int>(
       context: context,
-      backgroundColor: const Color(0xFF0F172A),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Text(
-                  'DEFINIR LEMBRETE',
-                  style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1,
-                    color: Colors.white,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            color: const Color(0xFF0F172A).withOpacity(0.95),
+            child: SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Text(
+                      'LEMBRETE',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              ...opts.map(
-                (m) => ListTile(
-                  title: Text(
-                    m == 0 ? 'No momento do evento' : '$m minutos antes',
-                    style: const TextStyle(color: Colors.white),
+                  ...opts.map(
+                    (m) => ListTile(
+                      title: Text(
+                        m == 0 ? 'No momento do evento' : '$m minutos antes',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      onTap: () => Navigator.pop(ctx, m),
+                    ),
                   ),
-                  onTap: () => Navigator.pop(ctx, m),
-                ),
+                  const SizedBox(height: 20),
+                ],
               ),
-              const SizedBox(height: 20),
-            ],
+            ),
           ),
-        );
-      },
+        ),
+      ),
     );
     if (picked != null) {
       setState(() => _reminderMin = picked);
@@ -131,10 +131,38 @@ class _JogoDetalheState extends State<JogoDetalhe> {
     } catch (e) {
       if (mounted) {
         setState(() => _deleting = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Erro ao apagar: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao apagar: $e'),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
       }
+    }
+  }
+
+  Future<void> _openMaps(String local) async {
+    try {
+      final res = await locationFromAddress('$local, Portugal');
+      if (res.isNotEmpty) {
+        final pos = LatLng(res.first.latitude, res.first.longitude);
+        final uri = Uri.parse(
+          'https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}',
+        );
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        throw Exception('Localização não encontrada');
+      }
+    } catch (e) {
+      // Fallback: abrir pesquisa Google Maps com o nome do local
+      final query = Uri.encodeComponent(local);
+      final uri = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=$query',
+      );
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 
@@ -158,7 +186,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
       ),
       body: Stack(
         children: [
-          // Background Backdrop
+          // Background
           Positioned.fill(child: Container(color: const Color(0xFF0F172A))),
           Positioned.fill(
             child: Opacity(
@@ -209,9 +237,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                               const SizedBox(height: 24),
                               if (isOwner)
                                 _buildAdminSection(jogoRef, data, cs),
-                              const SizedBox(
-                                height: 100,
-                              ), // Space for action button
+                              const SizedBox(height: 100),
                             ],
                           ),
                         ),
@@ -245,7 +271,6 @@ class _JogoDetalheState extends State<JogoDetalhe> {
       ),
       child: Stack(
         children: [
-          // Background Grid Detail
           Positioned.fill(
             child: Opacity(
               opacity: 0.05,
@@ -339,18 +364,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
             local,
             trailing: IconButton(
               icon: const Icon(Icons.directions, color: Colors.white70),
-              onPressed: () async {
-                // Obter LatLng e abrir no maps (preservando lógica original)
-                final res = await locationFromAddress('$local, Portugal');
-                if (res.isNotEmpty) {
-                  final pos = LatLng(res.first.latitude, res.first.longitude);
-                  final q = Uri.encodeComponent(local);
-                  final uri = Uri.parse(
-                    'https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}',
-                  );
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }
-              },
+              onPressed: () => _openMaps(local),
             ),
           ),
           const Divider(color: Colors.white10, height: 1),
@@ -455,69 +469,78 @@ class _JogoDetalheState extends State<JogoDetalhe> {
           builder: (context, snap) {
             final docs = snap.data?.docs ?? [];
             if (docs.isEmpty) {
-              return Text(
-                'Ninguém confirmou ainda.',
-                style: TextStyle(color: Colors.white24),
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Text(
+                  'Ninguém confirmou ainda.',
+                  style: GoogleFonts.outfit(
+                    color: Colors.white24,
+                    fontSize: 14,
+                  ),
+                ),
               );
             }
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 3,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-              ),
-              itemCount: docs.length,
-              itemBuilder: (context, i) {
-                final d = docs[i];
-                final name = d.data()['name'] as String? ?? 'Jogador';
-                final photo = d.data()['photo'] as String?;
-                final isOrg = d.id == createdBy;
+            return Container(
+              constraints: const BoxConstraints(maxHeight: 200),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const AlwaysScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 3.5,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                ),
+                itemCount: docs.length,
+                itemBuilder: (context, i) {
+                  final d = docs[i];
+                  final name = d.data()['name'] as String? ?? 'Jogador';
+                  final photo = d.data()['photo'] as String?;
+                  final isOrg = d.id == createdBy;
 
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.04),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withOpacity(0.05)),
-                  ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 14,
-                        backgroundImage: photo != null
-                            ? NetworkImage(photo)
-                            : null,
-                        child: photo == null
-                            ? const Icon(Icons.person, size: 14)
-                            : null,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: isOrg
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            fontSize: 13,
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.04),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withOpacity(0.05)),
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 14,
+                          backgroundImage: photo != null
+                              ? NetworkImage(photo)
+                              : null,
+                          child: photo == null
+                              ? const Icon(Icons.person, size: 14)
+                              : null,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontWeight: isOrg
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
-                      ),
-                      if (isOrg)
-                        Icon(Icons.verified, size: 14, color: cs.primary),
-                    ],
-                  ),
-                );
-              },
+                        if (isOrg)
+                          Icon(Icons.verified, size: 14, color: cs.primary),
+                      ],
+                    ),
+                  );
+                },
+              ),
             );
           },
         ),
@@ -554,20 +577,22 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => JogoEditar(jogoId: widget.jogoId),
-                          ),
-                        ),
+                        onPressed: _saving
+                            ? null
+                            : () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      JogoEditar(jogoId: widget.jogoId),
+                                ),
+                              ),
                         icon: const Icon(Icons.edit_outlined, size: 16),
                         label: const Text('EDITAR'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white10,
                           foregroundColor: Colors.white,
-                          padding: EdgeInsets.zero,
-                          textStyle: const TextStyle(
+                          textStyle: GoogleFonts.outfit(
                             fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -575,16 +600,15 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: _eliminarJogo,
+                        onPressed: _saving ? null : _eliminarJogo,
                         icon: const Icon(Icons.delete_outline, size: 16),
                         label: const Text('APAGAR'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.redAccent.withOpacity(0.1),
                           foregroundColor: Colors.redAccent,
-                          padding: EdgeInsets.zero,
-                          textStyle: const TextStyle(
+                          textStyle: GoogleFonts.outfit(
                             fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -644,8 +668,30 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Notas guardadas.'),
+                                          SnackBar(
+                                            content: const Text(
+                                              'Notas guardadas.',
+                                            ),
+                                            behavior: SnackBarBehavior.floating,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Erro: $e'),
+                                            behavior: SnackBarBehavior.floating,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
                                           ),
                                         );
                                       }
@@ -655,7 +701,13 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                                     }
                                   },
                             child: _saving
-                                ? const CircularProgressIndicator()
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
                                 : const Text('GUARDAR NOTAS'),
                           ),
                         ),
@@ -690,40 +742,54 @@ class _JogoDetalheState extends State<JogoDetalhe> {
           stream: presencas.minhaPresenca(jogoId),
           builder: (context, snap) {
             final isGoing = snap.data ?? false;
+            final isLoading = snap.connectionState == ConnectionState.waiting;
             return SizedBox(
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: () async {
-                  await presencas.marcarPresenca(jogoId, !isGoing);
-                  if (!isGoing && mounted) {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => ConfirmacaoJogoPage(
-                          titulo: local,
-                          data: date ?? DateTime.now(),
-                          local: local,
-                        ),
-                      ),
-                    );
-                  }
-                },
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                        await presencas.marcarPresenca(jogoId, !isGoing);
+                        if (!isGoing && mounted) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ConfirmacaoJogoPage(
+                                titulo: local,
+                                data: date ?? DateTime.now(),
+                                local: local,
+                              ),
+                            ),
+                          );
+                        }
+                      },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isGoing ? Colors.white12 : cs.primary,
                   foregroundColor: isGoing
                       ? Colors.white
                       : const Color(0xFF0F172A),
+                  elevation: isGoing ? 0 : 2,
+                  shadowColor: cs.primary.withOpacity(0.3),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                ),
-                child: Text(
-                  isGoing ? 'DESMARCAR PRESENÇA' : 'CONFIRMAR PRESENÇA',
-                  style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.w900,
+                  textStyle: GoogleFonts.outfit(
+                    fontWeight: FontWeight.w800,
                     letterSpacing: 1,
                   ),
                 ),
+                child: isLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        isGoing ? 'DESMARCAR PRESENÇA' : 'CONFIRMAR PRESENÇA',
+                      ),
               ),
             );
           },

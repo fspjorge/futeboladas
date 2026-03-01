@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'jogos/jogos_lista.dart';
 import 'jogos/jogos_maps.dart';
+import 'perfil_page.dart'; // nova página de perfil (criar depois)
 import 'package:futeboladas/main.dart' show HomePage;
 
 class HomeDashboard extends StatefulWidget {
@@ -31,17 +32,36 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      drawer: _buildDrawer(context, cs),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text(
-          'Futeboladas',
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.w900,
-            letterSpacing: -0.5,
+        // Título dinâmico: searchbar na tab Lista, título normal na tab Mapa
+        title: _tab == 0
+            ? _buildSearchBarCompact(cs)
+            : Text(
+                'Mapa',
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+        // Ações: ícone do perfil sempre visível
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_outline_rounded),
+            color: Colors.white70,
+            onPressed: () {
+              // Navegar para a página de perfil (substitui o drawer)
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => PerfilPage(user: widget.user),
+                ),
+              );
+            },
           ),
-        ),
+        ],
       ),
       body: Stack(
         children: [
@@ -54,7 +74,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
               child: CustomPaint(painter: _GridBackdropPainter()),
             ),
           ),
-          SafeArea(child: _tab == 0 ? _buildLista(cs) : _buildMapa()),
+          SafeArea(
+            child: _tab == 0
+                ? _buildLista(cs) // sem searchbar aqui
+                : _buildMapa(),
+          ),
         ],
       ),
       bottomNavigationBar: _buildBottomBar(cs),
@@ -84,36 +108,21 @@ class _HomeDashboardState extends State<HomeDashboard> {
     );
   }
 
-  Widget _buildLista(ColorScheme cs) {
-    return RefreshIndicator(
-      onRefresh: () async =>
-          await Future.delayed(const Duration(milliseconds: 500)),
-      color: cs.primary,
-      backgroundColor: const Color(0xFF1E293B),
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
-        children: [
-          _buildSearchBar(cs),
-          const SizedBox(height: 20),
-          JogosLista(searchQuery: _searchQuery),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSearchBar(ColorScheme cs) {
+  // Versão compacta da searchbar para caber na AppBar
+  Widget _buildSearchBarCompact(ColorScheme cs) {
     final hasText = _searchQuery.isNotEmpty;
     return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(12),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
+          constraints: const BoxConstraints(maxWidth: 280),
           decoration: BoxDecoration(
             color: hasText
                 ? cs.primary.withOpacity(0.08)
                 : Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: hasText
                   ? cs.primary.withOpacity(0.4)
@@ -124,24 +133,24 @@ class _HomeDashboardState extends State<HomeDashboard> {
           child: TextField(
             controller: _searchCtrl,
             onChanged: (v) => setState(() => _searchQuery = v.trim()),
-            style: const TextStyle(color: Colors.white, fontSize: 15),
+            style: const TextStyle(color: Colors.white, fontSize: 14),
             decoration: InputDecoration(
               hintText: 'Pesquisar jogos...',
               hintStyle: TextStyle(
                 color: Colors.white.withOpacity(0.3),
-                fontSize: 15,
+                fontSize: 14,
               ),
               prefixIcon: Icon(
                 Icons.search_rounded,
                 color: hasText ? cs.primary : Colors.white30,
-                size: 20,
+                size: 18,
               ),
               suffixIcon: hasText
                   ? IconButton(
                       icon: Icon(
                         Icons.close_rounded,
                         color: Colors.white30,
-                        size: 18,
+                        size: 16,
                       ),
                       onPressed: () => setState(() {
                         _searchCtrl.clear();
@@ -151,12 +160,30 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   : null,
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
+                horizontal: 12,
+                vertical: 8,
               ),
+              isDense: true,
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildLista(ColorScheme cs) {
+    return RefreshIndicator(
+      onRefresh: () async =>
+          await Future.delayed(const Duration(milliseconds: 500)),
+      color: cs.primary,
+      backgroundColor: const Color(0xFF1E293B),
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
+        children: [
+          // Searchbar removida daqui – agora está na AppBar
+          const SizedBox(height: 20),
+          JogosLista(searchQuery: _searchQuery),
+        ],
       ),
     );
   }
@@ -225,70 +252,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildDrawer(BuildContext context, ColorScheme cs) {
-    return Drawer(
-      backgroundColor: const Color(0xFF0F172A),
-      child: Column(
-        children: [
-          UserAccountsDrawerHeader(
-            accountName: Text(
-              widget.user.displayName ?? 'Jogador',
-              style: GoogleFonts.outfit(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
-            accountEmail: Text(widget.user.email ?? ''),
-            currentAccountPicture: CircleAvatar(
-              backgroundColor: cs.primary.withOpacity(0.2),
-              child: widget.user.photoURL != null
-                  ? ClipOval(child: Image.network(widget.user.photoURL!))
-                  : Icon(Icons.person, color: cs.primary, size: 32),
-            ),
-            decoration: BoxDecoration(
-              color: cs.primary.withOpacity(0.05),
-              border: Border(
-                bottom: BorderSide(color: Colors.white.withOpacity(0.05)),
-              ),
-            ),
-          ),
-          _drawerItem(Icons.people_outline, 'Meus Amigos', () {}),
-          _drawerItem(Icons.emoji_events_outlined, 'Estatísticas', () {}),
-          const Spacer(),
-          Divider(color: Colors.white.withOpacity(0.05)),
-          _drawerItem(Icons.settings_outlined, 'Definições da Conta', () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => HomePage(user: widget.user)),
-            );
-          }),
-          _drawerItem(Icons.logout, 'Terminar Sessão', () async {
-            await FirebaseAuth.instance.signOut();
-          }, color: Colors.redAccent),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
-
-  Widget _drawerItem(
-    IconData icon,
-    String label,
-    VoidCallback onTap, {
-    Color? color,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: color ?? Colors.white70, size: 24),
-      title: Text(
-        label,
-        style: TextStyle(
-          color: color ?? Colors.white,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-      onTap: onTap,
     );
   }
 }
