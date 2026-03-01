@@ -66,13 +66,10 @@ class _JogosListaState extends State<JogosLista> {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Horizontal Day Selector
             _buildDaySelector(filtered.keys.toList()..sort(), cs),
             const SizedBox(height: 20),
-            // Filter Chips
             _buildFilterChips(cs),
             const SizedBox(height: 24),
-            // Game Timeline/List
             if (visibleDays.isEmpty)
               _buildEmptyState(
                 icon: Icons.filter_alt_off_outlined,
@@ -102,11 +99,9 @@ class _JogosListaState extends State<JogosLista> {
     for (final d in docs) {
       final data = d.data();
 
-      // Aplicar filtros
       if (uid != null) {
-        if (_filterMode == FilterMode.meus && data['createdBy'] != uid) {
+        if (_filterMode == FilterMode.meus && data['createdBy'] != uid)
           continue;
-        }
         if (_filterMode == FilterMode.participo) {
           final participants = List<String>.from(data['participantes'] ?? []);
           final isCreator = data['createdBy'] == uid;
@@ -209,7 +204,6 @@ class _JogosListaState extends State<JogosLista> {
   Widget _buildDaySelector(List<DateTime> allDays, ColorScheme cs) {
     if (allDays.isEmpty) return const SizedBox.shrink();
 
-    // Determinar o mês predominante para mostrar no topo
     final monthDisplay = _selectedDay != null
         ? DateFormat('MMMM yyyy', 'pt_PT').format(_selectedDay!).toUpperCase()
         : DateFormat('MMMM yyyy', 'pt_PT').format(allDays.first).toUpperCase();
@@ -338,7 +332,7 @@ class _JogosListaState extends State<JogosLista> {
             _filterMode == FilterMode.todos,
             () => setState(() {
               _filterMode = FilterMode.todos;
-              _selectedDay = null; // Limpar dia ao trocar filtro
+              _selectedDay = null;
             }),
             cs,
           ),
@@ -348,7 +342,7 @@ class _JogosListaState extends State<JogosLista> {
             _filterMode == FilterMode.meus,
             () => setState(() {
               _filterMode = FilterMode.meus;
-              _selectedDay = null; // Limpar dia ao trocar filtro
+              _selectedDay = null;
             }),
             cs,
           ),
@@ -358,7 +352,7 @@ class _JogosListaState extends State<JogosLista> {
             _filterMode == FilterMode.participo,
             () => setState(() {
               _filterMode = FilterMode.participo;
-              _selectedDay = null; // Limpar dia ao trocar filtro
+              _selectedDay = null;
             }),
             cs,
             icon: Icons.check_circle_outline,
@@ -463,13 +457,12 @@ class _JogosListaState extends State<JogosLista> {
     final maxJogadores = (data['jogadores'] as num?)?.toInt() ?? 0;
     final date = (data['data'] as Timestamp).toDate();
     final jogoId = doc.id;
-    final organizer = data['createdByName'] as String? ?? 'Desconhecido';
     final hora = DateFormat('HH:mm').format(date);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 10),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
           child: InkWell(
@@ -477,247 +470,154 @@ class _JogosListaState extends State<JogosLista> {
               MaterialPageRoute(builder: (_) => JogoDetalhe(jogoId: jogoId)),
             ),
             child: Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.04),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.white.withOpacity(0.08)),
               ),
               child: Row(
                 children: [
-                  // Time side bar
-                  Column(
-                    children: [
-                      Text(
-                        hora,
-                        style: GoogleFonts.outfit(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                        ),
+                  // Hora
+                  SizedBox(
+                    width: 48,
+                    child: Text(
+                      hora,
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
                       ),
-                      const SizedBox(height: 4),
-                      Container(
-                        width: 30,
-                        height: 3,
-                        decoration: BoxDecoration(
-                          color: cs.primary,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                  const SizedBox(width: 24),
-                  // Content
+                  Container(
+                    width: 1,
+                    height: 36,
+                    color: Colors.white.withOpacity(0.1),
+                    margin: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                  // Local + bolinhas
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          local,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.outfit(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
+                    child: StreamBuilder<int>(
+                      stream: presencas.countConfirmados(jogoId),
+                      builder: (context, countSnap) {
+                        final confirmados = countSnap.data ?? 0;
+                        final bool hasLimit = maxJogadores > 0;
+                        final bool isFull =
+                            hasLimit && confirmados >= maxJogadores;
+                        final dotColor = isFull ? cs.error : cs.primary;
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              Icons.person_outline,
-                              size: 14,
-                              color: Colors.white38,
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                organizer,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white38,
-                                  fontSize: 13,
-                                ),
+                            Text(
+                              local,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.outfit(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
                               ),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        StreamBuilder<int>(
-                          stream: presencas.countConfirmados(jogoId),
-                          builder: (context, countSnap) {
-                            final confirmados = countSnap.data ?? 0;
-                            final restantes = maxJogadores - confirmados;
-                            final bool hasLimit = maxJogadores > 0;
-                            final bool isFull =
-                                hasLimit && confirmados >= maxJogadores;
-
-                            return Column(
+                            const SizedBox(height: 6),
+                            Row(
                               children: [
-                                Row(
-                                  children: [
-                                    _buildStatusIndicator(
-                                      confirmados,
-                                      maxJogadores,
-                                      cs,
+                                if (hasLimit) ...[
+                                  ...List.generate(maxJogadores.clamp(0, 10), (
+                                    i,
+                                  ) {
+                                    return Container(
+                                      margin: const EdgeInsets.only(right: 3),
+                                      width: 5,
+                                      height: 5,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: i < confirmados
+                                            ? dotColor
+                                            : Colors.white.withOpacity(0.15),
+                                      ),
+                                    );
+                                  }),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '$confirmados/$maxJogadores',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: isFull ? cs.error : Colors.white38,
                                     ),
-                                    if (hasLimit && restantes > 0)
-                                      Padding(
-                                        padding: const EdgeInsets.only(
-                                          left: 12,
-                                        ),
-                                        child: Text(
-                                          'Faltam $restantes',
-                                          style: TextStyle(
-                                            color: cs.primary.withOpacity(0.5),
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    const Spacer(),
-                                    if (uid != null)
-                                      StreamBuilder<bool>(
-                                        stream: presencas.minhaPresenca(jogoId),
-                                        builder: (context, meSnap) {
-                                          final isGoing = meSnap.data ?? false;
-                                          return _buildJoinButton(
-                                            isGoing,
-                                            isFull,
-                                            () async {
-                                              try {
-                                                if (!isGoing && isFull) {
-                                                  ScaffoldMessenger.of(
-                                                    context,
-                                                  ).showSnackBar(
-                                                    const SnackBar(
-                                                      content: Text(
-                                                        'Este jogo já está lotado!',
-                                                      ),
-                                                    ),
-                                                  );
-                                                  return;
-                                                }
-                                                await presencas.marcarPresenca(
-                                                  jogoId,
-                                                  !isGoing,
-                                                );
-                                                if (!isGoing && mounted) {
-                                                  Navigator.of(context).push(
-                                                    MaterialPageRoute(
-                                                      builder: (_) =>
-                                                          ConfirmacaoJogoPage(
-                                                            titulo: local,
-                                                            data: date,
-                                                            local: local,
-                                                          ),
-                                                    ),
-                                                  );
-                                                }
-                                              } catch (e) {
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text('Erro: $e'),
-                                                  ),
-                                                );
-                                              }
-                                            },
-                                            cs,
-                                          );
-                                        },
-                                      ),
-                                  ],
-                                ),
-                                if (hasLimit)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 12),
-                                    child: _buildProgressBar(
-                                      confirmados,
-                                      maxJogadores,
-                                      cs,
+                                  ),
+                                ] else
+                                  Text(
+                                    '$confirmados jogadores',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 11,
+                                      color: Colors.white38,
                                     ),
                                   ),
                               ],
-                            );
-                          },
-                        ),
-                      ],
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
+                  const SizedBox(width: 12),
+                  // Botão
+                  if (uid != null)
+                    StreamBuilder<int>(
+                      stream: presencas.countConfirmados(jogoId),
+                      builder: (context, countSnap) {
+                        final confirmados = countSnap.data ?? 0;
+                        final bool isFull =
+                            maxJogadores > 0 && confirmados >= maxJogadores;
+                        return StreamBuilder<bool>(
+                          stream: presencas.minhaPresenca(jogoId),
+                          builder: (context, meSnap) {
+                            final isGoing = meSnap.data ?? false;
+                            return _buildJoinButton(isGoing, isFull, () async {
+                              try {
+                                if (!isGoing && isFull) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Este jogo já está lotado!',
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+                                await presencas.marcarPresenca(
+                                  jogoId,
+                                  !isGoing,
+                                );
+                                if (!isGoing && mounted) {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => ConfirmacaoJogoPage(
+                                        titulo: local,
+                                        data: date,
+                                        local: local,
+                                      ),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Erro: $e')),
+                                );
+                              }
+                            }, cs);
+                          },
+                        );
+                      },
+                    ),
                 ],
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildProgressBar(int current, int max, ColorScheme cs) {
-    final double progress = (current / max).clamp(0.0, 1.0);
-    final bool isFull = current >= max;
-
-    return Container(
-      height: 4,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(2),
-      ),
-      child: FractionallySizedBox(
-        alignment: Alignment.centerLeft,
-        widthFactor: progress,
-        child: Container(
-          decoration: BoxDecoration(
-            color: isFull ? cs.error : cs.primary.withOpacity(0.8),
-            borderRadius: BorderRadius.circular(2),
-            boxShadow: [
-              if (!isFull)
-                BoxShadow(
-                  color: cs.primary.withOpacity(0.3),
-                  blurRadius: 4,
-                  spreadRadius: 1,
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusIndicator(int current, int max, ColorScheme cs) {
-    final bool hasLimit = max > 0;
-    final bool isFull = hasLimit && current >= max;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: isFull ? cs.error.withOpacity(0.1) : cs.primary.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.people_alt_rounded,
-            size: 14,
-            color: isFull ? cs.error : cs.primary,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            '$current${hasLimit ? "/$max" : ""}',
-            style: GoogleFonts.outfit(
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              color: isFull ? cs.error : cs.primary,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -732,34 +632,34 @@ class _JogosListaState extends State<JogosLista> {
       return OutlinedButton(
         onPressed: onTap,
         style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           side: const BorderSide(color: Colors.white24),
           foregroundColor: Colors.white70,
+          textStyle: GoogleFonts.outfit(
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+          ),
         ),
         child: const Text('SAIR'),
       );
     }
 
-    return Container(
-      constraints: const BoxConstraints(
-        minWidth: 70, // Largura mínima
-        maxWidth: 100, // Largura máxima
-      ),
-      child: ElevatedButton(
-        onPressed: isFull ? null : onTap,
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          minimumSize: Size.zero,
-          backgroundColor: isFull ? Colors.white10 : cs.primary,
-          foregroundColor: isFull ? Colors.white24 : const Color(0xFF0F172A),
-        ),
-        child: Text(
-          isFull ? 'LOTADO' : 'VOU',
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
+    return ElevatedButton(
+      onPressed: isFull ? null : onTap,
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        backgroundColor: isFull ? Colors.white10 : cs.primary,
+        foregroundColor: isFull ? Colors.white24 : const Color(0xFF0F172A),
+        textStyle: GoogleFonts.outfit(
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
         ),
       ),
+      child: Text(isFull ? 'LOTADO' : 'VOU'),
     );
   }
 }
