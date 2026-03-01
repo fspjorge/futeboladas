@@ -9,7 +9,8 @@ import 'confirmacao_page.dart';
 import '../../services/presenca_service.dart';
 
 class JogosLista extends StatefulWidget {
-  const JogosLista({super.key});
+  final String searchQuery;
+  const JogosLista({super.key, this.searchQuery = ''});
 
   @override
   State<JogosLista> createState() => _JogosListaState();
@@ -221,6 +222,14 @@ class _JogosListaState extends State<JogosLista> {
 
     for (final d in docs) {
       final data = d.data();
+
+      // Filtro de pesquisa
+      if (widget.searchQuery.isNotEmpty) {
+        final q = widget.searchQuery.toLowerCase();
+        final titulo = (data['titulo'] as String? ?? '').toLowerCase();
+        final local = (data['local'] as String? ?? '').toLowerCase();
+        if (!titulo.contains(q) && !local.contains(q)) continue;
+      }
 
       if (uid != null) {
         if (_filterMode == FilterMode.meus && data['createdBy'] != uid)
