@@ -18,73 +18,196 @@ class JogosLista extends StatefulWidget {
 enum FilterMode { todos, meus, participo }
 
 class _JogosListaState extends State<JogosLista> {
-  DateTime? _selectedDay;
   FilterMode _filterMode = FilterMode.todos;
+  Set<String> _jogosOndeVou = {};
+  bool _loadingVou = false;
+  DateTime? _selectedDay;
 
-  @override
-  Widget build(BuildContext context) {
-    final presencas = PresencaService();
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    final cs = Theme.of(context).colorScheme;
+  bool get _hasActiveFilter =>
+      _filterMode != FilterMode.todos || _selectedDay != null;
 
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('jogos')
-          .where('ativo', isEqualTo: true)
-          .orderBy('data')
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return _buildLoadingState();
-        }
-        if (snapshot.hasError) {
-          return _buildErrorState();
-        }
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return _buildEmptyState(
-            icon: Icons.sports_soccer,
-            message: 'Sem jogos agendados.',
-            cs: cs,
+  Future<void> _loadJogosOndeVou() async {
+    if (!mounted) return;
+    setState(() => _loadingVou = true);
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+
+      final snap = await FirebaseFirestore.instance
+          .collectionGroup('presencas')
+          .where('uid', isEqualTo: uid)
+          .where('vai', isEqualTo: true)
+          .get();
+
+      if (!mounted) return;
+      setState(() {
+        _jogosOndeVou = snap.docs
+            .map((d) => d.reference.parent.parent!.id)
+            .toSet();
+      });
+    } catch (e) {
+      debugPrint('Erro: $e');
+    } finally {
+      if (mounted) setState(() => _loadingVou = false);
+    }
+  }
+
+  void _openFilterSheet(BuildContext context, ColorScheme cs) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          return ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E293B).withOpacity(0.95),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
+                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Handle
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'FILTROS',
+                      style: GoogleFonts.outfit(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white38,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        _sheetChip(
+                          'Todos',
+                          Icons.grid_view_rounded,
+                          _filterMode == FilterMode.todos,
+                          cs,
+                          () {
+                            setSheetState(() => _filterMode = FilterMode.todos);
+                            setState(() => _filterMode = FilterMode.todos);
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        _sheetChip(
+                          'Meus',
+                          Icons.person_outline_rounded,
+                          _filterMode == FilterMode.meus,
+                          cs,
+                          () {
+                            setSheetState(() => _filterMode = FilterMode.meus);
+                            setState(() => _filterMode = FilterMode.meus);
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        _sheetChip(
+                          'Vou',
+                          Icons.check_circle_outline_rounded,
+                          _filterMode == FilterMode.participo,
+                          cs,
+                          () {
+                            setSheetState(
+                              () => _filterMode = FilterMode.participo,
+                            );
+                            setState(() => _filterMode = FilterMode.participo);
+                            _loadJogosOndeVou();
+                          },
+                        ),
+                      ],
+                    ),
+                    if (_hasActiveFilter) ...[
+                      const SizedBox(height: 20),
+                      TextButton.icon(
+                        onPressed: () {
+                          setSheetState(() {});
+                          setState(() {
+                            _filterMode = FilterMode.todos;
+                            _selectedDay = null;
+                          });
+                          Navigator.pop(context);
+                        },
+                        icon: const Icon(Icons.close_rounded, size: 14),
+                        label: Text(
+                          'Limpar filtros',
+                          style: GoogleFonts.outfit(fontSize: 13),
+                        ),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white38,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
           );
-        }
+        },
+      ),
+    );
+  }
 
-        final docs = snapshot.data!.docs;
-        final filtered = _processGames(docs, uid);
-
-        final filteredDays = filtered.keys.toList()..sort();
-        final visibleDays = _selectedDay == null
-            ? filteredDays
-            : filteredDays
-                  .where(
-                    (d) =>
-                        d.year == _selectedDay!.year &&
-                        d.month == _selectedDay!.month &&
-                        d.day == _selectedDay!.day,
-                  )
-                  .toList();
-
-        return Column(
+  Widget _sheetChip(
+    String label,
+    IconData icon,
+    bool selected,
+    ColorScheme cs,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected
+              ? cs.primary.withOpacity(0.15)
+              : Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected
+                ? cs.primary.withOpacity(0.6)
+                : Colors.white.withOpacity(0.08),
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildDaySelector(filtered.keys.toList()..sort(), cs),
-            const SizedBox(height: 20),
-            _buildFilterChips(cs),
-            const SizedBox(height: 24),
-            if (visibleDays.isEmpty)
-              _buildEmptyState(
-                icon: Icons.filter_alt_off_outlined,
-                message: 'Nenhum jogo encontrado para estes filtros.',
-                isSmall: true,
-                cs: cs,
-              )
-            else
-              ...visibleDays.map(
-                (day) =>
-                    _buildDaySection(day, filtered[day]!, presencas, uid, cs),
+            Icon(icon, size: 14, color: selected ? cs.primary : Colors.white38),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
+                color: selected ? cs.primary : Colors.white60,
               ),
+            ),
           ],
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -102,11 +225,15 @@ class _JogosListaState extends State<JogosLista> {
       if (uid != null) {
         if (_filterMode == FilterMode.meus && data['createdBy'] != uid)
           continue;
-        if (_filterMode == FilterMode.participo) {
-          final participants = List<String>.from(data['participantes'] ?? []);
-          final isCreator = data['createdBy'] == uid;
-          if (!participants.contains(uid) && !isCreator) continue;
-        }
+        if (_filterMode == FilterMode.participo &&
+            !_jogosOndeVou.contains(d.id))
+          continue;
+      }
+
+      if (_selectedDay != null) {
+        final dt = (data['data'] as Timestamp).toDate();
+        final day = DateTime(dt.year, dt.month, dt.day);
+        if (day != _selectedDay) continue;
       }
 
       final dt = (data['data'] as Timestamp).toDate();
@@ -117,15 +244,137 @@ class _JogosListaState extends State<JogosLista> {
     return groups;
   }
 
+  List<DateTime> _getAllDays(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+  ) {
+    final Set<DateTime> days = {};
+    for (final d in docs) {
+      final dt = (d.data()['data'] as Timestamp).toDate();
+      days.add(DateTime(dt.year, dt.month, dt.day));
+    }
+    return days.toList()..sort();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final presencas = PresencaService();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final cs = Theme.of(context).colorScheme;
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('jogos')
+          .where('ativo', isEqualTo: true)
+          .orderBy('data')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting ||
+            (_loadingVou && _filterMode == FilterMode.participo)) {
+          return _buildLoadingState();
+        }
+        if (snapshot.hasError) return _buildErrorState();
+
+        final docs = snapshot.data?.docs ?? [];
+        final allDays = _getAllDays(docs);
+        final filtered = _processGames(docs, uid);
+        final visibleDays = filtered.keys.toList()..sort();
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header com seletor de dias + botão filtro
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: _buildDaySelector(allDays, cs)),
+                const SizedBox(width: 8),
+                Padding(
+                  padding: const EdgeInsets.only(top: 28),
+                  child: _buildFilterButton(cs, context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (docs.isEmpty)
+              _buildEmptyState(
+                icon: Icons.sports_soccer,
+                message: 'Sem jogos agendados.',
+                cs: cs,
+              )
+            else if (visibleDays.isEmpty)
+              _buildEmptyState(
+                icon: Icons.filter_alt_off_outlined,
+                message: 'Nenhum jogo encontrado.',
+                isSmall: true,
+                cs: cs,
+              )
+            else
+              ...visibleDays.map(
+                (day) =>
+                    _buildDaySection(day, filtered[day]!, presencas, uid, cs),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildFilterButton(ColorScheme cs, BuildContext context) {
+    return GestureDetector(
+      onTap: () => _openFilterSheet(context, cs),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: _hasActiveFilter
+              ? cs.primary.withOpacity(0.15)
+              : Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: _hasActiveFilter
+                ? cs.primary.withOpacity(0.5)
+                : Colors.white.withOpacity(0.08),
+            width: _hasActiveFilter ? 1.5 : 1,
+          ),
+        ),
+        child: Stack(
+          children: [
+            Center(
+              child: Icon(
+                Icons.tune_rounded,
+                size: 20,
+                color: _hasActiveFilter ? cs.primary : Colors.white38,
+              ),
+            ),
+            if (_hasActiveFilter)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: cs.primary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildLoadingState() {
     return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           CircularProgressIndicator(strokeWidth: 2),
-          SizedBox(height: 16),
+          SizedBox(height: 12),
           Text(
-            'A carregar jogos...',
+            'A carregar...',
             style: TextStyle(color: Colors.white38, fontSize: 13),
           ),
         ],
@@ -138,8 +387,8 @@ class _JogosListaState extends State<JogosLista> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.error_outline, color: Colors.redAccent, size: 40),
-          const SizedBox(height: 16),
+          const Icon(Icons.error_outline, color: Colors.redAccent, size: 36),
+          const SizedBox(height: 12),
           const Text(
             'Erro ao carregar jogos.',
             style: TextStyle(color: Colors.white70),
@@ -159,39 +408,36 @@ class _JogosListaState extends State<JogosLista> {
     required ColorScheme cs,
     bool isSmall = false,
   }) {
-    String finalMessage = message;
+    String msg = message;
     if (isSmall) {
-      if (_filterMode == FilterMode.meus) {
-        finalMessage = 'Não criaste jogos para este dia.';
-      } else if (_filterMode == FilterMode.participo) {
-        finalMessage = 'Não tens jogos agendados onde vais participar.';
-      }
+      if (_filterMode == FilterMode.meus)
+        msg = 'Não criaste nenhum jogo.';
+      else if (_filterMode == FilterMode.participo)
+        msg = 'Não tens jogos confirmados.';
     }
-
     return Center(
       child: Padding(
-        padding: EdgeInsets.symmetric(vertical: isSmall ? 40 : 100),
+        padding: EdgeInsets.symmetric(vertical: isSmall ? 32 : 80),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: isSmall ? 40 : 64, color: Colors.white10),
-            const SizedBox(height: 16),
+            Icon(icon, size: isSmall ? 36 : 56, color: Colors.white10),
+            const SizedBox(height: 12),
             Text(
-              finalMessage,
+              msg,
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(color: Colors.white38, fontSize: 16),
+              style: GoogleFonts.outfit(color: Colors.white38, fontSize: 15),
             ),
-            if (isSmall && _filterMode != FilterMode.todos)
+            if (isSmall && _hasActiveFilter)
               Padding(
-                padding: const EdgeInsets.only(top: 16),
+                padding: const EdgeInsets.only(top: 12),
                 child: TextButton(
                   onPressed: () => setState(() {
                     _filterMode = FilterMode.todos;
                     _selectedDay = null;
                   }),
                   child: Text(
-                    'VER TODOS OS JOGOS',
-                    style: TextStyle(color: cs.primary),
+                    'LIMPAR FILTROS',
+                    style: TextStyle(color: cs.primary, fontSize: 12),
                   ),
                 ),
               ),
@@ -215,11 +461,11 @@ class _JogosListaState extends State<JogosLista> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          padding: const EdgeInsets.only(left: 2, bottom: 8),
           child: Text(
             monthDisplay,
             style: GoogleFonts.outfit(
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: FontWeight.w900,
               color: cs.primary.withOpacity(0.5),
               letterSpacing: 1.5,
@@ -227,7 +473,7 @@ class _JogosListaState extends State<JogosLista> {
           ),
         ),
         SizedBox(
-          height: 85,
+          height: 62,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: allDays.length,
@@ -241,46 +487,47 @@ class _JogosListaState extends State<JogosLista> {
                   day.day == _selectedDay!.day;
 
               return Padding(
-                padding: const EdgeInsets.only(right: 12),
+                padding: const EdgeInsets.only(right: 6),
                 child: InkWell(
                   onTap: () =>
                       setState(() => _selectedDay = selected ? null : day),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(12),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    width: 64,
+                    width: 46,
                     decoration: BoxDecoration(
                       color: selected
                           ? cs.primary
                           : isToday
                           ? cs.primary.withOpacity(0.1)
-                          : Colors.white.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(20),
+                          : Colors.white.withOpacity(0.04),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: selected
                             ? cs.primary
                             : isToday
-                            ? cs.primary.withOpacity(0.3)
-                            : Colors.white.withOpacity(0.1),
-                        width: isToday ? 2 : 1.5,
+                            ? cs.primary.withOpacity(0.4)
+                            : Colors.white.withOpacity(0.07),
+                        width: isToday && !selected ? 1.5 : 1,
                       ),
-                      boxShadow: [
-                        if (selected)
-                          BoxShadow(
-                            color: cs.primary.withOpacity(0.3),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                      ],
+                      boxShadow: selected
+                          ? [
+                              BoxShadow(
+                                color: cs.primary.withOpacity(0.25),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ]
+                          : [],
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         if (isToday && !selected)
                           Container(
-                            margin: const EdgeInsets.only(bottom: 4),
-                            width: 4,
-                            height: 4,
+                            margin: const EdgeInsets.only(bottom: 2),
+                            width: 3,
+                            height: 3,
                             decoration: BoxDecoration(
                               color: cs.primary,
                               shape: BoxShape.circle,
@@ -289,7 +536,7 @@ class _JogosListaState extends State<JogosLista> {
                         Text(
                           DateFormat.d('pt_PT').format(day),
                           style: GoogleFonts.outfit(
-                            fontSize: 20,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: selected
                                 ? const Color(0xFF0F172A)
@@ -301,13 +548,13 @@ class _JogosListaState extends State<JogosLista> {
                         Text(
                           DateFormat.E('pt_PT').format(day).toUpperCase(),
                           style: GoogleFonts.outfit(
-                            fontSize: 10,
+                            fontSize: 9,
                             fontWeight: FontWeight.w900,
                             color: selected
-                                ? const Color(0xFF0F172A).withOpacity(0.7)
+                                ? const Color(0xFF0F172A).withOpacity(0.6)
                                 : isToday
                                 ? cs.primary.withOpacity(0.7)
-                                : Colors.white38,
+                                : Colors.white30,
                           ),
                         ),
                       ],
@@ -319,94 +566,6 @@ class _JogosListaState extends State<JogosLista> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildFilterChips(ColorScheme cs) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _filterChip(
-            'Todos',
-            _filterMode == FilterMode.todos,
-            () => setState(() {
-              _filterMode = FilterMode.todos;
-              _selectedDay = null;
-            }),
-            cs,
-          ),
-          const SizedBox(width: 8),
-          _filterChip(
-            'Meus',
-            _filterMode == FilterMode.meus,
-            () => setState(() {
-              _filterMode = FilterMode.meus;
-              _selectedDay = null;
-            }),
-            cs,
-          ),
-          const SizedBox(width: 8),
-          _filterChip(
-            'Vou',
-            _filterMode == FilterMode.participo,
-            () => setState(() {
-              _filterMode = FilterMode.participo;
-              _selectedDay = null;
-            }),
-            cs,
-            icon: Icons.check_circle_outline,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _filterChip(
-    String label,
-    bool selected,
-    VoidCallback onTap,
-    ColorScheme cs, {
-    IconData? icon,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? cs.primary.withOpacity(0.15) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected
-                ? cs.primary.withOpacity(0.6)
-                : Colors.white.withOpacity(0.1),
-            width: selected ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(
-                icon,
-                size: 14,
-                color: selected ? cs.primary : Colors.white38,
-              ),
-              const SizedBox(width: 6),
-            ],
-            Text(
-              label,
-              style: GoogleFonts.outfit(
-                fontSize: 13,
-                fontWeight: selected ? FontWeight.w900 : FontWeight.bold,
-                color: selected ? cs.primary : Colors.white60,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -423,25 +582,25 @@ class _JogosListaState extends State<JogosLista> {
       return da.compareTo(db);
     });
 
-    final dayStr = DateFormat("EEEE, d 'de' MMMM", 'pt_PT').format(day);
+    final dayStr = DateFormat("EEE, d 'de' MMM", 'pt_PT').format(day);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 16, top: 8),
+          padding: const EdgeInsets.only(left: 2, bottom: 8, top: 4),
           child: Text(
             dayStr.toUpperCase(),
             style: GoogleFonts.outfit(
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: FontWeight.w800,
-              color: Colors.white38,
+              color: Colors.white30,
               letterSpacing: 1.2,
             ),
           ),
         ),
         ...items.map((doc) => _buildGameCard(doc, presencas, uid, cs)),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
       ],
     );
   }
@@ -460,9 +619,9 @@ class _JogosListaState extends State<JogosLista> {
     final hora = DateFormat('HH:mm').format(date);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 8),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
           child: InkWell(
@@ -470,21 +629,20 @@ class _JogosListaState extends State<JogosLista> {
               MaterialPageRoute(builder: (_) => JogoDetalhe(jogoId: jogoId)),
             ),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.04),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withOpacity(0.08)),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white.withOpacity(0.07)),
               ),
               child: Row(
                 children: [
-                  // Hora
                   SizedBox(
-                    width: 48,
+                    width: 44,
                     child: Text(
                       hora,
                       style: GoogleFonts.outfit(
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
                       ),
@@ -492,11 +650,10 @@ class _JogosListaState extends State<JogosLista> {
                   ),
                   Container(
                     width: 1,
-                    height: 36,
-                    color: Colors.white.withOpacity(0.1),
-                    margin: const EdgeInsets.symmetric(horizontal: 12),
+                    height: 30,
+                    color: Colors.white.withOpacity(0.08),
+                    margin: const EdgeInsets.symmetric(horizontal: 10),
                   ),
-                  // Local + bolinhas
                   Expanded(
                     child: StreamBuilder<int>(
                       stream: presencas.countConfirmados(jogoId),
@@ -515,45 +672,44 @@ class _JogosListaState extends State<JogosLista> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.outfit(
-                                fontSize: 15,
+                                fontSize: 14,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
                               ),
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 4),
                             Row(
                               children: [
                                 if (hasLimit) ...[
-                                  ...List.generate(maxJogadores.clamp(0, 10), (
-                                    i,
-                                  ) {
-                                    return Container(
-                                      margin: const EdgeInsets.only(right: 3),
+                                  ...List.generate(
+                                    maxJogadores.clamp(0, 10),
+                                    (i) => Container(
+                                      margin: const EdgeInsets.only(right: 2),
                                       width: 5,
                                       height: 5,
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
                                         color: i < confirmados
                                             ? dotColor
-                                            : Colors.white.withOpacity(0.15),
+                                            : Colors.white.withOpacity(0.12),
                                       ),
-                                    );
-                                  }),
-                                  const SizedBox(width: 6),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 5),
                                   Text(
                                     '$confirmados/$maxJogadores',
                                     style: GoogleFonts.outfit(
-                                      fontSize: 11,
+                                      fontSize: 10,
                                       fontWeight: FontWeight.w700,
-                                      color: isFull ? cs.error : Colors.white38,
+                                      color: isFull ? cs.error : Colors.white30,
                                     ),
                                   ),
                                 ] else
                                   Text(
                                     '$confirmados jogadores',
                                     style: GoogleFonts.outfit(
-                                      fontSize: 11,
-                                      color: Colors.white38,
+                                      fontSize: 10,
+                                      color: Colors.white30,
                                     ),
                                   ),
                               ],
@@ -563,8 +719,7 @@ class _JogosListaState extends State<JogosLista> {
                       },
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  // Botão
+                  const SizedBox(width: 10),
                   if (uid != null)
                     StreamBuilder<int>(
                       stream: presencas.countConfirmados(jogoId),
@@ -592,6 +747,8 @@ class _JogosListaState extends State<JogosLista> {
                                   jogoId,
                                   !isGoing,
                                 );
+                                if (_filterMode == FilterMode.participo)
+                                  _loadJogosOndeVou();
                                 if (!isGoing && mounted) {
                                   Navigator.of(context).push(
                                     MaterialPageRoute(
@@ -632,13 +789,13 @@ class _JogosListaState extends State<JogosLista> {
       return OutlinedButton(
         onPressed: onTap,
         style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           minimumSize: Size.zero,
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           side: const BorderSide(color: Colors.white24),
-          foregroundColor: Colors.white70,
+          foregroundColor: Colors.white60,
           textStyle: GoogleFonts.outfit(
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -649,13 +806,13 @@ class _JogosListaState extends State<JogosLista> {
     return ElevatedButton(
       onPressed: isFull ? null : onTap,
       style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         backgroundColor: isFull ? Colors.white10 : cs.primary,
         foregroundColor: isFull ? Colors.white24 : const Color(0xFF0F172A),
         textStyle: GoogleFonts.outfit(
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: FontWeight.w900,
         ),
       ),

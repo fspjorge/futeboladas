@@ -30,6 +30,7 @@ class PresencaService {
       'updatedAt': Timestamp.now(),
       'name': user.displayName ?? '',
       'photo': user.photoURL ?? '',
+      'uid': user.uid, // ← adiciona este campo
     }, SetOptions(merge: true));
 
     await batch.commit();
