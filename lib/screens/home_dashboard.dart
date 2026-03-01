@@ -40,36 +40,49 @@ class HomeDashboard extends StatelessWidget {
             ),
           ),
           SafeArea(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              children: [
-                _headerSection(context, user, cs),
-                const SizedBox(height: 32),
-                Row(
-                  children: [
-                    Container(
-                      width: 4,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: cs.primary,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Próximos Jogos',
-                      style: GoogleFonts.outfit(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
+            child: RefreshIndicator(
+              onRefresh: () async {
+                // Força um rebuild do dashboard para atualizar a lista
+                await Future.delayed(const Duration(milliseconds: 500));
+                // Como JogosLista usa StreamBuilder, ela vai-se atualizar
+                // Mas o onRefresh ajuda na UX se o user quiser forçar.
+              },
+              color: cs.primary,
+              backgroundColor: const Color(0xFF1E293B),
+              child: ListView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
                 ),
-                const SizedBox(height: 20),
-                const JogosLista(),
-                const SizedBox(height: 80), // Space for FAB
-              ],
+                children: [
+                  _headerSection(context, user, cs),
+                  const SizedBox(height: 32),
+                  Row(
+                    children: [
+                      Container(
+                        width: 4,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: cs.primary,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Próximos Jogos',
+                        style: GoogleFonts.outfit(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  const JogosLista(),
+                  const SizedBox(height: 80), // Space for FAB
+                ],
+              ),
             ),
           ),
         ],

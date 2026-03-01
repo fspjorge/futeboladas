@@ -20,12 +20,19 @@ class PresencaService {
     if (user == null) {
       throw StateError('Utilizador não autenticado');
     }
-    await _doc(jogoId).set({
+
+    final batch = _db.batch();
+    final presenceRef = _doc(jogoId);
+
+    // 1. Atualizar a subcoleção de presenças
+    batch.set(presenceRef, {
       'vai': vai,
-      'updatedAt': FieldValue.serverTimestamp(),
-      'name': user.displayName,
-      'photo': user.photoURL,
+      'updatedAt': Timestamp.now(),
+      'name': user.displayName ?? '',
+      'photo': user.photoURL ?? '',
     }, SetOptions(merge: true));
+
+    await batch.commit();
   }
 
   Stream<int> countConfirmados(String jogoId) {
@@ -53,5 +60,3 @@ class PresencaService {
         .map((d) => (d.data()?['vai'] as bool?) ?? false);
   }
 }
-
-

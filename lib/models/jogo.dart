@@ -11,6 +11,7 @@ class Jogo {
   final String? createdByPhoto;
   final double? lat;
   final double? lon;
+  final List<String> participantes;
   final bool ativo;
 
   Jogo({
@@ -24,6 +25,7 @@ class Jogo {
     this.createdByPhoto,
     this.lat,
     this.lon,
+    this.participantes = const [],
     this.ativo = true,
   });
 
@@ -40,6 +42,7 @@ class Jogo {
       createdByPhoto: data['createdByPhoto'],
       lat: (data['lat'] as num?)?.toDouble(),
       lon: (data['lon'] as num?)?.toDouble(),
+      participantes: List<String>.from(data['participantes'] ?? []),
       ativo: data['ativo'] ?? true,
     );
   }
@@ -59,6 +62,7 @@ class Jogo {
       'createdByPhoto': createdByPhoto,
       'lat': lat,
       'lon': lon,
+      'participantes': participantes,
       'ativo': ativo,
     };
   }
