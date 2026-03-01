@@ -4,10 +4,15 @@ import '../models/jogo.dart';
 
 /// Centraliza todas as operações Firestore sobre a coleção 'jogos'.
 class JogoService {
-  JogoService._();
-  static final JogoService instance = JogoService._();
+  final FirebaseFirestore _db;
+  final FirebaseAuth _auth;
 
-  final _db = FirebaseFirestore.instance;
+  JogoService({FirebaseFirestore? firestore, FirebaseAuth? auth})
+    : _db = firestore ?? FirebaseFirestore.instance,
+      _auth = auth ?? FirebaseAuth.instance;
+
+  static final JogoService instance = JogoService();
+
   CollectionReference<Map<String, dynamic>> get _col => _db.collection('jogos');
 
   // ── Queries ───────────────────────────────────────────────────────────────
@@ -45,7 +50,7 @@ class JogoService {
   /// Apagar o jogo e todas as suas subcoleções (presencas + admin).
   Future<void> apagarJogo(String jogoId) async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final user = _auth.currentUser;
       if (user == null) {
         throw StateError('Sem sessão iniciada');
       }

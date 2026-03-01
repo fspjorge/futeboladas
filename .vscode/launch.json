@@ -1,0 +1,11 @@
+{
+    "configurations": [
+        {
+            "name": "futeboladas (Flutter RMX3085)",
+            "program": "lib/main.dart",
+            "deviceId": "ZLW8SSBMCEFIVGOV",
+            "request": "launch",
+            "type": "dart"
+        }
+    ]
+}

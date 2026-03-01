@@ -36,7 +36,9 @@ class Jogo {
       titulo: data['titulo'] ?? '',
       local: data['local'] ?? '',
       jogadores: (data['jogadores'] as num?)?.toInt() ?? 0,
-      data: (data['data'] as Timestamp).toDate(),
+      data: data['data'] is Timestamp
+          ? (data['data'] as Timestamp).toDate()
+          : DateTime.parse(data['data'] as String),
       createdBy: data['createdBy'],
       createdByName: data['createdByName'],
       createdByPhoto: data['createdByPhoto'],
