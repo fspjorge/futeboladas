@@ -42,7 +42,8 @@ service cloud.firestore {
         // Cada utilizador gere a sua própria presença
         allow create, update: if request.auth != null
           && request.auth.uid == uid
-          && request.resource.data.keys().hasOnly(['vai','updatedAt','name','photo'])
+          && request.resource.data.keys().hasAll(['vai', 'uid'])
+          && request.resource.data.keys().hasOnly(['vai','updatedAt','name','photo', 'uid'])
           && request.resource.data.vai is bool;
         // O utilizador pode apagar a sua, ou o dono do jogo pode apagar todas
         allow delete: if request.auth != null
