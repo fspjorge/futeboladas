@@ -820,12 +820,22 @@ class _JogosListaState extends State<JogosLista> {
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         backgroundColor: isFull ? Colors.white10 : cs.primary,
         foregroundColor: isFull ? Colors.white24 : const Color(0xFF0F172A),
+        shape: RoundedRectangleBorder(
+          // ← Adicionar
+          borderRadius: BorderRadius.circular(8), // Mesmo dos chips
+        ),
         textStyle: GoogleFonts.outfit(
           fontSize: 11,
           fontWeight: FontWeight.w900,
         ),
       ),
-      child: Text(isFull ? 'LOTADO' : 'VOU'),
+      child: Text(
+        isFull ? 'LOTADO' : 'VOU',
+        style: GoogleFonts.outfit(
+          fontSize: isFull ? 10 : 11, // Ligeiramente menor se for "LOTADO"
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
 }
