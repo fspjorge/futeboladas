@@ -4,8 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'jogos/jogos_lista.dart';
 import 'jogos/jogos_maps.dart';
-import 'perfil_page.dart'; // nova página de perfil (criar depois)
-import 'package:futeboladas/main.dart' show HomePage;
+import 'perfil/perfil_page.dart'; // nova página de perfil (criar depois)
 
 class HomeDashboard extends StatefulWidget {
   final User user;
@@ -108,64 +107,74 @@ class _HomeDashboardState extends State<HomeDashboard> {
     );
   }
 
-  // Versão compacta da searchbar para caber na AppBar
   Widget _buildSearchBarCompact(ColorScheme cs) {
     final hasText = _searchQuery.isNotEmpty;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          constraints: const BoxConstraints(maxWidth: 280),
-          decoration: BoxDecoration(
-            color: hasText
-                ? cs.primary.withOpacity(0.08)
-                : Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: hasText
-                  ? cs.primary.withOpacity(0.4)
-                  : Colors.white.withOpacity(0.08),
-              width: hasText ? 1.5 : 1,
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      constraints: const BoxConstraints(maxWidth: 280),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: hasText
+              ? cs.primary.withOpacity(0.5)
+              : Colors.white.withOpacity(0.2),
+          width: hasText ? 1.5 : 1,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          children: [
+            // Fundo com blur
+            Positioned.fill(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  color: hasText
+                      ? cs.primary.withOpacity(0.08)
+                      : Colors.white.withOpacity(0.05),
+                ),
+              ),
             ),
-          ),
-          child: TextField(
-            controller: _searchCtrl,
-            onChanged: (v) => setState(() => _searchQuery = v.trim()),
-            style: const TextStyle(color: Colors.white, fontSize: 14),
-            decoration: InputDecoration(
-              hintText: 'Pesquisar jogos...',
-              hintStyle: TextStyle(
-                color: Colors.white.withOpacity(0.3),
-                fontSize: 14,
+            // Campo de texto
+            TextField(
+              controller: _searchCtrl,
+              onChanged: (v) => setState(() => _searchQuery = v.trim()),
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'Pesquisar jogos...',
+                hintStyle: TextStyle(
+                  color: Colors.white.withOpacity(0.3),
+                  fontSize: 14,
+                ),
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  color: hasText ? cs.primary : Colors.white30,
+                  size: 18,
+                ),
+                suffixIcon: hasText
+                    ? IconButton(
+                        icon: Icon(
+                          Icons.close_rounded,
+                          color: Colors.white30,
+                          size: 16,
+                        ),
+                        onPressed: () => setState(() {
+                          _searchCtrl.clear();
+                          _searchQuery = '';
+                        }),
+                      )
+                    : null,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                isDense: true,
               ),
-              prefixIcon: Icon(
-                Icons.search_rounded,
-                color: hasText ? cs.primary : Colors.white30,
-                size: 18,
-              ),
-              suffixIcon: hasText
-                  ? IconButton(
-                      icon: Icon(
-                        Icons.close_rounded,
-                        color: Colors.white30,
-                        size: 16,
-                      ),
-                      onPressed: () => setState(() {
-                        _searchCtrl.clear();
-                        _searchQuery = '';
-                      }),
-                    )
-                  : null,
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 8,
-              ),
-              isDense: true,
             ),
-          ),
+          ],
         ),
       ),
     );

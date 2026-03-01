@@ -100,22 +100,7 @@ class PerfilPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 30),
-                // Secções de opções
-                _buildSectionTitle('CONTA', cs),
-                const SizedBox(height: 12),
-                _buildOptionTile(
-                  icon: Icons.people_outline_rounded,
-                  label: 'Meus Amigos',
-                  onTap: () {},
-                  cs: cs,
-                ),
-                _buildOptionTile(
-                  icon: Icons.emoji_events_outlined,
-                  label: 'Estatísticas',
-                  onTap: () {},
-                  cs: cs,
-                ),
-                const SizedBox(height: 20),
+                // Apenas secção de definições
                 _buildSectionTitle('DEFINIÇÕES', cs),
                 const SizedBox(height: 12),
                 _buildOptionTile(
