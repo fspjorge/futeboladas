@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/presenca_service.dart';
 import '../../services/jogo_service.dart';
+import '../../services/weather_service.dart'; // ← NOVO
 import 'confirmacao_page.dart';
 import 'jogo_editar.dart';
 
@@ -230,7 +231,15 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                     child: ListView(
                       padding: EdgeInsets.zero,
                       children: [
-                        _buildHeroHeader(local, date, preco, cs),
+                        _buildHeroHeader(
+                          data['titulo'] as String? ?? local,
+                          local,
+                          date,
+                          preco,
+                          cs,
+                          (data['lat'] as num?)?.toDouble(),
+                          (data['lon'] as num?)?.toDouble(),
+                        ),
                         Padding(
                           padding: const EdgeInsets.all(20),
                           child: Column(
@@ -250,7 +259,16 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                       ],
                     ),
                   ),
-                  _buildBottomAction(presencas, widget.jogoId, local, date, cs),
+                  _buildBottomAction(
+                    presencas,
+                    widget.jogoId,
+                    data['titulo'] as String? ?? local,
+                    local,
+                    date,
+                    cs,
+                    (data['lat'] as num?)?.toDouble(),
+                    (data['lon'] as num?)?.toDouble(),
+                  ),
                 ],
               );
             },
@@ -266,10 +284,13 @@ class _JogoDetalheState extends State<JogoDetalhe> {
   }
 
   Widget _buildHeroHeader(
+    String titulo,
     String local,
     DateTime? date,
     num preco,
     ColorScheme cs,
+    double? lat,
+    double? lon,
   ) {
     return Container(
       constraints: const BoxConstraints(minHeight: 280),
@@ -308,7 +329,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          'PARTIDA CONFIRMADA',
+                          'JOGO CONFIRMADO',
                           style: GoogleFonts.outfit(
                             color: cs.primary,
                             fontSize: 10,
@@ -346,7 +367,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    local,
+                    titulo,
                     style: GoogleFonts.outfit(
                       fontSize: 32,
                       fontWeight: FontWeight.w900,
@@ -375,6 +396,43 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
+                      if (lat != null && lon != null && date != null) ...[
+                        const SizedBox(width: 12),
+                        FutureBuilder<Map<String, dynamic>?>(
+                          future: WeatherService().getForecastAt(
+                            lat,
+                            lon,
+                            date,
+                          ),
+                          builder: (context, weatherSnap) {
+                            if (!weatherSnap.hasData ||
+                                weatherSnap.data == null) {
+                              return const SizedBox.shrink();
+                            }
+                            final w = weatherSnap.data!;
+                            return Row(
+                              children: [
+                                Icon(
+                                  w['diaNoite'] == 'Noite'
+                                      ? Icons.nightlight_round
+                                      : Icons.wb_sunny_rounded,
+                                  size: 16,
+                                  color: Colors.amber.withOpacity(0.8),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${w['temp']}°C',
+                                  style: GoogleFonts.outfit(
+                                    color: Colors.white70,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ],
                     ],
                   ),
                 ],
@@ -426,6 +484,38 @@ class _JogoDetalheState extends State<JogoDetalhe> {
           const Divider(color: Colors.white10, height: 1),
           _infoRow(Icons.person_outline, 'Organizador', createdByName),
           const Divider(color: Colors.white10, height: 1),
+          if ((data['lat'] as num?) != null &&
+              (data['lon'] as num?) != null &&
+              (data['data'] as Timestamp?) != null) ...[
+            FutureBuilder<Map<String, dynamic>?>(
+              future: WeatherService().getForecastAt(
+                (data['lat'] as num).toDouble(),
+                (data['lon'] as num).toDouble(),
+                (data['data'] as Timestamp).toDate(),
+              ),
+              builder: (context, weatherSnap) {
+                if (!weatherSnap.hasData || weatherSnap.data == null) {
+                  return const SizedBox.shrink();
+                }
+                final w = weatherSnap.data!;
+                final desc = w['desc'] as String? ?? '';
+                final capitalizedDesc = desc.isNotEmpty
+                    ? '${desc[0].toUpperCase()}${desc.substring(1)}'
+                    : '';
+
+                return Column(
+                  children: [
+                    _infoRow(
+                      Icons.cloud_outlined,
+                      'Previsão',
+                      '$capitalizedDesc, ${w['temp']}°C',
+                    ),
+                    const Divider(color: Colors.white10, height: 1),
+                  ],
+                );
+              },
+            ),
+          ],
           InkWell(
             onTap: _pickReminder,
             child: _infoRow(
@@ -770,9 +860,12 @@ class _JogoDetalheState extends State<JogoDetalhe> {
   Widget _buildBottomAction(
     PresencaService presencas,
     String jogoId,
+    String titulo,
     String local,
     DateTime? date,
     ColorScheme cs,
+    double? lat,
+    double? lon,
   ) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -796,15 +889,34 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                     : () async {
                         await presencas.marcarPresenca(jogoId, !isGoing);
                         if (!isGoing && mounted) {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => ConfirmacaoJogoPage(
-                                titulo: local,
-                                data: date ?? DateTime.now(),
-                                local: local,
+                          String? weatherStr;
+                          if (lat != null && lon != null && date != null) {
+                            final w = await WeatherService().getForecastAt(
+                              lat,
+                              lon,
+                              date,
+                            );
+                            if (w != null) {
+                              final desc = w['desc'] as String? ?? '';
+                              final capitalizedDesc = desc.isNotEmpty
+                                  ? '${desc[0].toUpperCase()}${desc.substring(1)}'
+                                  : '';
+                              weatherStr = '$capitalizedDesc, ${w['temp']}°C';
+                            }
+                          }
+
+                          if (mounted) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ConfirmacaoJogoPage(
+                                  titulo: titulo,
+                                  data: date ?? DateTime.now(),
+                                  local: local,
+                                  weather: weatherStr,
+                                ),
                               ),
-                            ),
-                          );
+                            );
+                          }
                         }
                       },
                 style: ElevatedButton.styleFrom(

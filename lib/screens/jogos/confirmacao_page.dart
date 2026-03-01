@@ -8,13 +8,14 @@ class ConfirmacaoJogoPage extends StatelessWidget {
   final DateTime data;
   final String local;
   final double? preco; // ← NOVO (opcional)
-
+  final String? weather; // ← NOVO (opcional)
   const ConfirmacaoJogoPage({
     super.key,
     required this.titulo,
     required this.data,
     required this.local,
-    this.preco, // ← NOVO
+    this.preco,
+    this.weather,
   });
 
   String _formatarPreco(double? preco) {
@@ -27,6 +28,15 @@ class ConfirmacaoJogoPage extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: Stack(
         children: [
           // Background Backdrop
@@ -39,143 +49,161 @@ class ConfirmacaoJogoPage extends StatelessWidget {
           ),
 
           // Content
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Animated Success Icon with Glass background
-                  TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0.0, end: 1.0),
-                    duration: const Duration(milliseconds: 800),
-                    curve: Curves.elasticOut,
-                    builder: (context, value, child) {
-                      return Transform.scale(scale: value, child: child);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: cs.primary.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: cs.primary.withOpacity(0.2),
-                          width: 2,
-                        ),
-                      ),
-                      child: Icon(
-                        Icons.check_circle_rounded,
-                        size: 80,
-                        color: cs.primary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  Text(
-                    'PRESENÇA CONFIRMADA!',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.outfit(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Estás dentro da convocatória. Prepara as chuteiras!',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.outfit(
-                      fontSize: 16,
-                      color: Colors.white60,
-                    ),
-                  ),
-
-                  const SizedBox(height: 48),
-
-                  // Game Summary Card
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.1),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            _buildInfoMini(Icons.sports_soccer, titulo),
-                            const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 12),
-                              child: Divider(color: Colors.white10, height: 1),
-                            ),
-                            _buildInfoMini(Icons.place_outlined, local),
-                            const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 12),
-                              child: Divider(color: Colors.white10, height: 1),
-                            ),
-                            _buildInfoMini(
-                              Icons.schedule_outlined,
-                              DateFormat(
-                                "EEEE, d 'de' MMMM 'às' HH:mm",
-                                'pt_PT',
-                              ).format(data),
-                            ),
-                            if (preco != null) ...[
-                              const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 12),
-                                child: Divider(
-                                  color: Colors.white10,
-                                  height: 1,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Animated Success Icon with Glass background
+                          TweenAnimationBuilder<double>(
+                            tween: Tween(begin: 0.0, end: 1.0),
+                            duration: const Duration(milliseconds: 800),
+                            curve: Curves.elasticOut,
+                            builder: (context, value, child) {
+                              return Transform.scale(
+                                scale: value,
+                                child: child,
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: cs.primary.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: cs.primary.withOpacity(0.2),
+                                  width: 2,
                                 ),
                               ),
-                              _buildInfoMini(
-                                Icons.euro_rounded,
-                                _formatarPreco(preco),
-                                valorCor: preco! > 0
-                                    ? Colors.green
-                                    : Colors.blue,
+                              child: Icon(
+                                Icons.check_circle_rounded,
+                                size: 80,
+                                color: cs.primary,
                               ),
-                            ],
-                          ],
-                        ),
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+
+                          Text(
+                            'PRESENÇA CONFIRMADA!',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.outfit(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Estás dentro da convocatória. Prepara as chuteiras!',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.outfit(
+                              fontSize: 16,
+                              color: Colors.white60,
+                            ),
+                          ),
+
+                          const SizedBox(height: 40),
+
+                          // Game Summary Card
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                              child: Container(
+                                padding: const EdgeInsets.all(24),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.05),
+                                  borderRadius: BorderRadius.circular(24),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.1),
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    _buildInfoMini(Icons.sports_soccer, titulo),
+                                    const Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+                                      child: Divider(
+                                        color: Colors.white10,
+                                        height: 1,
+                                      ),
+                                    ),
+                                    _buildInfoMini(Icons.place_outlined, local),
+                                    const Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+                                      child: Divider(
+                                        color: Colors.white10,
+                                        height: 1,
+                                      ),
+                                    ),
+                                    _buildInfoMini(
+                                      Icons.schedule_outlined,
+                                      DateFormat(
+                                        "EEEE, d 'de' MMMM 'às' HH:mm",
+                                        'pt_PT',
+                                      ).format(data),
+                                    ),
+                                    if (preco != null) ...[
+                                      const Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          vertical: 12,
+                                        ),
+                                        child: Divider(
+                                          color: Colors.white10,
+                                          height: 1,
+                                        ),
+                                      ),
+                                      _buildInfoMini(
+                                        Icons.euro_rounded,
+                                        _formatarPreco(preco),
+                                        valorCor: preco! > 0
+                                            ? Colors.green
+                                            : Colors.blue,
+                                      ),
+                                    ],
+                                    if (weather != null &&
+                                        weather!.isNotEmpty) ...[
+                                      const Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          vertical: 12,
+                                        ),
+                                        child: Divider(
+                                          color: Colors.white10,
+                                          height: 1,
+                                        ),
+                                      ),
+                                      _buildInfoMini(
+                                        Icons.cloud_outlined,
+                                        weather!,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 48),
+                        ],
                       ),
                     ),
                   ),
-
-                  const SizedBox(height: 64),
-
-                  // Action Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF0F172A),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: Text(
-                        'VOLTAR AO JOGO',
-                        style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
         ],
       ),

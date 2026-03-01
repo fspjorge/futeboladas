@@ -278,7 +278,7 @@ class _JogoEditarState extends State<JogoEditar> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          'Editar Partida',
+          'Editar Jogo',
           style: GoogleFonts.outfit(fontWeight: FontWeight.w800),
         ),
       ),

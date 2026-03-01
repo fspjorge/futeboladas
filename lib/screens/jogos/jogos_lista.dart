@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'jogo_detalhe.dart';
 import 'confirmacao_page.dart';
 import '../../services/presenca_service.dart';
+import '../../services/weather_service.dart'; // ← NOVO
 
 class JogosLista extends StatefulWidget {
   final String searchQuery;
@@ -128,7 +129,7 @@ class _JogosListaState extends State<JogosLista> {
                         ),
                         const SizedBox(width: 8),
                         _sheetChip(
-                          'Vou',
+                          'Confirmados',
                           Icons.check_circle_outline_rounded,
                           _filterMode == FilterMode.participo,
                           cs,
@@ -560,7 +561,9 @@ class _JogosListaState extends State<JogosLista> {
                           ),
                         ),
                         Text(
-                          DateFormat.E('pt_PT').format(day).toUpperCase(),
+                          DateFormat.E(
+                            'pt_PT',
+                          ).format(day).toUpperCase().substring(0, 3),
                           style: GoogleFonts.outfit(
                             fontSize: 9,
                             fontWeight: FontWeight.w900,
@@ -751,6 +754,47 @@ class _JogosListaState extends State<JogosLista> {
                                     ),
                                   ),
                                 ),
+                                if (data['lat'] != null &&
+                                    data['lon'] != null &&
+                                    data['data'] != null) ...[
+                                  const SizedBox(width: 8),
+                                  FutureBuilder<Map<String, dynamic>?>(
+                                    future: WeatherService().getForecastAt(
+                                      (data['lat'] as num).toDouble(),
+                                      (data['lon'] as num).toDouble(),
+                                      (data['data'] as Timestamp).toDate(),
+                                    ),
+                                    builder: (context, weatherSnap) {
+                                      if (!weatherSnap.hasData ||
+                                          weatherSnap.data == null) {
+                                        return const SizedBox.shrink();
+                                      }
+                                      final w = weatherSnap.data!;
+                                      return Row(
+                                        children: [
+                                          Icon(
+                                            w['diaNoite'] == 'Noite'
+                                                ? Icons.nightlight_round
+                                                : Icons.wb_sunny_rounded,
+                                            size: 10,
+                                            color: Colors.amber.withOpacity(
+                                              0.6,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 2),
+                                          Text(
+                                            '${w['temp']}°C',
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.white30,
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                ],
                               ],
                             ),
                           ],
@@ -789,16 +833,39 @@ class _JogosListaState extends State<JogosLista> {
                                 if (_filterMode == FilterMode.participo)
                                   _loadJogosOndeVou();
                                 if (!isGoing && mounted) {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => ConfirmacaoJogoPage(
-                                        titulo: local,
-                                        data: date,
-                                        local: local,
-                                        preco: preco.toDouble(),
+                                  String? weatherStr;
+                                  final lat = (data['lat'] as num?)?.toDouble();
+                                  final lon = (data['lon'] as num?)?.toDouble();
+                                  if (lat != null &&
+                                      lon != null &&
+                                      date != null) {
+                                    final w = await WeatherService()
+                                        .getForecastAt(lat, lon, date);
+                                    if (w != null) {
+                                      final desc = w['desc'] as String? ?? '';
+                                      final capitalizedDesc = desc.isNotEmpty
+                                          ? '${desc[0].toUpperCase()}${desc.substring(1)}'
+                                          : '';
+                                      weatherStr =
+                                          '$capitalizedDesc, ${w['temp']}°C';
+                                    }
+                                  }
+
+                                  if (mounted) {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => ConfirmacaoJogoPage(
+                                          titulo:
+                                              data['titulo'] as String? ??
+                                              local,
+                                          data: date,
+                                          local: local,
+                                          preco: preco.toDouble(),
+                                          weather: weatherStr,
+                                        ),
                                       ),
-                                    ),
-                                  );
+                                    );
+                                  }
                                 }
                               } catch (e) {
                                 ScaffoldMessenger.of(context).showSnackBar(
@@ -858,7 +925,7 @@ class _JogosListaState extends State<JogosLista> {
         ),
       ),
       child: Text(
-        isFull ? 'LOTADO' : 'VOU',
+        isFull ? 'LOTADO' : 'IR',
         style: GoogleFonts.outfit(
           fontSize: isFull ? 10 : 11,
           fontWeight: FontWeight.w900,

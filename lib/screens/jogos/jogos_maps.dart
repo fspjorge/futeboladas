@@ -136,8 +136,11 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
 
   Future<void> _togglePresenca(
     String jogoId,
+    String titulo,
     String local,
     DateTime? dataJogo,
+    double? lat,
+    double? lon,
   ) async {
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -151,15 +154,30 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
       await _presencaService.marcarPresenca(jogoId, !isGoing);
 
       if (!isGoing && mounted) {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => ConfirmacaoJogoPage(
-              titulo: local,
-              data: dataJogo ?? DateTime.now(),
-              local: local,
+        String? weatherStr;
+        if (lat != null && lon != null && dataJogo != null) {
+          final w = await WeatherService().getForecastAt(lat, lon, dataJogo);
+          if (w != null) {
+            final desc = w['desc'] as String? ?? '';
+            final capitalizedDesc = desc.isNotEmpty
+                ? '${desc[0].toUpperCase()}${desc.substring(1)}'
+                : '';
+            weatherStr = '$capitalizedDesc, ${w['temp']}°C';
+          }
+        }
+
+        if (mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ConfirmacaoJogoPage(
+                titulo: titulo,
+                data: dataJogo ?? DateTime.now(),
+                local: local,
+                weather: weatherStr,
+              ),
             ),
-          ),
-        );
+          );
+        }
       } else if (mounted) {
         _showSnackBar('Presença removida', color: Colors.orangeAccent);
       }
@@ -199,6 +217,7 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
           final lon = (data['lon'] as num?)?.toDouble();
 
           _jogosData[jogoId] = {
+            'titulo': data['titulo'] as String? ?? local,
             'local': local,
             'dataJogo': dataJogo,
             'maxJogadores': maxJogadores,

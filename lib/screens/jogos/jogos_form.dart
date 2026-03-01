@@ -267,7 +267,7 @@ class _JogosFormState extends State<JogosForm> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          'Agendar Partida',
+          'Agendar Jogo',
           style: GoogleFonts.outfit(fontWeight: FontWeight.w800),
         ),
       ),
@@ -292,7 +292,7 @@ class _JogosFormState extends State<JogosForm> {
                     const SizedBox(height: 16),
                     _buildGlassInput(
                       controller: _tituloCtrl,
-                      label: 'Nome da Partida',
+                      label: 'Nome do Jogo',
                       hint: 'ex: Futebolada Semanal',
                       icon: Icons.sports_soccer,
                       validator: (v) =>
