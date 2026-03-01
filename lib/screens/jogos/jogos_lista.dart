@@ -1,14 +1,14 @@
-﻿import 'dart:ui' show ImageFilter;
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'jogo_detalhe.dart';
-import 'confirmacao_page.dart';
+
+import '../../models/filter_mode.dart';
 import '../../services/presenca_service.dart';
-import '../../services/weather_service.dart';
-import '../../utils/format_utils.dart';
+import '../../widgets/empty_state.dart';
+import 'widgets/jogo_card.dart';
+import 'widgets/day_selector.dart';
+import 'widgets/filter_sheet.dart';
 
 class JogosLista extends StatefulWidget {
   final String searchQuery;
@@ -17,8 +17,6 @@ class JogosLista extends StatefulWidget {
   @override
   State<JogosLista> createState() => _JogosListaState();
 }
-
-enum FilterMode { todos, meus, participo, gratuitos }
 
 class _JogosListaState extends State<JogosLista> {
   FilterMode _filterMode = FilterMode.todos;
@@ -31,8 +29,6 @@ class _JogosListaState extends State<JogosLista> {
       _filterMode != FilterMode.todos ||
       _selectedDay != null ||
       _selectedCampo != null;
-
-  String _formatarPreco(num? preco) => FormatUtils.formatarPreco(preco);
 
   Future<void> _loadJogosOndeVou() async {
     if (!mounted) return;
@@ -64,235 +60,18 @@ class _JogosListaState extends State<JogosLista> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (_) => StatefulBuilder(
-        builder: (context, setSheetState) {
-          return ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B).withValues(alpha: 0.95),
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(24),
-                  ),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.08),
-                  ),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Handle
-                    Center(
-                      child: Container(
-                        width: 36,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.white24,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'FILTROS',
-                      style: GoogleFonts.outfit(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white38,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 10,
-                      children: [
-                        _sheetChip(
-                          'Todos',
-                          Icons.grid_view_rounded,
-                          _filterMode == FilterMode.todos,
-                          cs,
-                          () {
-                            setSheetState(() => _filterMode = FilterMode.todos);
-                            setState(() => _filterMode = FilterMode.todos);
-                          },
-                        ),
-                        _sheetChip(
-                          'Meus',
-                          Icons.person_outline_rounded,
-                          _filterMode == FilterMode.meus,
-                          cs,
-                          () {
-                            final newMode = _filterMode == FilterMode.meus
-                                ? FilterMode.todos
-                                : FilterMode.meus;
-                            setSheetState(() => _filterMode = newMode);
-                            setState(() => _filterMode = newMode);
-                          },
-                        ),
-                        _sheetChip(
-                          'Confirmados',
-                          Icons.check_circle_outline_rounded,
-                          _filterMode == FilterMode.participo,
-                          cs,
-                          () {
-                            final newMode = _filterMode == FilterMode.participo
-                                ? FilterMode.todos
-                                : FilterMode.participo;
-                            setSheetState(() => _filterMode = newMode);
-                            setState(() => _filterMode = newMode);
-                            if (newMode == FilterMode.participo) {
-                              _loadJogosOndeVou();
-                            }
-                          },
-                        ),
-                        _sheetChip(
-                          'Gratuitos',
-                          Icons.money_off_csred_outlined,
-                          _filterMode == FilterMode.gratuitos,
-                          cs,
-                          () {
-                            final newMode = _filterMode == FilterMode.gratuitos
-                                ? FilterMode.todos
-                                : FilterMode.gratuitos;
-                            setSheetState(() => _filterMode = newMode);
-                            setState(() => _filterMode = newMode);
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'TIPO DE CAMPO',
-                      style: GoogleFonts.outfit(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white38,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 10,
-                      children: [
-                        _sheetChip(
-                          'Pavilhão',
-                          Icons.stairs_outlined,
-                          _selectedCampo == 'Pavilhão',
-                          cs,
-                          () {
-                            final val = _selectedCampo == 'Pavilhão'
-                                ? null
-                                : 'Pavilhão';
-                            setSheetState(() => _selectedCampo = val);
-                            setState(() => _selectedCampo = val);
-                          },
-                        ),
-                        _sheetChip(
-                          'Sintética',
-                          Icons.grass,
-                          _selectedCampo == 'Relva Sintética',
-                          cs,
-                          () {
-                            final val = _selectedCampo == 'Relva Sintética'
-                                ? null
-                                : 'Relva Sintética';
-                            setSheetState(() => _selectedCampo = val);
-                            setState(() => _selectedCampo = val);
-                          },
-                        ),
-                        _sheetChip(
-                          'Natural',
-                          Icons.eco_outlined,
-                          _selectedCampo == 'Relva Natural',
-                          cs,
-                          () {
-                            final val = _selectedCampo == 'Relva Natural'
-                                ? null
-                                : 'Relva Natural';
-                            setSheetState(() => _selectedCampo = val);
-                            setState(() => _selectedCampo = val);
-                          },
-                        ),
-                      ],
-                    ),
-                    if (_hasActiveFilter) ...[
-                      const SizedBox(height: 20),
-                      TextButton.icon(
-                        onPressed: () {
-                          setSheetState(() {});
-                          setState(() {
-                            _filterMode = FilterMode.todos;
-                            _selectedDay = null;
-                            _selectedCampo = null;
-                          });
-                          Navigator.pop(context);
-                        },
-                        icon: const Icon(Icons.close_rounded, size: 14),
-                        label: Text(
-                          'Limpar filtros',
-                          style: GoogleFonts.outfit(fontSize: 13),
-                        ),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.white38,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _sheetChip(
-    String label,
-    IconData icon,
-    bool selected,
-    ColorScheme cs,
-    VoidCallback onTap,
-  ) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected
-              ? cs.primary.withValues(alpha: 0.15)
-              : Colors.white.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected
-                ? cs.primary.withValues(alpha: 0.6)
-                : Colors.white.withValues(alpha: 0.08),
-            width: selected ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: selected ? cs.primary : Colors.white38),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: GoogleFonts.outfit(
-                fontSize: 13,
-                fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
-                color: selected ? cs.primary : Colors.white60,
-              ),
-            ),
-          ],
-        ),
+      builder: (_) => FilterSheet(
+        currentMode: _filterMode,
+        selectedCampo: _selectedCampo,
+        hasActiveFilter: _hasActiveFilter,
+        onModeChanged: (mode) => setState(() => _filterMode = mode),
+        onCampoChanged: (campo) => setState(() => _selectedCampo = campo),
+        onClearFilters: () => setState(() {
+          _filterMode = FilterMode.todos;
+          _selectedDay = null;
+          _selectedCampo = null;
+        }),
+        onLoadJogosOndeVou: _loadJogosOndeVou,
       ),
     );
   }
@@ -376,9 +155,27 @@ class _JogosListaState extends State<JogosLista> {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting ||
             (_loadingVou && _filterMode == FilterMode.participo)) {
-          return _buildLoadingState();
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.only(top: 40),
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          );
         }
-        if (snapshot.hasError) return _buildErrorState();
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.redAccent),
+                const Text('Erro ao carregar jogos'),
+                TextButton(
+                  onPressed: () => setState(() {}),
+                  child: const Text('Tentar novamente'),
+                ),
+              ],
+            ),
+          );
+        }
 
         final docs = snapshot.data?.docs ?? [];
         final allDays = _getAllDays(docs);
@@ -388,36 +185,49 @@ class _JogosListaState extends State<JogosLista> {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header com seletor de dias + botão filtro
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: _buildDaySelector(allDays, cs)),
+                Expanded(
+                  child: DaySelector(
+                    allDays: allDays,
+                    selectedDay: _selectedDay,
+                    onDaySelected: (day) => setState(() => _selectedDay = day),
+                  ),
+                ),
                 const SizedBox(width: 8),
                 Padding(
                   padding: const EdgeInsets.only(top: 28),
-                  child: _buildFilterButton(cs, context),
+                  child: _FilterButton(
+                    hasActiveFilter: _hasActiveFilter,
+                    onTap: () => _openFilterSheet(context, cs),
+                    cs: cs,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
             if (docs.isEmpty)
-              _buildEmptyState(
+              EmptyState(
                 icon: Icons.sports_soccer,
                 message: 'Sem jogos agendados.',
-                cs: cs,
               )
             else if (visibleDays.isEmpty)
-              _buildEmptyState(
+              EmptyState(
                 icon: Icons.filter_alt_off_outlined,
-                message: 'Nenhum jogo encontrado.',
+                message: _getEmptyMessage(),
                 isSmall: true,
-                cs: cs,
+                onAction: _hasActiveFilter
+                    ? () => setState(() {
+                        _filterMode = FilterMode.todos;
+                        _selectedDay = null;
+                      })
+                    : null,
+                actionLabel: 'LIMPAR FILTROS',
               )
             else
               ...visibleDays.map(
-                (day) =>
-                    _buildDaySection(day, filtered[day]!, presencas, uid, cs),
+                (day) => _buildDaySection(day, filtered[day]!, presencas, uid),
               ),
           ],
         );
@@ -425,257 +235,11 @@ class _JogosListaState extends State<JogosLista> {
     );
   }
 
-  Widget _buildFilterButton(ColorScheme cs, BuildContext context) {
-    return GestureDetector(
-      onTap: () => _openFilterSheet(context, cs),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: _hasActiveFilter
-              ? cs.primary.withValues(alpha: 0.15)
-              : Colors.white.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: _hasActiveFilter
-                ? cs.primary.withValues(alpha: 0.5)
-                : Colors.white.withValues(alpha: 0.08),
-            width: _hasActiveFilter ? 1.5 : 1,
-          ),
-        ),
-        child: Stack(
-          children: [
-            Center(
-              child: Icon(
-                Icons.tune_rounded,
-                size: 20,
-                color: _hasActiveFilter ? cs.primary : Colors.white38,
-              ),
-            ),
-            if (_hasActiveFilter)
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                    color: cs.primary,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLoadingState() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(strokeWidth: 2),
-          SizedBox(height: 12),
-          Text(
-            'A carregar...',
-            style: TextStyle(color: Colors.white38, fontSize: 13),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildErrorState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, color: Colors.redAccent, size: 36),
-          const SizedBox(height: 12),
-          const Text(
-            'Erro ao carregar jogos.',
-            style: TextStyle(color: Colors.white70),
-          ),
-          TextButton(
-            onPressed: () => setState(() {}),
-            child: const Text('Tentar novamente'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState({
-    required IconData icon,
-    required String message,
-    required ColorScheme cs,
-    bool isSmall = false,
-  }) {
-    String msg = message;
-    if (isSmall) {
-      if (_filterMode == FilterMode.meus) {
-        msg = 'Não criaste nenhum jogo.';
-      } else if (_filterMode == FilterMode.participo) {
-        msg = 'Não tens jogos confirmados.';
-      }
-    }
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: isSmall ? 32 : 80),
-        child: Column(
-          children: [
-            Icon(icon, size: isSmall ? 36 : 56, color: Colors.white10),
-            const SizedBox(height: 12),
-            Text(
-              msg,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(color: Colors.white38, fontSize: 15),
-            ),
-            if (isSmall && _hasActiveFilter)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: TextButton(
-                  onPressed: () => setState(() {
-                    _filterMode = FilterMode.todos;
-                    _selectedDay = null;
-                  }),
-                  child: Text(
-                    'LIMPAR FILTROS',
-                    style: TextStyle(color: cs.primary, fontSize: 12),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDaySelector(List<DateTime> allDays, ColorScheme cs) {
-    if (allDays.isEmpty) return const SizedBox.shrink();
-
-    final monthDisplay = _selectedDay != null
-        ? DateFormat('MMMM yyyy', 'pt_PT').format(_selectedDay!).toUpperCase()
-        : DateFormat('MMMM yyyy', 'pt_PT').format(allDays.first).toUpperCase();
-
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 2, bottom: 8),
-          child: Text(
-            monthDisplay,
-            style: GoogleFonts.outfit(
-              fontSize: 10,
-              fontWeight: FontWeight.w900,
-              color: cs.primary.withValues(alpha: 0.5),
-              letterSpacing: 1.5,
-            ),
-          ),
-        ),
-        SizedBox(
-          height: 62,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: allDays.length,
-            itemBuilder: (context, i) {
-              final day = allDays[i];
-              final isToday = day.isAtSameMomentAs(today);
-              final selected =
-                  _selectedDay != null &&
-                  day.year == _selectedDay!.year &&
-                  day.month == _selectedDay!.month &&
-                  day.day == _selectedDay!.day;
-
-              return Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: InkWell(
-                  onTap: () =>
-                      setState(() => _selectedDay = selected ? null : day),
-                  borderRadius: BorderRadius.circular(12),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 46,
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? cs.primary
-                          : isToday
-                          ? cs.primary.withValues(alpha: 0.1)
-                          : Colors.white.withValues(alpha: 0.04),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: selected
-                            ? cs.primary
-                            : isToday
-                            ? cs.primary.withValues(alpha: 0.4)
-                            : Colors.white.withValues(alpha: 0.07),
-                        width: isToday && !selected ? 1.5 : 1,
-                      ),
-                      boxShadow: selected
-                          ? [
-                              BoxShadow(
-                                color: cs.primary.withValues(alpha: 0.25),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ]
-                          : [],
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        if (isToday && !selected)
-                          Container(
-                            margin: const EdgeInsets.only(bottom: 2),
-                            width: 3,
-                            height: 3,
-                            decoration: BoxDecoration(
-                              color: cs.primary,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        Text(
-                          DateFormat.d('pt_PT').format(day),
-                          style: GoogleFonts.outfit(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: selected
-                                ? const Color(0xFF0F172A)
-                                : isToday
-                                ? cs.primary
-                                : Colors.white,
-                          ),
-                        ),
-                        Text(
-                          DateFormat.E(
-                            'pt_PT',
-                          ).format(day).toUpperCase().substring(0, 3),
-                          style: GoogleFonts.outfit(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w900,
-                            color: selected
-                                ? const Color(0xFF0F172A).withValues(alpha: 0.6)
-                                : isToday
-                                ? cs.primary.withValues(alpha: 0.7)
-                                : Colors.white30,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
+  String _getEmptyMessage() {
+    if (_filterMode == FilterMode.meus) return 'Não criaste nenhum jogo.';
+    if (_filterMode == FilterMode.participo)
+      return 'Não tens jogos confirmados.';
+    return 'Nenhum jogo encontrado.';
   }
 
   Widget _buildDaySection(
@@ -683,7 +247,6 @@ class _JogosListaState extends State<JogosLista> {
     List<QueryDocumentSnapshot<Map<String, dynamic>>> items,
     PresencaService presencas,
     String? uid,
-    ColorScheme cs,
   ) {
     items.sort((a, b) {
       final da = (a.data()['data'] as Timestamp).toDate();
@@ -691,7 +254,7 @@ class _JogosListaState extends State<JogosLista> {
       return da.compareTo(db);
     });
 
-    final dayStr = DateFormat("EEE, d 'de' MMM", 'pt_PT').format(day);
+    final dayStr = _formatDayTitle(day);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -708,352 +271,101 @@ class _JogosListaState extends State<JogosLista> {
             ),
           ),
         ),
-        ...items.map((doc) => _buildGameCard(doc, presencas, uid, cs)),
+        ...items.map(
+          (doc) => JogoCard(
+            doc: doc,
+            presencas: presencas,
+            uid: uid,
+            onPresenceChanged: _loadJogosOndeVou,
+          ),
+        ),
         const SizedBox(height: 8),
       ],
     );
   }
 
-  Widget _buildGameCard(
-    QueryDocumentSnapshot<Map<String, dynamic>> doc,
-    PresencaService presencas,
-    String? uid,
-    ColorScheme cs,
-  ) {
-    final data = doc.data();
-    final local = data['local'] as String? ?? 'Local desconhecido';
-    final maxJogadores = (data['jogadores'] as num?)?.toInt() ?? 0;
-    final preco = data['preco'] as num? ?? 0;
-    final date = (data['data'] as Timestamp).toDate();
-    final jogoId = doc.id;
-    final hora = DateFormat('HH:mm').format(date);
+  String _formatDayTitle(DateTime day) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-          child: InkWell(
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => JogoDetalhe(jogoId: jogoId)),
-            ),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.04),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
-              ),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 44,
-                    child: Text(
-                      hora,
-                      style: GoogleFonts.outfit(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    width: 1,
-                    height: 30,
-                    color: Colors.white.withValues(alpha: 0.08),
-                    margin: const EdgeInsets.symmetric(horizontal: 10),
-                  ),
-                  Expanded(
-                    child: StreamBuilder<int>(
-                      stream: presencas.countConfirmados(jogoId),
-                      builder: (context, countSnap) {
-                        final confirmados = countSnap.data ?? 0;
-                        final bool hasLimit = maxJogadores > 0;
-                        final bool isFull =
-                            hasLimit && confirmados >= maxJogadores;
-                        final dotColor = isFull ? cs.error : cs.primary;
+    if (day == today) return 'Hoje';
+    if (day == tomorrow) return 'Amanhã';
 
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              local,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.outfit(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (hasLimit) ...[
-                                      ...List.generate(
-                                        maxJogadores.clamp(0, 8),
-                                        (i) => Container(
-                                          margin: const EdgeInsets.only(
-                                            right: 2,
-                                          ),
-                                          width: 5,
-                                          height: 5,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color: i < confirmados
-                                                ? dotColor
-                                                : Colors.white.withValues(
-                                                    alpha: 0.12,
-                                                  ),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 5),
-                                      Text(
-                                        '$confirmados/$maxJogadores',
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w700,
-                                          color: isFull
-                                              ? cs.error
-                                              : Colors.white30,
-                                        ),
-                                      ),
-                                    ] else
-                                      Text(
-                                        '$confirmados jogadores',
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 10,
-                                          color: Colors.white30,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                                const SizedBox(width: 8),
-                                // Preço ao lado do número de jogadores
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: preco > 0
-                                        ? Colors.green.withValues(alpha: 0.1)
-                                        : Colors.blue.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    _formatarPreco(preco),
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w700,
-                                      color: preco > 0
-                                          ? Colors.green
-                                          : Colors.blue,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                        Icons.stadium_outlined,
-                                        size: 10,
-                                        color: Colors.white38,
-                                      ),
-                                      const SizedBox(width: 2),
-                                      Flexible(
-                                        child: Text(
-                                          (data['campo'] as String? ??
-                                                  'Relva Sintética')
-                                              .replaceAll('Relva ', ''),
-                                          style: GoogleFonts.outfit(
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white30,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  if (uid != null)
-                    StreamBuilder<int>(
-                      stream: presencas.countConfirmados(jogoId),
-                      builder: (context, countSnap) {
-                        final confirmados = countSnap.data ?? 0;
-                        final bool isFull =
-                            maxJogadores > 0 && confirmados >= maxJogadores;
-                        return StreamBuilder<bool>(
-                          stream: presencas.minhaPresenca(jogoId),
-                          builder: (context, meSnap) {
-                            final isGoing = meSnap.data ?? false;
-                            return _buildJoinButton(isGoing, isFull, () async {
-                              try {
-                                if (!isGoing && isFull) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Este jogo já está lotado!',
-                                      ),
-                                    ),
-                                  );
-                                  return;
-                                }
-                                await presencas.marcarPresenca(
-                                  jogoId,
-                                  !isGoing,
-                                );
-                                if (_filterMode == FilterMode.participo) {
-                                  _loadJogosOndeVou();
-                                }
-
-                                if (isGoing && context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Presença removida de: ${data['titulo'] as String? ?? local}',
-                                        style: GoogleFonts.outfit(
-                                          fontWeight: FontWeight.w600,
-                                          color: const Color(0xFF111827),
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                      behavior: SnackBarBehavior.floating,
-                                      backgroundColor: const Color(0xFFF3F4F6),
-                                      elevation: 4,
-                                      duration: const Duration(seconds: 4),
-                                      action: SnackBarAction(
-                                        label: 'ANULAR',
-                                        textColor: cs.primary,
-                                        onPressed: () {
-                                          presencas.marcarPresenca(
-                                            jogoId,
-                                            true,
-                                          );
-                                        },
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                  );
-                                }
-
-                                if (!isGoing && mounted) {
-                                  String? weatherStr;
-                                  final lat = (data['lat'] as num?)?.toDouble();
-                                  final lon = (data['lon'] as num?)?.toDouble();
-                                  if (lat != null && lon != null) {
-                                    final w = await WeatherService()
-                                        .getForecastAt(lat, lon, date);
-                                    if (w != null) {
-                                      final desc = w['desc'] as String? ?? '';
-                                      final capitalizedDesc = desc.isNotEmpty
-                                          ? '${desc[0].toUpperCase()}${desc.substring(1)}'
-                                          : '';
-                                      weatherStr =
-                                          '$capitalizedDesc, ${w['temp']}°C';
-                                    }
-                                  }
-
-                                  if (context.mounted) {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) => ConfirmacaoJogoPage(
-                                          titulo:
-                                              data['titulo'] as String? ??
-                                              local,
-                                          data: date,
-                                          local: local,
-                                          preco: preco.toDouble(),
-                                          weather: weatherStr,
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Erro: $e')),
-                                  );
-                                }
-                              }
-                            }, cs);
-                          },
-                        );
-                      },
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+    // Fallback locale date
+    final months = [
+      'Jan',
+      'Fev',
+      'Mar',
+      'Abr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Set',
+      'Out',
+      'Nov',
+      'Dez',
+    ];
+    final weekdays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+    return '${weekdays[day.weekday - 1]}, ${day.day} ${months[day.month - 1]}';
   }
+}
 
-  Widget _buildJoinButton(
-    bool isGoing,
-    bool isFull,
-    VoidCallback onTap,
-    ColorScheme cs,
-  ) {
-    if (isGoing) {
-      return OutlinedButton(
-        onPressed: onTap,
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          minimumSize: Size.zero,
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          side: const BorderSide(color: Colors.white24),
-          foregroundColor: Colors.white60,
-          textStyle: GoogleFonts.outfit(
-            fontSize: 11,
-            fontWeight: FontWeight.w900,
+class _FilterButton extends StatelessWidget {
+  final bool hasActiveFilter;
+  final VoidCallback onTap;
+  final ColorScheme cs;
+
+  const _FilterButton({
+    required this.hasActiveFilter,
+    required this.onTap,
+    required this.cs,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: hasActiveFilter
+              ? cs.primary.withValues(alpha: 0.15)
+              : Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: hasActiveFilter
+                ? cs.primary.withValues(alpha: 0.5)
+                : Colors.white.withValues(alpha: 0.08),
+            width: hasActiveFilter ? 1.5 : 1,
           ),
         ),
-        child: const Text('SAIR'),
-      );
-    }
-
-    return ElevatedButton(
-      onPressed: isFull ? null : onTap,
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        backgroundColor: isFull ? Colors.white10 : cs.primary,
-        foregroundColor: isFull ? Colors.white24 : const Color(0xFF0F172A),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        textStyle: GoogleFonts.outfit(
-          fontSize: 11,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-      child: Text(
-        isFull ? 'LOTADO' : 'IR',
-        style: GoogleFonts.outfit(
-          fontSize: isFull ? 10 : 11,
-          fontWeight: FontWeight.w900,
+        child: Stack(
+          children: [
+            Center(
+              child: Icon(
+                Icons.tune_rounded,
+                size: 20,
+                color: hasActiveFilter ? cs.primary : Colors.white38,
+              ),
+            ),
+            if (hasActiveFilter)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: cs.primary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );

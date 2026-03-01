@@ -4,7 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'jogos/jogos_lista.dart';
 import 'jogos/jogos_maps.dart';
-import 'perfil/perfil_page.dart'; // nova página de perfil (criar depois)
+import 'perfil/perfil_page.dart';
+import '../widgets/grid_backdrop.dart';
 
 class HomeDashboard extends StatefulWidget {
   final User user;
@@ -34,7 +35,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        // Título dinâmico: searchbar na tab Lista, título normal na tab Mapa
         title: _tab == 0
             ? _buildSearchBarCompact(cs)
             : Text(
@@ -45,13 +45,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   color: Colors.white,
                 ),
               ),
-        // Ações: ícone do perfil sempre visível
         actions: [
           IconButton(
             icon: const Icon(Icons.person_outline_rounded),
             color: Colors.white70,
             onPressed: () {
-              // Navegar para a página de perfil (substitui o drawer)
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -67,17 +65,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
           Positioned.fill(
             child: Container(color: Theme.of(context).scaffoldBackgroundColor),
           ),
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.03,
-              child: CustomPaint(painter: _GridBackdropPainter()),
-            ),
-          ),
-          SafeArea(
-            child: _tab == 0
-                ? _buildLista(cs) // sem searchbar aqui
-                : _buildMapa(),
-          ),
+          const Positioned.fill(child: GridBackdrop(opacity: 0.03)),
+          SafeArea(child: _tab == 0 ? _buildLista(cs) : _buildMapa()),
         ],
       ),
       bottomNavigationBar: _buildBottomBar(cs),
@@ -126,7 +115,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
         borderRadius: BorderRadius.circular(12),
         child: Stack(
           children: [
-            // Fundo com blur
             Positioned.fill(
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
@@ -137,7 +125,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 ),
               ),
             ),
-            // Campo de texto
             TextField(
               controller: _searchCtrl,
               onChanged: (v) => setState(() => _searchQuery = v.trim()),
@@ -155,7 +142,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 ),
                 suffixIcon: hasText
                     ? IconButton(
-                        icon: Icon(
+                        icon: const Icon(
                           Icons.close_rounded,
                           color: Colors.white30,
                           size: 16,
@@ -189,7 +176,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
         children: [
-          // Searchbar removida daqui – agora está na AppBar
           const SizedBox(height: 20),
           JogosLista(searchQuery: _searchQuery),
         ],
@@ -265,22 +251,4 @@ class _HomeDashboardState extends State<HomeDashboard> {
       ),
     );
   }
-}
-
-class _GridBackdropPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.05)
-      ..strokeWidth = 0.5;
-    for (double i = 0; i < size.width; i += 40) {
-      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
-    }
-    for (double i = 0; i < size.height; i += 40) {
-      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

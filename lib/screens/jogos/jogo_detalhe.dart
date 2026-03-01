@@ -2,20 +2,19 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:intl/intl.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../widgets/glass_card.dart';
 import '../../services/presenca_service.dart';
 import '../../services/jogo_service.dart';
-import '../../services/weather_service.dart'; // ← NOVO
-import 'confirmacao_page.dart';
-import '../../utils/format_utils.dart';
-import 'widgets/weather_section.dart';
+import '../../widgets/grid_backdrop.dart';
 import 'widgets/admin_section.dart';
+import 'widgets/jogo_detalhe_header.dart';
+import 'widgets/jogo_detalhe_info.dart';
+import 'widgets/jogo_detalhe_players.dart';
+import 'widgets/jogo_detalhe_actions.dart';
 
 class JogoDetalhe extends StatefulWidget {
   final String jogoId;
@@ -28,13 +27,6 @@ class JogoDetalhe extends StatefulWidget {
 class _JogoDetalheState extends State<JogoDetalhe> {
   bool _deleting = false;
   int _reminderMin = 5;
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  String _formatarPreco(num? preco) => FormatUtils.formatarPreco(preco);
 
   Future<void> _pickReminder() async {
     final opts = const [0, 5, 10, 15, 30, 60];
@@ -123,7 +115,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
     try {
       await JogoService.instance.apagarJogo(widget.jogoId);
       if (mounted) {
-        Navigator.of(context).pop(); // Back to dashboard
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Jogo apagado com sucesso.')),
         );
@@ -131,15 +123,9 @@ class _JogoDetalheState extends State<JogoDetalhe> {
     } catch (e) {
       if (mounted) {
         setState(() => _deleting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao apagar: $e'),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erro ao apagar: $e')));
       }
     }
   }
@@ -157,7 +143,6 @@ class _JogoDetalheState extends State<JogoDetalhe> {
         throw Exception('Localização não encontrada');
       }
     } catch (e) {
-      // Fallback: abrir pesquisa Google Maps com o nome do local
       final query = Uri.encodeComponent(local);
       final uri = Uri.parse(
         'https://www.google.com/maps/search/?api=1&query=$query',
@@ -186,9 +171,8 @@ class _JogoDetalheState extends State<JogoDetalhe> {
       ),
       body: Stack(
         children: [
-          // Background
           Positioned.fill(child: Container(color: const Color(0xFF0F172A))),
-          Positioned.fill(child: CustomPaint(painter: GridBackdropPainter())),
+          Positioned.fill(child: const GridBackdrop()),
           StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
             stream: jogoRef.snapshots(),
             builder: (context, snap) {
@@ -220,25 +204,35 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                     child: ListView(
                       padding: EdgeInsets.zero,
                       children: [
-                        _buildHeroHeader(
-                          data['titulo'] as String? ?? local,
-                          local,
-                          date,
-                          preco,
-                          cs,
-                          (data['lat'] as num?)?.toDouble(),
-                          (data['lon'] as num?)?.toDouble(),
-                          data['campo'] as String?,
+                        JogoDetalheHeader(
+                          titulo: data['titulo'] as String? ?? local,
+                          local: local,
+                          date: date,
+                          preco: preco,
+                          campo: data['campo'] as String?,
+                          lat: (data['lat'] as num?)?.toDouble(),
+                          lon: (data['lon'] as num?)?.toDouble(),
                         ),
                         Padding(
                           padding: const EdgeInsets.all(20),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildInfoSection(context, data, presencas, cs),
+                              JogoDetalheInfo(
+                                jogoId: widget.jogoId,
+                                data: data,
+                                presencas: presencas,
+                                onPickReminder: _pickReminder,
+                                reminderMin: _reminderMin,
+                                onOpenMaps: _openMaps,
+                              ),
                               const SizedBox(height: 24),
                               if (uid != null)
-                                _buildPlayersList(jogoRef, createdBy, uid, cs),
+                                JogoDetalhePlayers(
+                                  jogoRef: jogoRef,
+                                  createdBy: createdBy,
+                                  uid: uid,
+                                ),
                               const SizedBox(height: 24),
                               if (isOwner)
                                 AdminSection(
@@ -253,15 +247,14 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                       ],
                     ),
                   ),
-                  _buildBottomAction(
-                    presencas,
-                    widget.jogoId,
-                    data['titulo'] as String? ?? local,
-                    local,
-                    date,
-                    cs,
-                    (data['lat'] as num?)?.toDouble(),
-                    (data['lon'] as num?)?.toDouble(),
+                  JogoDetalheActions(
+                    presencas: presencas,
+                    jogoId: widget.jogoId,
+                    titulo: data['titulo'] as String? ?? local,
+                    local: local,
+                    date: date,
+                    lat: (data['lat'] as num?)?.toDouble(),
+                    lon: (data['lon'] as num?)?.toDouble(),
                   ),
                 ],
               );
@@ -273,537 +266,6 @@ class _JogoDetalheState extends State<JogoDetalhe> {
               child: const Center(child: CircularProgressIndicator()),
             ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildHeroHeader(
-    String titulo,
-    String local,
-    DateTime? date,
-    num preco,
-    ColorScheme cs,
-    double? lat,
-    double? lon,
-    String? campo,
-  ) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 280),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [cs.primary.withValues(alpha: 0.2), const Color(0xFF0F172A)],
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned.fill(child: CustomPaint(painter: GridBackdropPainter())),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: cs.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          'JOGO CONFIRMADO',
-                          style: GoogleFonts.outfit(
-                            color: cs.primary,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: preco > 0
-                              ? Colors.green.withValues(alpha: 0.2)
-                              : Colors.blue.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: preco > 0
-                                ? Colors.green.withValues(alpha: 0.3)
-                                : Colors.blue.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Text(
-                          _formatarPreco(preco),
-                          style: GoogleFonts.outfit(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: preco > 0 ? Colors.green : Colors.blue,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    titulo,
-                    style: GoogleFonts.outfit(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      height: 1.1,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 12,
-                    runSpacing: 8,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.schedule,
-                            size: 16,
-                            color: Colors.white38,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            date != null
-                                ? DateFormat(
-                                    "EEEE, d 'de' MMMM 'às' HH:mm",
-                                    'pt_PT',
-                                  ).format(date)
-                                : 'Sem data',
-                            style: GoogleFonts.outfit(
-                              color: Colors.white38,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.stadium_outlined,
-                            size: 16,
-                            color: Colors.white38,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            campo ?? 'Relva Sintética',
-                            style: GoogleFonts.outfit(
-                              color: Colors.white70,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  if (lat != null && lon != null && date != null)
-                    FutureBuilder<Map<String, dynamic>?>(
-                      future: WeatherService().getForecastAt(lat, lon, date),
-                      builder: (context, weatherSnap) {
-                        if (!weatherSnap.hasData || weatherSnap.data == null) {
-                          return const SizedBox.shrink();
-                        }
-                        final w = weatherSnap.data!;
-                        return Row(
-                          children: [
-                            Icon(
-                              w['diaNoite'] == 'Noite'
-                                  ? Icons.nightlight_round
-                                  : Icons.wb_sunny_rounded,
-                              size: 16,
-                              color: Colors.amber.withValues(alpha: 0.8),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${w['temp']}°C • ${w['desc']}',
-                              style: GoogleFonts.outfit(
-                                color: Colors.white70,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoSection(
-    BuildContext context,
-    Map<String, dynamic> data,
-    PresencaService presencas,
-    ColorScheme cs,
-  ) {
-    final local = data['local'] as String? ?? '';
-    final maxJogadores = (data['jogadores'] as num?)?.toInt() ?? 0;
-    final createdByName = data['createdByName'] as String? ?? 'Desconhecido';
-    final preco = data['preco'] as num? ?? 0;
-
-    return GlassCard(
-      child: Column(
-        children: [
-          _infoRow(
-            Icons.place_outlined,
-            'Localização',
-            local,
-            trailing: IconButton(
-              icon: const Icon(Icons.directions, color: Colors.white70),
-              onPressed: () => _openMaps(local),
-            ),
-          ),
-          const Divider(color: Colors.white10, height: 1),
-          _infoRow(Icons.euro_rounded, 'Preço', _formatarPreco(preco)),
-          const Divider(color: Colors.white10, height: 1),
-          _infoRow(
-            Icons.stadium_outlined,
-            'Tipo de Campo',
-            data['campo'] as String? ?? 'Relva Sintética',
-          ),
-          const Divider(color: Colors.white10, height: 1),
-          StreamBuilder<int>(
-            stream: presencas.countConfirmados(widget.jogoId),
-            builder: (context, snap) {
-              final count = snap.data ?? 0;
-              return _infoRow(
-                Icons.people_outline,
-                'Equipas',
-                '$count / $maxJogadores jogadores',
-              );
-            },
-          ),
-          const Divider(color: Colors.white10, height: 1),
-          _infoRow(Icons.person_outline, 'Organizador', createdByName),
-          const Divider(color: Colors.white10, height: 1),
-          if ((data['lat'] as num?) != null &&
-              (data['lon'] as num?) != null &&
-              (data['data'] as Timestamp?) != null) ...[
-            WeatherSection(
-              lat: (data['lat'] as num).toDouble(),
-              lon: (data['lon'] as num).toDouble(),
-              date: (data['data'] as Timestamp).toDate(),
-              infoRowBuilder: _infoRow,
-            ),
-          ],
-          InkWell(
-            onTap: _pickReminder,
-            child: _infoRow(
-              Icons.notifications_none,
-              'Lembrete',
-              _reminderMin == 0 ? 'No momento' : '$_reminderMin min antes',
-              trailing: const Icon(Icons.chevron_right, color: Colors.white24),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _infoRow(
-    IconData icon,
-    String label,
-    String value, {
-    Widget? trailing,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, size: 20, color: Colors.white60),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(color: Colors.white38, fontSize: 12),
-                ),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (trailing != null) trailing,
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPlayersList(
-    DocumentReference<Map<String, dynamic>> jogoRef,
-    String? createdBy,
-    String uid,
-    ColorScheme cs,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 12),
-          child: Text(
-            'JOGADORES CONFIRMADOS',
-            style: GoogleFonts.outfit(
-              fontWeight: FontWeight.w900,
-              color: Colors.white38,
-              fontSize: 12,
-              letterSpacing: 1,
-            ),
-          ),
-        ),
-        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: jogoRef
-              .collection('presencas')
-              .where('vai', isEqualTo: true)
-              .snapshots(),
-          builder: (context, snap) {
-            final docs = snap.data?.docs ?? [];
-            if (docs.isEmpty) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: Text(
-                  'Ninguém confirmou ainda.',
-                  style: GoogleFonts.outfit(
-                    color: Colors.white24,
-                    fontSize: 14,
-                  ),
-                ),
-              );
-            }
-            return Container(
-              constraints: const BoxConstraints(maxHeight: 200),
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const AlwaysScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 3.5,
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                ),
-                itemCount: docs.length,
-                itemBuilder: (context, i) {
-                  final d = docs[i];
-                  final name = d.data()['name'] as String? ?? 'Jogador';
-                  final photo = d.data()['photo'] as String?;
-                  final isOrg = d.id == createdBy;
-
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.04),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.05),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 14,
-                          backgroundImage: photo != null
-                              ? NetworkImage(photo)
-                              : null,
-                          child: photo == null
-                              ? const Icon(Icons.person, size: 14)
-                              : null,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.outfit(
-                              color: Colors.white,
-                              fontWeight: isOrg
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                        if (isOrg)
-                          Icon(Icons.verified, size: 14, color: cs.primary),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBottomAction(
-    PresencaService presencas,
-    String jogoId,
-    String titulo,
-    String local,
-    DateTime? date,
-    ColorScheme cs,
-    double? lat,
-    double? lon,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
-        border: Border(
-          top: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
-        ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: StreamBuilder<bool>(
-          stream: presencas.minhaPresenca(jogoId),
-          builder: (context, snap) {
-            final isGoing = snap.data ?? false;
-            final isLoading = snap.connectionState == ConnectionState.waiting;
-            return SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: isLoading
-                    ? null
-                    : () async {
-                        await presencas.marcarPresenca(jogoId, !isGoing);
-
-                        if (isGoing && context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Presença removida de: $titulo',
-                                style: GoogleFonts.outfit(
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF111827),
-                                  fontSize: 14,
-                                ),
-                              ),
-                              behavior: SnackBarBehavior.floating,
-                              backgroundColor: const Color(0xFFF3F4F6),
-                              elevation: 4,
-                              duration: const Duration(seconds: 4),
-                              action: SnackBarAction(
-                                label: 'ANULAR',
-                                textColor: cs.primary,
-                                onPressed: () {
-                                  presencas.marcarPresenca(jogoId, true);
-                                },
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                          );
-                        }
-
-                        if (!isGoing && context.mounted) {
-                          String? weatherStr;
-                          if (lat != null && lon != null && date != null) {
-                            final w = await WeatherService().getForecastAt(
-                              lat,
-                              lon,
-                              date,
-                            );
-                            if (w != null) {
-                              final desc = w['desc'] as String? ?? '';
-                              final capitalizedDesc = desc.isNotEmpty
-                                  ? '${desc[0].toUpperCase()}${desc.substring(1)}'
-                                  : '';
-                              weatherStr = '$capitalizedDesc, ${w['temp']}°C';
-                            }
-                          }
-
-                          if (context.mounted) {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => ConfirmacaoJogoPage(
-                                  titulo: titulo,
-                                  data: date ?? DateTime.now(),
-                                  local: local,
-                                  weather: weatherStr,
-                                ),
-                              ),
-                            );
-                          }
-                        }
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isGoing ? Colors.white12 : cs.primary,
-                  foregroundColor: isGoing
-                      ? Colors.white
-                      : const Color(0xFF0F172A),
-                  elevation: isGoing ? 0 : 2,
-                  shadowColor: cs.primary.withValues(alpha: 0.3),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  textStyle: GoogleFonts.outfit(
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1,
-                  ),
-                ),
-                child: isLoading
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(
-                        isGoing ? 'DESMARCAR PRESENÇA' : 'CONFIRMAR PRESENÇA',
-                      ),
-              ),
-            );
-          },
-        ),
       ),
     );
   }
