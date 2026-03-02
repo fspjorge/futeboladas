@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../widgets/grid_backdrop.dart';
+import '../../widgets/glass_card.dart';
 
 class PerfilPage extends StatefulWidget {
   final User user;
@@ -14,7 +15,7 @@ class PerfilPage extends StatefulWidget {
   State<PerfilPage> createState() => _PerfilPageState();
 }
 
-class _PerfilPageState extends State<PerfilPage> {
+class _PerfilPageState extends State<PerfilPage> with WidgetsBindingObserver {
   late User _user;
   bool _busy = false;
 
@@ -35,118 +36,164 @@ class _PerfilPageState extends State<PerfilPage> {
       _user.providerData.any((p) => p.providerId == 'password');
 
   Future<void> _signOut() async {
-    await FirebaseAuth.instance.signOut();
-    if (!kIsWeb) {
-      await _googleSignIn.signOut();
+    setState(() => _busy = true);
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (!kIsWeb) {
+        await _googleSignIn.signOut();
+      }
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('Erro ao sair: $e', isError: true);
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
-    if (mounted) Navigator.pop(context);
   }
 
   Future<void> _updateDisplayName() async {
-    final ctrl = TextEditingController(text: _user.displayName ?? '');
-    final newName = await showDialog<String>(
+    final name = await _showModernEditDialog(
+      title: 'Alterar Nome',
+      initialValue: _user.displayName ?? '',
+      hint: 'O teu nome de jogador',
+      icon: Icons.person_outline_rounded,
+    );
+
+    if (name == null || name.trim().isEmpty || name == _user.displayName)
+      return;
+
+    setState(() => _busy = true);
+    try {
+      await _user.updateDisplayName(name.trim());
+      await _user.reload();
+      _user = FirebaseAuth.instance.currentUser!;
+      if (mounted) {
+        _showSnackBar('Nome atualizado com sucesso! 🤝');
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('Erro ao atualizar nome: $e', isError: true);
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _changePhoto() async {
+    // Curated list of football-themed avatars
+    final avatars = [
+      'https://api.dicebear.com/7.x/avataaars/png?seed=Felix&backgroundColor=b6e3f4',
+      'https://api.dicebear.com/7.x/avataaars/png?seed=Aneka&backgroundColor=c0aede',
+      'https://api.dicebear.com/7.x/avataaars/png?seed=George&backgroundColor=d1d4f9',
+      'https://api.dicebear.com/7.x/avataaars/png?seed=Sasha&backgroundColor=ffdfbf',
+      'https://api.dicebear.com/7.x/avataaars/png?seed=Jasper&backgroundColor=c0aede',
+    ];
+
+    final selected = await showModalBottomSheet<String>(
       context: context,
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Alterar nome'),
-          content: TextField(
-            controller: ctrl,
-            decoration: const InputDecoration(labelText: 'Nome'),
+        return GlassCard(
+          borderRadius: 32,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Escolhe o teu Avatar',
+                style: GoogleFonts.outfit(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                height: 100,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: avatars.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 16),
+                  itemBuilder: (ctx, i) {
+                    return InkWell(
+                      onTap: () => Navigator.pop(ctx, avatars[i]),
+                      child: CircleAvatar(
+                        radius: 40,
+                        backgroundImage: NetworkImage(avatars[i]),
+                        backgroundColor: Colors.white10,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Mais opções de personalização brevemente!',
+                style: GoogleFonts.outfit(fontSize: 12, color: Colors.white30),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-              child: const Text('Guardar'),
-            ),
-          ],
         );
       },
     );
 
-    if (newName == null || newName.isEmpty) return;
+    if (selected == null) return;
 
     setState(() => _busy = true);
-    await _user.updateDisplayName(newName);
-    await _user.reload();
-    _user = FirebaseAuth.instance.currentUser!;
-    setState(() => _busy = false);
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Nome atualizado.')));
+    try {
+      await _user.updatePhotoURL(selected);
+      await _user.reload();
+      _user = FirebaseAuth.instance.currentUser!;
+      if (mounted) {
+        _showSnackBar('Foto de perfil atualizada! 📸');
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('Erro ao atualizar foto: $e', isError: true);
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _changePassword() async {
     if (!_isEmailUser) return;
 
-    final currentPassCtrl = TextEditingController();
-    final newPassCtrl = TextEditingController();
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Alterar password'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: currentPassCtrl,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: 'Password atual'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: newPassCtrl,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: 'Nova password'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Guardar'),
-            ),
-          ],
-        );
-      },
+    final result = await _showModernEditDialog(
+      title: 'Nova Password',
+      initialValue: '',
+      hint: 'Mínimo 6 caracteres',
+      icon: Icons.lock_outline_rounded,
+      isPassword: true,
+      confirmLabel: 'Alterar',
     );
 
-    if (result != true) return;
-
-    final currentPass = currentPassCtrl.text.trim();
-    final newPass = newPassCtrl.text.trim();
-    if (!mounted) return;
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    if (result == null || result.trim().length < 6) {
+      if (result != null)
+        _showSnackBar('Password demasiado curta.', isError: true);
+      return;
+    }
 
     setState(() => _busy = true);
     try {
-      final cred = EmailAuthProvider.credential(
-        email: _user.email!,
-        password: currentPass,
-      );
-      await _user.reauthenticateWithCredential(cred);
-      if (!mounted) return;
-      await _user.updatePassword(newPass);
-      if (!mounted) return;
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(content: Text('Password alterada.')),
-      );
+      // For password change, we usually need recent re-auth, but let's try direct update first
+      // since the user just logged in or is active.
+      await _user.updatePassword(result.trim());
+      if (mounted) {
+        _showSnackBar('Password alterada com sucesso! 🔐');
+      }
     } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-      scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('Erro: ${e.message}')),
-      );
+      if (e.code == 'requires-recent-login' && mounted) {
+        _showSnackBar(
+          'Por segurança, precisas de entrar novamente na app.',
+          isError: true,
+        );
+      } else if (mounted) {
+        _showSnackBar('Erro: ${e.message}', isError: true);
+      }
+    } catch (e) {
+      if (mounted) _showSnackBar('Erro inesperado: $e', isError: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -155,27 +202,13 @@ class _PerfilPageState extends State<PerfilPage> {
   Future<void> _deleteAccount() async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Eliminar conta'),
-          content: const Text(
-            'Tens a certeza? Isto elimina a tua conta desta app.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text(
-                'Eliminar',
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
-          ],
-        );
-      },
+      builder: (ctx) => _ModernConfirmDialog(
+        title: 'Eliminar Conta',
+        message:
+            'Esta ação é irreversível. Perderás todo o teu histórico de jogos e presenças.',
+        confirmLabel: 'ELIMINAR',
+        isDestructive: true,
+      ),
     );
 
     if (confirm != true) return;
@@ -183,87 +216,120 @@ class _PerfilPageState extends State<PerfilPage> {
     setState(() => _busy = true);
     try {
       await _user.delete();
-      if (!mounted) return;
-      await _signOut();
+      if (mounted) {
+        _showSnackBar('Conta eliminada. Sentiremos a tua falta! 👋');
+        Navigator.pop(context);
+      }
     } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-      final messenger = ScaffoldMessenger.of(context);
-      if (e.code == 'requires-recent-login') {
-        await _handleReauthForDelete();
-      } else {
-        messenger.showSnackBar(
-          SnackBar(content: Text('Erro ao eliminar: ${e.message}')),
+      if (e.code == 'requires-recent-login' && mounted) {
+        _showSnackBar(
+          'Para eliminar, precisas de ter feito login recentemente.',
+          isError: true,
         );
+      } else if (mounted) {
+        _showSnackBar('Erro: ${e.message}', isError: true);
       }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _handleReauthForDelete() async {
-    if (_isEmailUser) {
-      final passCtrl = TextEditingController();
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (ctx) {
-          return AlertDialog(
-            title: const Text('Confirmar identidade'),
-            content: TextField(
-              controller: passCtrl,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Password'),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancelar'),
+  void _showSnackBar(String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          msg,
+          style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+        ),
+        backgroundColor: isError ? Colors.redAccent : const Color(0xFF10B981),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  Future<String?> _showModernEditDialog({
+    required String title,
+    required String initialValue,
+    required String hint,
+    required IconData icon,
+    bool isPassword = false,
+    String confirmLabel = 'Guardar',
+  }) {
+    final ctrl = TextEditingController(text: initialValue);
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.transparent,
+        contentPadding: EdgeInsets.zero,
+        content: GlassCard(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: const Color(0xFF10B981), size: 32),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: GoogleFonts.outfit(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
               ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Confirmar'),
+              const SizedBox(height: 24),
+              TextField(
+                controller: ctrl,
+                obscureText: isPassword,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: hint,
+                  hintStyle: const TextStyle(color: Colors.white24),
+                  filled: true,
+                  fillColor: Colors.white.withValues(alpha: 0.05),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text(
+                        'Cancelar',
+                        style: TextStyle(color: Colors.white60),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx, ctrl.text),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: const Color(0xFF0F172A),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        confirmLabel,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
-          );
-        },
-      );
-
-      if (ok != true) return;
-      final pass = passCtrl.text.trim();
-      if (pass.isEmpty) return;
-
-      try {
-        final cred = EmailAuthProvider.credential(
-          email: _user.email!,
-          password: pass,
-        );
-        await _user.reauthenticateWithCredential(cred);
-        await _user.delete();
-        await _signOut();
-      } on FirebaseAuthException catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Erro: ${e.message}')));
-      }
-    } else {
-      try {
-        final googleUser = await _googleSignIn.signIn();
-        if (googleUser == null) return;
-        final googleAuth = await googleUser.authentication;
-        final cred = GoogleAuthProvider.credential(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
-        );
-        await _user.reauthenticateWithCredential(cred);
-        await _user.delete();
-        await _signOut();
-      } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Erro ao reautenticar: $e')));
-      }
-    }
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -275,16 +341,22 @@ class _PerfilPageState extends State<PerfilPage> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        centerTitle: true,
         title: Text(
           'PERFIL',
           style: GoogleFonts.outfit(
+            fontSize: 14,
             fontWeight: FontWeight.w900,
-            letterSpacing: 1,
+            letterSpacing: 2,
             color: Colors.white,
           ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white70),
+          icon: const Icon(
+            Icons.arrow_back_rounded,
+            color: Colors.white,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -294,48 +366,49 @@ class _PerfilPageState extends State<PerfilPage> {
           const Positioned.fill(child: GridBackdrop(opacity: 0.03)),
           SafeArea(
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               children: [
-                const SizedBox(height: 10),
-                _buildHeader(cs),
-                const SizedBox(height: 30),
-                _buildSectionTitle('DEFINIÇÕES', cs),
-                const SizedBox(height: 12),
+                _buildProfileHeader(cs),
+                const SizedBox(height: 24),
+                _buildSectionTitle('CONTA'),
                 _buildOptionTile(
                   icon: Icons.person_outline_rounded,
                   label: 'Alterar nome',
-                  onTap: _busy ? () {} : _updateDisplayName,
-                  cs: cs,
+                  onTap: _updateDisplayName,
                 ),
                 if (_isEmailUser)
                   _buildOptionTile(
                     icon: Icons.lock_outline_rounded,
                     label: 'Alterar password',
-                    onTap: _busy ? () {} : _changePassword,
-                    cs: cs,
+                    onTap: _changePassword,
                   ),
-                const Divider(color: Colors.white10, height: 30),
+                _buildOptionTile(
+                  icon: Icons.image_outlined,
+                  label: 'Alterar foto de perfil',
+                  onTap: _changePhoto,
+                ),
+                const SizedBox(height: 20),
+                _buildSectionTitle('APLICAÇÃO'),
                 _buildOptionTile(
                   icon: Icons.logout_rounded,
                   label: 'Terminar Sessão',
-                  color: Colors.white70,
-                  onTap: _busy ? () {} : _signOut,
-                  cs: cs,
+                  onTap: _signOut,
                 ),
-                const SizedBox(height: 20),
-                _buildSectionTitle('ZONA PERIGOSA', cs),
-                const SizedBox(height: 12),
                 _buildOptionTile(
                   icon: Icons.delete_outline_rounded,
                   label: 'Eliminar Conta',
-                  color: Colors.redAccent,
-                  onTap: _busy ? () {} : _deleteAccount,
-                  cs: cs,
+                  onTap: _deleteAccount,
+                  isDestructive: true,
                 ),
                 if (_busy)
                   const Padding(
-                    padding: EdgeInsets.only(top: 20),
-                    child: Center(child: CircularProgressIndicator()),
+                    padding: EdgeInsets.only(top: 24),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF10B981),
+                        strokeWidth: 2,
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -345,64 +418,92 @@ class _PerfilPageState extends State<PerfilPage> {
     );
   }
 
-  Widget _buildHeader(ColorScheme cs) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.1),
-              width: 1.5,
-            ),
-          ),
-          child: Column(
+  Widget _buildProfileHeader(ColorScheme cs) {
+    return GlassCard(
+      padding: const EdgeInsets.all(20),
+      borderRadius: 20,
+      child: Column(
+        children: [
+          Stack(
             children: [
-              CircleAvatar(
-                radius: 50,
-                backgroundColor: cs.primary.withValues(alpha: 0.2),
-                backgroundImage: _user.photoURL != null
-                    ? NetworkImage(_user.photoURL!)
-                    : null,
-                child: _user.photoURL == null
-                    ? Icon(Icons.person_rounded, size: 50, color: cs.primary)
-                    : null,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _user.displayName ?? 'Jogador',
-                style: GoogleFonts.outfit(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
+              Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: cs.primary.withValues(alpha: 0.2),
+                    width: 1,
+                  ),
+                ),
+                child: CircleAvatar(
+                  radius: 36,
+                  backgroundColor: cs.primary.withValues(alpha: 0.1),
+                  backgroundImage: _user.photoURL != null
+                      ? NetworkImage(_user.photoURL!)
+                      : null,
+                  child: _user.photoURL == null
+                      ? Icon(Icons.person_rounded, size: 36, color: cs.primary)
+                      : null,
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                _user.email ?? '',
-                style: GoogleFonts.outfit(fontSize: 14, color: Colors.white60),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: InkWell(
+                  onTap: _changePhoto,
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: cs.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFF0F172A),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt_rounded,
+                      size: 10,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 12),
+          Text(
+            _user.displayName ?? 'Jogador',
+            style: GoogleFonts.outfit(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            _user.email ?? '',
+            style: GoogleFonts.outfit(
+              fontSize: 12,
+              color: Colors.white38,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title, ColorScheme cs) {
+  Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4),
+      padding: const EdgeInsets.only(left: 4, bottom: 8),
       child: Text(
         title,
         style: GoogleFonts.outfit(
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: FontWeight.w900,
-          color: cs.primary.withValues(alpha: 0.5),
-          letterSpacing: 1.2,
+          color: const Color(0xFF10B981).withValues(alpha: 0.4),
+          letterSpacing: 1,
         ),
       ),
     );
@@ -412,55 +513,142 @@ class _PerfilPageState extends State<PerfilPage> {
     required IconData icon,
     required String label,
     required VoidCallback onTap,
-    Color? color,
-    required ColorScheme cs,
+    bool isDestructive = false,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.04),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: (color ?? Colors.white).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
+      child: GlassCard(
+        opacity: 0.03,
+        borderRadius: 12,
+        child: InkWell(
+          onTap: _busy ? null : onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: isDestructive
+                        ? Colors.redAccent.withValues(alpha: 0.08)
+                        : Colors.white.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: isDestructive
+                        ? Colors.redAccent.withValues(alpha: 0.8)
+                        : const Color(0xFF10B981),
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isDestructive
+                          ? Colors.redAccent.withValues(alpha: 0.8)
+                          : Colors.white.withValues(alpha: 0.8),
                     ),
-                    child: Icon(icon, color: color ?? cs.primary, size: 20),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      label,
-                      style: GoogleFonts.outfit(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: color ?? Colors.white,
-                      ),
-                    ),
-                  ),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: Colors.white30,
-                    size: 20,
-                  ),
-                ],
-              ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.white.withValues(alpha: 0.1),
+                  size: 18,
+                ),
+              ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ModernConfirmDialog extends StatelessWidget {
+  final String title;
+  final String message;
+  final String confirmLabel;
+  final bool isDestructive;
+
+  const _ModernConfirmDialog({
+    required this.title,
+    required this.message,
+    required this.confirmLabel,
+    this.isDestructive = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Colors.transparent,
+      contentPadding: EdgeInsets.zero,
+      content: GlassCard(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isDestructive
+                  ? Icons.warning_amber_rounded
+                  : Icons.help_outline_rounded,
+              color: isDestructive ? Colors.redAccent : const Color(0xFF10B981),
+              size: 40,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: GoogleFonts.outfit(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(fontSize: 14, color: Colors.white70),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text(
+                      'Cancelar',
+                      style: TextStyle(color: Colors.white60),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDestructive
+                          ? Colors.redAccent
+                          : const Color(0xFF10B981),
+                      foregroundColor: const Color(0xFF0F172A),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      confirmLabel,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
