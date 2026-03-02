@@ -5,6 +5,9 @@ import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_dynamic_links/firebase_dynamic_links.dart';
 
+import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
+import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
+
 import 'firebase_options.dart';
 import 'screens/auth/reset_password.dart';
 import 'screens/jogos/jogos_form.dart';
@@ -16,6 +19,21 @@ final GlobalKey<NavigatorState> _navKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Google Maps Android renderer and Hybrid Composition
+  final GoogleMapsFlutterPlatform mapsImplementation =
+      GoogleMapsFlutterPlatform.instance;
+  if (mapsImplementation is GoogleMapsFlutterAndroid) {
+    mapsImplementation.useAndroidViewSurface = true;
+    try {
+      await mapsImplementation.initializeWithRenderer(
+        AndroidMapRenderer.latest,
+      );
+    } catch (e) {
+      debugPrint('Erro ao inicializar renderizador de mapas: $e');
+    }
+  }
+
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Locale data for Intl (pt_PT) used in DateFormat across the app
