@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../services/presenca_service.dart';
 import '../../../services/weather_service.dart';
 import '../confirmacao_page.dart';
+import '../../../main.dart';
 
 class JogoDetalheActions extends StatelessWidget {
   final PresencaService presencas;
@@ -99,26 +100,22 @@ class JogoDetalheActions extends StatelessWidget {
     if (!context.mounted) return;
 
     if (isGoing) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessengerKey.currentState?.clearSnackBars();
+
+      scaffoldMessengerKey.currentState?.showSnackBar(
         SnackBar(
-          content: Text(
-            'Presença removida de: $titulo',
-            style: GoogleFonts.outfit(
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF111827),
-              fontSize: 14,
-            ),
-          ),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFFF3F4F6),
-          elevation: 4,
-          duration: const Duration(seconds: 4),
+          content: Text('Presença removida de: $titulo'),
+          duration: const Duration(seconds: 3),
+          dismissDirection: DismissDirection.horizontal,
           action: SnackBarAction(
             label: 'ANULAR',
-            textColor: cs.primary,
-            onPressed: () => presencas.marcarPresenca(jogoId, true),
+            onPressed: () {
+              presencas.marcarPresenca(jogoId, true);
+              scaffoldMessengerKey.currentState?.hideCurrentSnackBar();
+            },
           ),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         ),
       );
     } else {

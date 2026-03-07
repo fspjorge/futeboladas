@@ -10,6 +10,8 @@ import '../../../services/presenca_service.dart';
 import '../../../services/weather_service.dart';
 import '../../../utils/format_utils.dart';
 
+import '../../../main.dart';
+
 class JogoCard extends StatelessWidget {
   final QueryDocumentSnapshot<Map<String, dynamic>> doc;
   final PresencaService presencas;
@@ -247,7 +249,6 @@ class JogoCard extends StatelessWidget {
     String local,
     num preco,
   ) async {
-    final cs = Theme.of(context).colorScheme;
     try {
       if (!isGoing && isFull) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -260,33 +261,26 @@ class JogoCard extends StatelessWidget {
       if (!context.mounted) return;
 
       if (isGoing) {
-        // Limpa notificações pendentes para evitar acumulação e "saltos"
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        // Usa a chave global para garantir que o SnackBar funciona bem em transições
+        scaffoldMessengerKey.currentState?.clearSnackBars();
 
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessengerKey.currentState?.showSnackBar(
           SnackBar(
             content: Text(
               'Presença removida de: ${data['titulo'] as String? ?? local}',
-              style: GoogleFonts.outfit(
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF111827),
-                fontSize: 14,
-              ),
             ),
-            backgroundColor: const Color(0xFFF3F4F6),
-            elevation: 0, // Removida sombra para um aspeto mais limpo no fundo
             duration: const Duration(seconds: 3),
+            dismissDirection:
+                DismissDirection.horizontal, // Mais fácil de limpar
             action: SnackBarAction(
               label: 'ANULAR',
-              textColor: cs.primary,
               onPressed: () {
                 presencas.marcarPresenca(jogoId, true);
+                scaffoldMessengerKey.currentState?.hideCurrentSnackBar();
               },
             ),
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius
-                  .zero, // Fixed SnackBar use zero or standard radius
-            ),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           ),
         );
       } else {
@@ -305,6 +299,9 @@ class JogoCard extends StatelessWidget {
         }
 
         if (context.mounted) {
+          // Hide snackbar if any before navigating to avoid dismissal issues
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => ConfirmacaoJogoPage(
@@ -347,15 +344,15 @@ class _JoinButton extends StatelessWidget {
       return OutlinedButton(
         onPressed: onTap,
         style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          minimumSize: const Size(0, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          minimumSize: const Size(0, 32), // Compact height
           side: const BorderSide(color: Colors.white24),
           foregroundColor: Colors.white60,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
           textStyle: GoogleFonts.outfit(
-            fontSize: 12,
+            fontSize: 10, // Compact font
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -366,17 +363,17 @@ class _JoinButton extends StatelessWidget {
     return ElevatedButton(
       onPressed: isFull ? null : onTap,
       style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        minimumSize: const Size(0, 40),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        minimumSize: const Size(0, 32), // Compact height
         backgroundColor: isFull ? Colors.white10 : cs.primary,
         foregroundColor: isFull ? Colors.white24 : const Color(0xFF0F172A),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: isFull ? 0 : 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        elevation: isFull ? 0 : 2,
       ),
       child: Text(
         isFull ? 'LOTADO' : 'IR',
         style: GoogleFonts.outfit(
-          fontSize: 12,
+          fontSize: 10, // Compact font
           fontWeight: FontWeight.w900,
           letterSpacing: 0.5,
         ),

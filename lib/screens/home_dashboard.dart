@@ -1,11 +1,11 @@
-﻿import 'dart:ui' show ImageFilter;
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'jogos/jogos_lista.dart';
 import 'jogos/jogos_maps.dart';
 import 'perfil/perfil_page.dart';
 import '../widgets/grid_backdrop.dart';
+import '../main.dart';
 
 class HomeDashboard extends StatefulWidget {
   final User user;
@@ -35,21 +35,22 @@ class _HomeDashboardState extends State<HomeDashboard> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        toolbarHeight: 56,
+        scrolledUnderElevation: 0,
+        toolbarHeight: 64,
         title: _tab == 0
-            ? _buildSearchBarCompact(cs)
+            ? _buildSearchBarSofa(cs)
             : Text(
                 'Mapa',
                 style: GoogleFonts.outfit(
-                  fontSize: 16,
+                  fontSize: 18,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
                 ),
               ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.person_outline_rounded, size: 22),
-            color: Colors.white70,
+            icon: const Icon(Icons.account_circle_outlined, size: 28),
+            color: Colors.white,
             onPressed: () {
               Navigator.push(
                 context,
@@ -59,7 +60,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               );
             },
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
         ],
       ),
       body: Stack(
@@ -82,14 +83,14 @@ class _HomeDashboardState extends State<HomeDashboard> {
       onPressed: () async {
         final ok = await Navigator.of(context).pushNamed('/jogos/novo');
         if (ok == true && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          scaffoldMessengerKey.currentState?.showSnackBar(
             SnackBar(
               content: Text(
                 'Jogo agendado com sucesso! ⚽',
                 style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
               ),
               backgroundColor: const Color(0xFF10B981),
-              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 4),
             ),
           );
         }
@@ -107,72 +108,54 @@ class _HomeDashboardState extends State<HomeDashboard> {
     );
   }
 
-  Widget _buildSearchBarCompact(ColorScheme cs) {
+  Widget _buildSearchBarSofa(ColorScheme cs) {
     final hasText = _searchQuery.isNotEmpty;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      constraints: const BoxConstraints(maxWidth: 240, maxHeight: 38),
+    return Container(
+      height: 42,
+      margin: const EdgeInsets.only(right: 8),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: hasText
-              ? cs.primary.withValues(alpha: 0.4)
-              : Colors.white.withValues(alpha: 0.1),
-          width: 1,
-        ),
+        color: Colors.white, // White background like SofaScore
+        borderRadius: BorderRadius.circular(
+          12,
+        ), // Slightly less rounded for premium feel
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                child: Container(
-                  color: hasText
-                      ? cs.primary.withValues(alpha: 0.05)
-                      : Colors.white.withValues(alpha: 0.03),
-                ),
-              ),
-            ),
-            TextField(
-              controller: _searchCtrl,
-              onChanged: (v) => setState(() => _searchQuery = v.trim()),
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-              decoration: InputDecoration(
-                hintText: 'Pesquisar...',
-                hintStyle: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  fontSize: 13,
-                ),
-                prefixIcon: Icon(
-                  Icons.search_rounded,
-                  color: hasText ? cs.primary : Colors.white24,
-                  size: 16,
-                ),
-                suffixIcon: hasText
-                    ? IconButton(
-                        icon: const Icon(
-                          Icons.close_rounded,
-                          color: Colors.white24,
-                          size: 14,
-                        ),
-                        onPressed: () => setState(() {
-                          _searchCtrl.clear();
-                          _searchQuery = '';
-                        }),
-                      )
-                    : null,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                isDense: true,
-              ),
-            ),
-          ],
+      child: TextField(
+        controller: _searchCtrl,
+        onChanged: (v) => setState(() => _searchQuery = v.trim()),
+        style: GoogleFonts.outfit(
+          color: const Color(0xFF0F172A), // Dark text on white BG
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+        ),
+        decoration: InputDecoration(
+          hintText: 'Pesquisar jogos...', // Home dashboard
+          hintStyle: GoogleFonts.outfit(
+            color: const Color(0xFF94A3B8), // Slate-400 hint
+            fontSize: 15,
+          ),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            color: Color(0xFF0F172A), // Dark icon
+            size: 20,
+          ),
+          suffixIcon: hasText
+              ? IconButton(
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: Color(0xFF94A3B8),
+                    size: 18,
+                  ),
+                  onPressed: () {
+                    _searchCtrl.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                )
+              : null,
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 11),
         ),
       ),
     );

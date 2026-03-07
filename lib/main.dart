@@ -16,6 +16,8 @@ import 'theme/app_theme.dart';
 import 'widgets/auth/auth_gate.dart';
 
 final GlobalKey<NavigatorState> _navKey = GlobalKey<NavigatorState>();
+final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,6 +55,7 @@ class FuteboladasApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: _navKey,
+      scaffoldMessengerKey: scaffoldMessengerKey,
       title: 'Futeboladas',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
