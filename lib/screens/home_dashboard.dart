@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'jogos/jogos_lista.dart';
@@ -18,11 +19,28 @@ class HomeDashboard extends StatefulWidget {
 class _HomeDashboardState extends State<HomeDashboard> {
   int _tab = 0;
   final _searchCtrl = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
+  bool _fabExpanded = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(() {
+      if (_scrollController.position.userScrollDirection ==
+          ScrollDirection.reverse) {
+        if (_fabExpanded) setState(() => _fabExpanded = false);
+      } else if (_scrollController.position.userScrollDirection ==
+          ScrollDirection.forward) {
+        if (!_fabExpanded) setState(() => _fabExpanded = true);
+      }
+    });
+  }
 
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -80,6 +98,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   Widget _buildFAB(ColorScheme cs) {
     return FloatingActionButton.extended(
+      isExtended: _fabExpanded,
       onPressed: () async {
         final ok = await Navigator.of(context).pushNamed('/jogos/novo');
         if (ok == true && mounted) {
@@ -168,6 +187,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
       color: cs.primary,
       backgroundColor: const Color(0xFF1E293B),
       child: ListView(
+        controller: _scrollController,
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
         children: [
           const SizedBox(height: 12),
