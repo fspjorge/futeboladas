@@ -74,7 +74,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
       ),
       bottomNavigationBar: _buildBottomBar(cs),
       floatingActionButton: _tab == 0 ? _buildFAB(cs) : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endDocked,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
