@@ -30,17 +30,14 @@ class JogoDetalheHeader extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return Container(
-      constraints: const BoxConstraints(minHeight: 280),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [cs.primary.withValues(alpha: 0.2), const Color(0xFF0F172A)],
-        ),
+      constraints: const BoxConstraints(minHeight: 220),
+      decoration: const BoxDecoration(
+        color: Colors
+            .transparent, // Background provided by parent (Scaffold/Stack)
       ),
       child: Stack(
         children: [
-          Positioned.fill(child: CustomPaint(painter: GridBackdropPainter())),
+          const Positioned.fill(child: GridBackdrop()),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -89,7 +86,7 @@ class JogoDetalheHeader extends StatelessWidget {
                         child: Text(
                           FormatUtils.formatarPreco(preco),
                           style: GoogleFonts.outfit(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.w800,
                             color: preco > 0 ? Colors.green : Colors.blue,
                           ),
@@ -101,7 +98,7 @@ class JogoDetalheHeader extends StatelessWidget {
                   Text(
                     titulo,
                     style: GoogleFonts.outfit(
-                      fontSize: 32,
+                      fontSize: 22,
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
                       height: 1.1,
@@ -132,6 +129,7 @@ class JogoDetalheHeader extends StatelessWidget {
                             style: GoogleFonts.outfit(
                               color: Colors.white38,
                               fontWeight: FontWeight.w500,
+                              fontSize: 13,
                             ),
                           ),
                         ],
@@ -150,7 +148,7 @@ class JogoDetalheHeader extends StatelessWidget {
                             style: GoogleFonts.outfit(
                               color: Colors.white70,
                               fontWeight: FontWeight.w600,
-                              fontSize: 14,
+                              fontSize: 13,
                             ),
                           ),
                         ],
@@ -181,7 +179,7 @@ class JogoDetalheHeader extends StatelessWidget {
                               style: GoogleFonts.outfit(
                                 color: Colors.white70,
                                 fontWeight: FontWeight.w600,
-                                fontSize: 14,
+                                fontSize: 13,
                               ),
                             ),
                           ],

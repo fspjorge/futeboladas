@@ -14,14 +14,12 @@ class JogoCard extends StatelessWidget {
   final QueryDocumentSnapshot<Map<String, dynamic>> doc;
   final PresencaService presencas;
   final String? uid;
-  final VoidCallback? onPresenceChanged;
 
   const JogoCard({
     super.key,
     required this.doc,
     required this.presencas,
     this.uid,
-    this.onPresenceChanged,
   });
 
   @override
@@ -46,11 +44,11 @@ class JogoCard extends StatelessWidget {
               MaterialPageRoute(builder: (_) => JogoDetalhe(jogoId: jogoId)),
             ),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.04),
+                color: Colors.white.withValues(alpha: 0.03),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
               ),
               child: Row(
                 children: [
@@ -59,17 +57,17 @@ class JogoCard extends StatelessWidget {
                     child: Text(
                       hora,
                       style: GoogleFonts.outfit(
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: FontWeight.w900,
-                        color: Colors.white,
+                        color: Colors.white.withValues(alpha: 0.9),
                       ),
                     ),
                   ),
                   Container(
                     width: 1,
-                    height: 30,
-                    color: Colors.white.withValues(alpha: 0.08),
-                    margin: const EdgeInsets.symmetric(horizontal: 10),
+                    height: 24,
+                    color: Colors.white.withValues(alpha: 0.06),
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
                   ),
                   Expanded(
                     child: StreamBuilder<int>(
@@ -124,11 +122,11 @@ class JogoCard extends StatelessWidget {
                                       Text(
                                         '$confirmados/$maxJogadores',
                                         style: GoogleFonts.outfit(
-                                          fontSize: 10,
+                                          fontSize: 9,
                                           fontWeight: FontWeight.w700,
                                           color: isFull
                                               ? cs.error
-                                              : Colors.white30,
+                                              : Colors.white24,
                                         ),
                                       ),
                                     ] else
@@ -145,22 +143,22 @@ class JogoCard extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 4,
-                                    vertical: 2,
+                                    vertical: 1.5,
                                   ),
                                   decoration: BoxDecoration(
                                     color: preco > 0
-                                        ? Colors.green.withValues(alpha: 0.1)
-                                        : Colors.blue.withValues(alpha: 0.1),
+                                        ? Colors.green.withValues(alpha: 0.08)
+                                        : Colors.blue.withValues(alpha: 0.08),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
                                     FormatUtils.formatarPreco(preco),
                                     style: GoogleFonts.outfit(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w700,
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.w800,
                                       color: preco > 0
-                                          ? Colors.green
-                                          : Colors.blue,
+                                          ? Colors.green.withValues(alpha: 0.8)
+                                          : Colors.blue.withValues(alpha: 0.8),
                                     ),
                                   ),
                                 ),
@@ -259,13 +257,12 @@ class JogoCard extends StatelessWidget {
       }
       await presencas.marcarPresenca(jogoId, !isGoing);
 
-      if (onPresenceChanged != null) {
-        onPresenceChanged!();
-      }
-
       if (!context.mounted) return;
 
       if (isGoing) {
+        // Limpa notificações pendentes para evitar acumulação e "saltos"
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -276,22 +273,19 @@ class JogoCard extends StatelessWidget {
                 fontSize: 14,
               ),
             ),
-            behavior: SnackBarBehavior.floating,
             backgroundColor: const Color(0xFFF3F4F6),
-            elevation: 4,
-            duration: const Duration(seconds: 4),
+            elevation: 0, // Removida sombra para um aspeto mais limpo no fundo
+            duration: const Duration(seconds: 3),
             action: SnackBarAction(
               label: 'ANULAR',
               textColor: cs.primary,
               onPressed: () {
                 presencas.marcarPresenca(jogoId, true);
-                if (onPresenceChanged != null) {
-                  onPresenceChanged!();
-                }
               },
             ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius
+                  .zero, // Fixed SnackBar use zero or standard radius
             ),
           ),
         );
@@ -353,13 +347,15 @@ class _JoinButton extends StatelessWidget {
       return OutlinedButton(
         onPressed: onTap,
         style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          minimumSize: Size.zero,
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          minimumSize: const Size(0, 40),
           side: const BorderSide(color: Colors.white24),
           foregroundColor: Colors.white60,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           textStyle: GoogleFonts.outfit(
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -370,22 +366,19 @@ class _JoinButton extends StatelessWidget {
     return ElevatedButton(
       onPressed: isFull ? null : onTap,
       style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        minimumSize: const Size(0, 40),
         backgroundColor: isFull ? Colors.white10 : cs.primary,
         foregroundColor: isFull ? Colors.white24 : const Color(0xFF0F172A),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        textStyle: GoogleFonts.outfit(
-          fontSize: 11,
-          fontWeight: FontWeight.w900,
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: isFull ? 0 : 4,
       ),
       child: Text(
         isFull ? 'LOTADO' : 'IR',
         style: GoogleFonts.outfit(
-          fontSize: isFull ? 10 : 11,
+          fontSize: 12,
           fontWeight: FontWeight.w900,
+          letterSpacing: 0.5,
         ),
       ),
     );

@@ -64,4 +64,18 @@ class PresencaService {
         .snapshots()
         .map((d) => (d.data()?['vai'] as bool?) ?? false);
   }
+
+  Stream<Set<String>> jogosOndeVouStream() {
+    final uid = _uid;
+    if (uid == null) return Stream.value({});
+
+    return _db
+        .collectionGroup('presencas')
+        .where('uid', isEqualTo: uid)
+        .where('vai', isEqualTo: true)
+        .snapshots()
+        .map(
+          (snap) => snap.docs.map((d) => d.reference.parent.parent!.id).toSet(),
+        );
+  }
 }

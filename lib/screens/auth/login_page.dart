@@ -176,7 +176,7 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       body: Stack(
         children: [
-          const GridBackdrop(opacity: 0.05),
+          const GridBackdrop(opacity: 0.03),
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -241,7 +241,7 @@ class _LoginPageState extends State<LoginPage> {
                       // Social Login (Primary)
                       SizedBox(
                         width: double.infinity,
-                        height: 50,
+                        height: 56,
                         child: OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             backgroundColor: Colors.white.withValues(
@@ -363,7 +363,7 @@ class _LoginPageState extends State<LoginPage> {
                           ElevatedButton(
                             onPressed: _isBusy ? null : _submitEmail,
                             style: ElevatedButton.styleFrom(
-                              minimumSize: const Size.fromHeight(50),
+                              minimumSize: const Size.fromHeight(56),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
                               ),

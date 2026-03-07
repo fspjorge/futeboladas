@@ -52,7 +52,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     return Scaffold(
       body: Stack(
         children: [
-          const GridBackdrop(opacity: 0.05),
+          const GridBackdrop(opacity: 0.03),
           Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
@@ -74,7 +74,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                         'Verifica o teu email',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.outfit(
-                          fontSize: 24,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -86,18 +86,22 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                         style: const TextStyle(color: Colors.white60),
                       ),
                       const SizedBox(height: 32),
-                      ElevatedButton(
-                        onPressed: _busy ? null : _refresh,
-                        child: _busy
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 3,
-                                  color: Color(0xFF0F172A),
-                                ),
-                              )
-                            : const Text('Já verifiquei'),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: _busy ? null : _refresh,
+                          child: _busy
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 3,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                )
+                              : const Text('Já verifiquei'),
+                        ),
                       ),
                       const SizedBox(height: 16),
                       TextButton(

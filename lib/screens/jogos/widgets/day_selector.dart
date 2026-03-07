@@ -44,7 +44,7 @@ class DaySelector extends StatelessWidget {
           ),
         ),
         SizedBox(
-          height: 62,
+          height: 74,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: allDays.length,
@@ -109,7 +109,7 @@ class DaySelector extends StatelessWidget {
                         Text(
                           DateFormat.d('pt_PT').format(day),
                           style: GoogleFonts.outfit(
-                            fontSize: 16,
+                            fontSize: 18, // Increased from 16
                             fontWeight: FontWeight.bold,
                             color: selected
                                 ? const Color(0xFF0F172A)
@@ -118,12 +118,13 @@ class DaySelector extends StatelessWidget {
                                 : Colors.white,
                           ),
                         ),
+                        const SizedBox(height: 2), // Added spacing
                         Text(
                           DateFormat.E(
                             'pt_PT',
                           ).format(day).toUpperCase().substring(0, 3),
                           style: GoogleFonts.outfit(
-                            fontSize: 9,
+                            fontSize: 10, // Increased from 9
                             fontWeight: FontWeight.w900,
                             color: selected
                                 ? const Color(0xFF0F172A).withValues(alpha: 0.6)

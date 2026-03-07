@@ -1,5 +1,4 @@
-﻿import 'dart:ui';
-import 'package:flutter/foundation.dart' show kIsWeb;
+﻿import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -42,13 +41,17 @@ class _PerfilPageState extends State<PerfilPage> with WidgetsBindingObserver {
       if (!kIsWeb) {
         await _googleSignIn.signOut();
       }
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        Navigator.pop(context);
+      }
     } catch (e) {
       if (mounted) {
         _showSnackBar('Erro ao sair: $e', isError: true);
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() => _busy = false);
+      }
     }
   }
 
@@ -60,8 +63,9 @@ class _PerfilPageState extends State<PerfilPage> with WidgetsBindingObserver {
       icon: Icons.person_outline_rounded,
     );
 
-    if (name == null || name.trim().isEmpty || name == _user.displayName)
+    if (name == null || name.trim().isEmpty || name == _user.displayName) {
       return;
+    }
 
     setState(() => _busy = true);
     try {
@@ -76,7 +80,9 @@ class _PerfilPageState extends State<PerfilPage> with WidgetsBindingObserver {
         _showSnackBar('Erro ao atualizar nome: $e', isError: true);
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() => _busy = false);
+      }
     }
   }
 
@@ -138,7 +144,9 @@ class _PerfilPageState extends State<PerfilPage> with WidgetsBindingObserver {
       },
     );
 
-    if (selected == null) return;
+    if (selected == null) {
+      return;
+    }
 
     setState(() => _busy = true);
     try {
@@ -153,12 +161,16 @@ class _PerfilPageState extends State<PerfilPage> with WidgetsBindingObserver {
         _showSnackBar('Erro ao atualizar foto: $e', isError: true);
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() => _busy = false);
+      }
     }
   }
 
   Future<void> _changePassword() async {
-    if (!_isEmailUser) return;
+    if (!_isEmailUser) {
+      return;
+    }
 
     final result = await _showModernEditDialog(
       title: 'Nova Password',
@@ -170,8 +182,9 @@ class _PerfilPageState extends State<PerfilPage> with WidgetsBindingObserver {
     );
 
     if (result == null || result.trim().length < 6) {
-      if (result != null)
+      if (result != null) {
         _showSnackBar('Password demasiado curta.', isError: true);
+      }
       return;
     }
 
@@ -193,9 +206,13 @@ class _PerfilPageState extends State<PerfilPage> with WidgetsBindingObserver {
         _showSnackBar('Erro: ${e.message}', isError: true);
       }
     } catch (e) {
-      if (mounted) _showSnackBar('Erro inesperado: $e', isError: true);
+      if (mounted) {
+        _showSnackBar('Erro inesperado: $e', isError: true);
+      }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() => _busy = false);
+      }
     }
   }
 
@@ -211,7 +228,9 @@ class _PerfilPageState extends State<PerfilPage> with WidgetsBindingObserver {
       ),
     );
 
-    if (confirm != true) return;
+    if (confirm != true) {
+      return;
+    }
 
     setState(() => _busy = true);
     try {
@@ -230,7 +249,9 @@ class _PerfilPageState extends State<PerfilPage> with WidgetsBindingObserver {
         _showSnackBar('Erro: ${e.message}', isError: true);
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() => _busy = false);
+      }
     }
   }
 
@@ -313,6 +334,7 @@ class _PerfilPageState extends State<PerfilPage> with WidgetsBindingObserver {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF10B981),
                         foregroundColor: const Color(0xFF0F172A),
+                        minimumSize: const Size(0, 48), // Dialog size
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -343,9 +365,9 @@ class _PerfilPageState extends State<PerfilPage> with WidgetsBindingObserver {
         elevation: 0,
         centerTitle: true,
         title: Text(
-          'PERFIL',
+          'Perfil',
           style: GoogleFonts.outfit(
-            fontSize: 14,
+            fontSize: 20,
             fontWeight: FontWeight.w900,
             letterSpacing: 2,
             color: Colors.white,
@@ -636,6 +658,7 @@ class _ModernConfirmDialog extends StatelessWidget {
                           ? Colors.redAccent
                           : const Color(0xFF10B981),
                       foregroundColor: const Color(0xFF0F172A),
+                      minimumSize: const Size(0, 48), // Dialog size
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),

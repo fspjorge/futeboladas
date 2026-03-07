@@ -7,11 +7,13 @@ service cloud.firestore {
 
       // Criar jogo: autenticado + campos válidos
       allow create: if request.auth != null
-        && request.resource.data.keys().hasOnly(['ativo','titulo','local','jogadores','data','lat','lon','createdBy','createdAt','createdByName','createdByPhoto'])
+        && request.resource.data.keys().hasOnly(['ativo','titulo','local','jogadores','data','lat','lon','createdBy','createdAt','createdByName','createdByPhoto','preco','campo'])
         && request.resource.data.ativo is bool
         && request.resource.data.local is string
         && request.resource.data.jogadores is int
         && request.resource.data.data is timestamp
+        && request.resource.data.preco is number
+        && request.resource.data.campo is string
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.createdAt is timestamp
         && (
@@ -23,10 +25,12 @@ service cloud.firestore {
       allow update: if request.auth != null
         && resource.data.createdBy == request.auth.uid
         && request.resource.data.createdBy == resource.data.createdBy
-        && request.resource.data.keys().hasOnly(['ativo','titulo','local','jogadores','data','lat','lon','createdBy','createdAt','createdByName','createdByPhoto'])
+        && request.resource.data.keys().hasOnly(['ativo','titulo','local','jogadores','data','lat','lon','createdBy','createdAt','createdByName','createdByPhoto','preco','campo'])
         && request.resource.data.local is string
         && request.resource.data.jogadores is int
         && request.resource.data.data is timestamp
+        && request.resource.data.preco is number
+        && request.resource.data.campo is string
         && (
           !(request.resource.data.keys().hasAny(['lat','lon']))
           || (request.resource.data.lat is float && request.resource.data.lon is float)

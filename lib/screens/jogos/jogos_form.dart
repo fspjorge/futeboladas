@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import '../../services/osm_service.dart';
 import 'jogo_detalhe.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/grid_backdrop.dart';
 
 class _Suggestion {
   final String local;
@@ -279,13 +280,13 @@ class _JogosFormState extends State<JogosForm> {
         elevation: 0,
         title: Text(
           'Agendar Jogo',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.w800),
+          style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 20),
         ),
       ),
       body: Stack(
         children: [
           Positioned.fill(child: Container(color: const Color(0xFF0F172A))),
-          Positioned.fill(child: CustomPaint(painter: GridBackdropPainter())),
+          Positioned.fill(child: const GridBackdrop()),
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),

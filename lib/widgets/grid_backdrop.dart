@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class GridBackdrop extends StatelessWidget {
   final double opacity;
-  const GridBackdrop({super.key, this.opacity = 0.05});
+  const GridBackdrop({super.key, this.opacity = 0.03});
 
   @override
   Widget build(BuildContext context) {

@@ -20,8 +20,6 @@ class JogosLista extends StatefulWidget {
 
 class _JogosListaState extends State<JogosLista> {
   FilterMode _filterMode = FilterMode.todos;
-  Set<String> _jogosOndeVou = {};
-  bool _loadingVou = false;
   DateTime? _selectedDay;
   String? _selectedCampo;
 
@@ -29,32 +27,6 @@ class _JogosListaState extends State<JogosLista> {
       _filterMode != FilterMode.todos ||
       _selectedDay != null ||
       _selectedCampo != null;
-
-  Future<void> _loadJogosOndeVou() async {
-    if (!mounted) return;
-    setState(() => _loadingVou = true);
-    try {
-      final uid = FirebaseAuth.instance.currentUser?.uid;
-      if (uid == null) return;
-
-      final snap = await FirebaseFirestore.instance
-          .collectionGroup('presencas')
-          .where('uid', isEqualTo: uid)
-          .where('vai', isEqualTo: true)
-          .get();
-
-      if (!mounted) return;
-      setState(() {
-        _jogosOndeVou = snap.docs
-            .map((d) => d.reference.parent.parent!.id)
-            .toSet();
-      });
-    } catch (e) {
-      debugPrint('Erro: $e');
-    } finally {
-      if (mounted) setState(() => _loadingVou = false);
-    }
-  }
 
   void _openFilterSheet(BuildContext context, ColorScheme cs) {
     showModalBottomSheet(
@@ -71,7 +43,6 @@ class _JogosListaState extends State<JogosLista> {
           _selectedDay = null;
           _selectedCampo = null;
         }),
-        onLoadJogosOndeVou: _loadJogosOndeVou,
       ),
     );
   }
@@ -80,6 +51,7 @@ class _JogosListaState extends State<JogosLista> {
   _processGames(
     List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
     String? uid,
+    Set<String> jogosOndeVou,
   ) {
     final Map<DateTime, List<QueryDocumentSnapshot<Map<String, dynamic>>>>
     groups = {};
@@ -100,7 +72,7 @@ class _JogosListaState extends State<JogosLista> {
           continue;
         }
         if (_filterMode == FilterMode.participo &&
-            !_jogosOndeVou.contains(d.id)) {
+            !jogosOndeVou.contains(d.id)) {
           continue;
         }
         if (_filterMode == FilterMode.gratuitos) {
@@ -146,99 +118,110 @@ class _JogosListaState extends State<JogosLista> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     final cs = Theme.of(context).colorScheme;
 
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('jogos')
-          .where('ativo', isEqualTo: true)
-          .orderBy('data')
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting ||
-            (_loadingVou && _filterMode == FilterMode.participo)) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.only(top: 40),
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          );
-        }
-        if (snapshot.hasError) {
-          return Center(
-            child: Column(
-              children: [
-                const Icon(Icons.error_outline, color: Colors.redAccent),
-                const Text('Erro ao carregar jogos'),
-                TextButton(
-                  onPressed: () => setState(() {}),
-                  child: const Text('Tentar novamente'),
-                ),
-              ],
-            ),
-          );
-        }
+    return StreamBuilder<Set<String>>(
+      stream: presencas.jogosOndeVouStream(),
+      builder: (context, vouSnap) {
+        final jogosOndeVou = vouSnap.data ?? {};
 
-        final docs = snapshot.data?.docs ?? [];
-        final allDays = _getAllDays(docs);
-        final filtered = _processGames(docs, uid);
-        final visibleDays = filtered.keys.toList()..sort();
+        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: FirebaseFirestore.instance
+              .collection('jogos')
+              .where('ativo', isEqualTo: true)
+              .orderBy('data')
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.only(top: 40),
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              );
+            }
+            if (snapshot.hasError) {
+              return Center(
+                child: Column(
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.redAccent),
+                    const Text('Erro ao carregar jogos'),
+                    TextButton(
+                      onPressed: () => setState(() {}),
+                      child: const Text('Tentar novamente'),
+                    ),
+                  ],
+                ),
+              );
+            }
 
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            final docs = snapshot.data?.docs ?? [];
+            final allDays = _getAllDays(docs);
+            final filtered = _processGames(docs, uid, jogosOndeVou);
+            final visibleDays = filtered.keys.toList()..sort();
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: DaySelector(
-                    allDays: allDays,
-                    selectedDay: _selectedDay,
-                    onDaySelected: (day) => setState(() => _selectedDay = day),
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: DaySelector(
+                        allDays: allDays,
+                        selectedDay: _selectedDay,
+                        onDaySelected: (day) =>
+                            setState(() => _selectedDay = day),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 28),
+                      child: _FilterButton(
+                        hasActiveFilter: _hasActiveFilter,
+                        onTap: () => _openFilterSheet(context, cs),
+                        cs: cs,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Padding(
-                  padding: const EdgeInsets.only(top: 28),
-                  child: _FilterButton(
-                    hasActiveFilter: _hasActiveFilter,
-                    onTap: () => _openFilterSheet(context, cs),
-                    cs: cs,
+                const SizedBox(height: 16),
+                if (docs.isEmpty)
+                  EmptyState(
+                    icon: Icons.sports_soccer,
+                    message: 'Sem jogos agendados.',
+                  )
+                else if (visibleDays.isEmpty)
+                  EmptyState(
+                    icon: Icons.filter_alt_off_outlined,
+                    message: _getEmptyMessage(),
+                    isSmall: true,
+                    onAction: _hasActiveFilter
+                        ? () => setState(() {
+                            _filterMode = FilterMode.todos;
+                            _selectedDay = null;
+                          })
+                        : null,
+                    actionLabel: 'LIMPAR FILTROS',
+                  )
+                else
+                  ...visibleDays.map(
+                    (day) =>
+                        _buildDaySection(day, filtered[day]!, presencas, uid),
                   ),
-                ),
               ],
-            ),
-            const SizedBox(height: 16),
-            if (docs.isEmpty)
-              EmptyState(
-                icon: Icons.sports_soccer,
-                message: 'Sem jogos agendados.',
-              )
-            else if (visibleDays.isEmpty)
-              EmptyState(
-                icon: Icons.filter_alt_off_outlined,
-                message: _getEmptyMessage(),
-                isSmall: true,
-                onAction: _hasActiveFilter
-                    ? () => setState(() {
-                        _filterMode = FilterMode.todos;
-                        _selectedDay = null;
-                      })
-                    : null,
-                actionLabel: 'LIMPAR FILTROS',
-              )
-            else
-              ...visibleDays.map(
-                (day) => _buildDaySection(day, filtered[day]!, presencas, uid),
-              ),
-          ],
+            );
+          },
         );
       },
     );
   }
 
   String _getEmptyMessage() {
-    if (_filterMode == FilterMode.meus) return 'Não criaste nenhum jogo.';
-    if (_filterMode == FilterMode.participo)
+    if (_filterMode == FilterMode.meus) {
+      return 'Não criaste nenhum jogo.';
+    }
+    if (_filterMode == FilterMode.participo) {
       return 'Não tens jogos confirmados.';
+    }
     return 'Nenhum jogo encontrado.';
   }
 
@@ -272,12 +255,7 @@ class _JogosListaState extends State<JogosLista> {
           ),
         ),
         ...items.map(
-          (doc) => JogoCard(
-            doc: doc,
-            presencas: presencas,
-            uid: uid,
-            onPresenceChanged: _loadJogosOndeVou,
-          ),
+          (doc) => JogoCard(doc: doc, presencas: presencas, uid: uid),
         ),
         const SizedBox(height: 8),
       ],

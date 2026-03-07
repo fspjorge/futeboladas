@@ -48,26 +48,31 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryGreen,
           foregroundColor: deepSlate,
+          minimumSize: const Size(double.infinity, 56),
           textStyle: GoogleFonts.outfit(
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w800,
             fontSize: 16,
+            letterSpacing: 1,
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           elevation: 0,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: primaryGreen,
+          minimumSize: const Size(double.infinity, 56),
           side: const BorderSide(color: primaryGreen, width: 2),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          textStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          textStyle: GoogleFonts.outfit(
+            fontWeight: FontWeight.w800,
+            fontSize: 16,
+            letterSpacing: 1,
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(

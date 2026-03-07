@@ -254,6 +254,8 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                     date: date,
                     lat: (data['lat'] as num?)?.toDouble(),
                     lon: (data['lon'] as num?)?.toDouble(),
+                    campo: data['campo'] as String?,
+                    preco: (data['preco'] as num?)?.toDouble(),
                   ),
                 ],
               );

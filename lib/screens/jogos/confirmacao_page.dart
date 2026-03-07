@@ -2,13 +2,16 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../../widgets/grid_backdrop.dart';
 
 class ConfirmacaoJogoPage extends StatelessWidget {
   final String titulo;
   final DateTime data;
   final String local;
-  final double? preco; // ← NOVO (opcional)
-  final String? weather; // ← NOVO (opcional)
+  final double? preco;
+  final String? weather;
+  final String? campo; // ← NOVO
+
   const ConfirmacaoJogoPage({
     super.key,
     required this.titulo,
@@ -16,6 +19,7 @@ class ConfirmacaoJogoPage extends StatelessWidget {
     required this.local,
     this.preco,
     this.weather,
+    this.campo,
   });
 
   String _formatarPreco(double? preco) {
@@ -42,10 +46,7 @@ class ConfirmacaoJogoPage extends StatelessWidget {
           // Background Backdrop
           Positioned.fill(child: Container(color: const Color(0xFF0F172A))),
           Positioned.fill(
-            child: Opacity(
-              opacity: 0.03,
-              child: CustomPaint(painter: _GridBackdropPainter()),
-            ),
+            child: Opacity(opacity: 0.03, child: const GridBackdrop()),
           ),
 
           // Content
@@ -57,7 +58,10 @@ class ConfirmacaoJogoPage extends StatelessWidget {
                   constraints: BoxConstraints(minHeight: constraints.maxHeight),
                   child: SafeArea(
                     child: Padding(
-                      padding: const EdgeInsets.all(32.0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 20,
+                      ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -73,18 +77,18 @@ class ConfirmacaoJogoPage extends StatelessWidget {
                               );
                             },
                             child: Container(
-                              padding: const EdgeInsets.all(24),
+                              padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
                                 color: cs.primary.withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: cs.primary.withValues(alpha: 0.2),
-                                  width: 2,
+                                  color: cs.primary.withValues(alpha: 0.15),
+                                  width: 1.5,
                                 ),
                               ),
                               child: Icon(
                                 Icons.check_circle_rounded,
-                                size: 80,
+                                size: 56,
                                 color: cs.primary,
                               ),
                             ),
@@ -95,10 +99,10 @@ class ConfirmacaoJogoPage extends StatelessWidget {
                             'PRESENÇA CONFIRMADA!',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.outfit(
-                              fontSize: 24,
+                              fontSize: 18,
                               fontWeight: FontWeight.w900,
                               color: Colors.white,
-                              letterSpacing: 1,
+                              letterSpacing: 1.5,
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -106,8 +110,9 @@ class ConfirmacaoJogoPage extends StatelessWidget {
                             'Estás dentro da convocatória. Prepara as chuteiras!',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.outfit(
-                              fontSize: 16,
-                              color: Colors.white60,
+                              fontSize: 13,
+                              color: Colors.white38,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
 
@@ -121,10 +126,10 @@ class ConfirmacaoJogoPage extends StatelessWidget {
                               child: Container(
                                 padding: const EdgeInsets.all(24),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.05),
-                                  borderRadius: BorderRadius.circular(24),
+                                  color: Colors.white.withValues(alpha: 0.03),
+                                  borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.1),
+                                    color: Colors.white.withValues(alpha: 0.06),
                                   ),
                                 ),
                                 child: Column(
@@ -156,6 +161,21 @@ class ConfirmacaoJogoPage extends StatelessWidget {
                                         'pt_PT',
                                       ).format(data),
                                     ),
+                                    if (campo != null) ...[
+                                      const Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          vertical: 12,
+                                        ),
+                                        child: Divider(
+                                          color: Colors.white10,
+                                          height: 1,
+                                        ),
+                                      ),
+                                      _buildInfoMini(
+                                        Icons.stadium_outlined,
+                                        campo!,
+                                      ),
+                                    ],
                                     if (preco != null) ...[
                                       const Padding(
                                         padding: EdgeInsets.symmetric(
@@ -228,23 +248,4 @@ class ConfirmacaoJogoPage extends StatelessWidget {
       ],
     );
   }
-}
-
-class _GridBackdropPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.05)
-      ..strokeWidth = 0.5;
-
-    for (double i = 0; i < size.width; i += 40) {
-      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
-    }
-    for (double i = 0; i < size.height; i += 40) {
-      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

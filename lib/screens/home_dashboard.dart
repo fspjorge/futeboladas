@@ -35,19 +35,20 @@ class _HomeDashboardState extends State<HomeDashboard> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        toolbarHeight: 56,
         title: _tab == 0
             ? _buildSearchBarCompact(cs)
             : Text(
                 'Mapa',
                 style: GoogleFonts.outfit(
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
                 ),
               ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.person_outline_rounded),
+            icon: const Icon(Icons.person_outline_rounded, size: 22),
             color: Colors.white70,
             onPressed: () {
               Navigator.push(
@@ -58,6 +59,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               );
             },
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Stack(
@@ -70,29 +72,38 @@ class _HomeDashboardState extends State<HomeDashboard> {
         ],
       ),
       bottomNavigationBar: _buildBottomBar(cs),
-      floatingActionButton: _tab == 0
-          ? FloatingActionButton.extended(
-              heroTag: 'fab-agendar',
-              backgroundColor: cs.primary,
-              foregroundColor: const Color(0xFF0F172A),
-              icon: const Icon(Icons.add, weight: 700),
-              label: Text(
-                'AGENDAR',
-                style: GoogleFonts.outfit(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.5,
-                ),
+      floatingActionButton: _tab == 0 ? _buildFAB(cs) : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endDocked,
+    );
+  }
+
+  Widget _buildFAB(ColorScheme cs) {
+    return FloatingActionButton.extended(
+      onPressed: () async {
+        final ok = await Navigator.of(context).pushNamed('/jogos/novo');
+        if (ok == true && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Jogo agendado com sucesso! ⚽',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
               ),
-              onPressed: () async {
-                final ok = await Navigator.of(context).pushNamed('/jogos/novo');
-                if (ok == true && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Jogo agendado com sucesso!')),
-                  );
-                }
-              },
-            )
-          : null,
+              backgroundColor: const Color(0xFF10B981),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      },
+      icon: const Icon(Icons.add_rounded),
+      label: Text(
+        'AGENDAR',
+        style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+      ),
+      backgroundColor: cs.primary,
+      foregroundColor: const Color(0xFF0F172A),
+      elevation: 4,
+      highlightElevation: 8,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     );
   }
 
@@ -101,51 +112,51 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
-      constraints: const BoxConstraints(maxWidth: 280),
+      constraints: const BoxConstraints(maxWidth: 240, maxHeight: 38),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: hasText
-              ? cs.primary.withValues(alpha: 0.5)
-              : Colors.white.withValues(alpha: 0.2),
-          width: hasText ? 1.5 : 1,
+              ? cs.primary.withValues(alpha: 0.4)
+              : Colors.white.withValues(alpha: 0.1),
+          width: 1,
         ),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         child: Stack(
           children: [
             Positioned.fill(
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                 child: Container(
                   color: hasText
-                      ? cs.primary.withValues(alpha: 0.08)
-                      : Colors.white.withValues(alpha: 0.05),
+                      ? cs.primary.withValues(alpha: 0.05)
+                      : Colors.white.withValues(alpha: 0.03),
                 ),
               ),
             ),
             TextField(
               controller: _searchCtrl,
               onChanged: (v) => setState(() => _searchQuery = v.trim()),
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              style: const TextStyle(color: Colors.white, fontSize: 13),
               decoration: InputDecoration(
-                hintText: 'Pesquisar jogos...',
+                hintText: 'Pesquisar...',
                 hintStyle: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.3),
-                  fontSize: 14,
+                  color: Colors.white.withValues(alpha: 0.2),
+                  fontSize: 13,
                 ),
                 prefixIcon: Icon(
                   Icons.search_rounded,
-                  color: hasText ? cs.primary : Colors.white30,
-                  size: 18,
+                  color: hasText ? cs.primary : Colors.white24,
+                  size: 16,
                 ),
                 suffixIcon: hasText
                     ? IconButton(
                         icon: const Icon(
                           Icons.close_rounded,
-                          color: Colors.white30,
-                          size: 16,
+                          color: Colors.white24,
+                          size: 14,
                         ),
                         onPressed: () => setState(() {
                           _searchCtrl.clear();
@@ -155,8 +166,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     : null,
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
+                  horizontal: 10,
+                  vertical: 6,
                 ),
                 isDense: true,
               ),
@@ -174,9 +185,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
       color: cs.primary,
       backgroundColor: const Color(0xFF1E293B),
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
         children: [
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           JogosLista(searchQuery: _searchQuery),
         ],
       ),
@@ -186,27 +197,22 @@ class _HomeDashboardState extends State<HomeDashboard> {
   Widget _buildMapa() => const JogosMapa();
 
   Widget _buildBottomBar(ColorScheme cs) {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.85),
-            border: Border(
-              top: BorderSide(color: Colors.white.withValues(alpha: 0.06)),
-            ),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              child: Row(
-                children: [
-                  Expanded(child: _tabItem(0, Icons.list_rounded, 'Lista', cs)),
-                  Expanded(child: _tabItem(1, Icons.map_outlined, 'Mapa', cs)),
-                ],
-              ),
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A).withValues(alpha: 0.85),
+        border: Border(
+          top: BorderSide(color: Colors.white.withValues(alpha: 0.06)),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          child: Row(
+            children: [
+              Expanded(child: _tabItem(0, Icons.list_rounded, 'Lista', cs)),
+              Expanded(child: _tabItem(1, Icons.map_outlined, 'Mapa', cs)),
+            ],
           ),
         ),
       ),

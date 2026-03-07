@@ -12,6 +12,8 @@ class JogoDetalheActions extends StatelessWidget {
   final DateTime? date;
   final double? lat;
   final double? lon;
+  final String? campo; // ← NOVO
+  final double? preco; // ← NOVO
 
   const JogoDetalheActions({
     super.key,
@@ -22,6 +24,8 @@ class JogoDetalheActions extends StatelessWidget {
     this.date,
     this.lat,
     this.lon,
+    this.campo,
+    this.preco,
   });
 
   @override
@@ -138,6 +142,8 @@ class JogoDetalheActions extends StatelessWidget {
               data: date ?? DateTime.now(),
               local: local,
               weather: weatherStr,
+              campo: campo,
+              preco: preco,
             ),
           ),
         );

@@ -30,21 +30,21 @@ class JogoMapaDetalhe extends StatelessWidget {
             zoomControlsEnabled: true,
             compassEnabled: true,
           ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 100,
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0xFF0F172A), Colors.transparent],
-                ),
-              ),
-            ),
-          ),
+          // Positioned(
+          //   top: 0,
+          //   left: 0,
+          //   right: 0,
+          //   height: 100,
+          //   child: Container(
+          //     decoration: const BoxDecoration(
+          //       gradient: LinearGradient(
+          //         begin: Alignment.topCenter,
+          //         end: Alignment.bottomCenter,
+          //         colors: [Color(0xFF0F172A), Colors.transparent],
+          //       ),
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );

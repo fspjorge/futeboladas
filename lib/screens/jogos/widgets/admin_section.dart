@@ -73,6 +73,7 @@ class _AdminSectionState extends State<AdminSection> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white10,
                           foregroundColor: Colors.white,
+                          minimumSize: const Size(0, 56),
                           textStyle: GoogleFonts.outfit(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
@@ -91,6 +92,7 @@ class _AdminSectionState extends State<AdminSection> {
                             alpha: 0.1,
                           ),
                           foregroundColor: Colors.redAccent,
+                          minimumSize: const Size(0, 56),
                           textStyle: GoogleFonts.outfit(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,

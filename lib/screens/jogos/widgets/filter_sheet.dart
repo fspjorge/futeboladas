@@ -10,7 +10,6 @@ class FilterSheet extends StatelessWidget {
   final Function(FilterMode) onModeChanged;
   final Function(String?) onCampoChanged;
   final VoidCallback onClearFilters;
-  final VoidCallback onLoadJogosOndeVou;
 
   const FilterSheet({
     super.key,
@@ -20,7 +19,6 @@ class FilterSheet extends StatelessWidget {
     required this.onModeChanged,
     required this.onCampoChanged,
     required this.onClearFilters,
-    required this.onLoadJogosOndeVou,
   });
 
   @override
@@ -104,8 +102,6 @@ class FilterSheet extends StatelessWidget {
                               ? FilterMode.todos
                               : FilterMode.participo;
                           onModeChanged(newMode);
-                          if (newMode == FilterMode.participo)
-                            onLoadJogosOndeVou();
                           setSheetState(() {});
                         },
                         cs: cs,
