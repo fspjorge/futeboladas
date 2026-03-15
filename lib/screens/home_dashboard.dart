@@ -37,6 +37,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
         elevation: 0,
         scrolledUnderElevation: 0,
         toolbarHeight: 64,
+        titleSpacing: _tab == 0 ? 16 : NavigationToolbar.kMiddleSpacing,
         title: _tab == 0
             ? _buildSearchBarSofa(cs)
             : Text(
@@ -60,7 +61,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               );
             },
           ),
-          const SizedBox(width: 12),
+          if (_tab != 0) const SizedBox(width: 12),
         ],
       ),
       body: Stack(
@@ -112,24 +113,22 @@ class _HomeDashboardState extends State<HomeDashboard> {
     final hasText = _searchQuery.isNotEmpty;
 
     return Container(
-      height: 42,
-      margin: const EdgeInsets.only(right: 8),
+      height: 48,
+      margin: EdgeInsets.zero,
       decoration: BoxDecoration(
         color: Colors.white, // White background like SofaScore
-        borderRadius: BorderRadius.circular(
-          12,
-        ), // Slightly less rounded for premium feel
+        borderRadius: BorderRadius.circular(24), // Pill-shaped
       ),
       child: TextField(
         controller: _searchCtrl,
         onChanged: (v) => setState(() => _searchQuery = v.trim()),
         style: GoogleFonts.outfit(
           color: const Color(0xFF0F172A), // Dark text on white BG
-          fontSize: 15,
+          fontSize: 16,
           fontWeight: FontWeight.w500,
         ),
         decoration: InputDecoration(
-          hintText: 'Pesquisar jogos...', // Home dashboard
+          hintText: 'Pesquisar jogos...',
           hintStyle: GoogleFonts.outfit(
             color: const Color(0xFF94A3B8), // Slate-400 hint
             fontSize: 15,
@@ -137,14 +136,14 @@ class _HomeDashboardState extends State<HomeDashboard> {
           prefixIcon: const Icon(
             Icons.search_rounded,
             color: Color(0xFF0F172A), // Dark icon
-            size: 20,
+            size: 22,
           ),
           suffixIcon: hasText
               ? IconButton(
                   icon: const Icon(
                     Icons.close_rounded,
                     color: Color(0xFF94A3B8),
-                    size: 18,
+                    size: 20,
                   ),
                   onPressed: () {
                     _searchCtrl.clear();
@@ -155,7 +154,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 11),
+          contentPadding: const EdgeInsets.symmetric(vertical: 13),
         ),
       ),
     );
