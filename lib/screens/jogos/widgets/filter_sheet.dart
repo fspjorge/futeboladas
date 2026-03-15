@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../models/filter_mode.dart';
 
-class FilterSheet extends StatelessWidget {
+class FilterSheet extends StatefulWidget {
   final FilterMode currentMode;
   final String? selectedCampo;
   final bool hasActiveFilter;
@@ -22,186 +22,203 @@ class FilterSheet extends StatelessWidget {
   });
 
   @override
+  State<FilterSheet> createState() => _FilterSheetState();
+}
+
+class _FilterSheetState extends State<FilterSheet> {
+  late FilterMode _localMode;
+  late String? _localCampo;
+
+  @override
+  void initState() {
+    super.initState();
+    _localMode = widget.currentMode;
+    _localCampo = widget.selectedCampo;
+  }
+
+  bool get _localHasActiveFilter =>
+      _localMode != FilterMode.todos || _localCampo != null;
+
+  @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    return StatefulBuilder(
-      builder: (context, setSheetState) {
-        return ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B).withValues(alpha: 0.95),
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(24),
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E293B).withValues(alpha: 0.95),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: 20),
+              Text(
+                'FILTROS',
+                style: GoogleFonts.outfit(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white38,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 10,
                 children: [
-                  Center(
-                    child: Container(
-                      width: 36,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.white24,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
+                  _SheetChip(
+                    label: 'Todos',
+                    icon: Icons.grid_view_rounded,
+                    selected: _localMode == FilterMode.todos,
+                    onTap: () {
+                      setState(() => _localMode = FilterMode.todos);
+                      widget.onModeChanged(_localMode);
+                    },
+                    cs: cs,
                   ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'FILTROS',
-                    style: GoogleFonts.outfit(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white38,
-                      letterSpacing: 1.5,
-                    ),
+                  _SheetChip(
+                    label: 'Meus',
+                    icon: Icons.person_outline_rounded,
+                    selected: _localMode == FilterMode.meus,
+                    onTap: () {
+                      setState(() {
+                        _localMode = _localMode == FilterMode.meus
+                            ? FilterMode.todos
+                            : FilterMode.meus;
+                      });
+                      widget.onModeChanged(_localMode);
+                    },
+                    cs: cs,
                   ),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 10,
-                    children: [
-                      _SheetChip(
-                        label: 'Todos',
-                        icon: Icons.grid_view_rounded,
-                        selected: currentMode == FilterMode.todos,
-                        onTap: () {
-                          onModeChanged(FilterMode.todos);
-                          setSheetState(() {});
-                        },
-                        cs: cs,
-                      ),
-                      _SheetChip(
-                        label: 'Meus',
-                        icon: Icons.person_outline_rounded,
-                        selected: currentMode == FilterMode.meus,
-                        onTap: () {
-                          onModeChanged(
-                            currentMode == FilterMode.meus
-                                ? FilterMode.todos
-                                : FilterMode.meus,
-                          );
-                          setSheetState(() {});
-                        },
-                        cs: cs,
-                      ),
-                      _SheetChip(
-                        label: 'Confirmados',
-                        icon: Icons.check_circle_outline_rounded,
-                        selected: currentMode == FilterMode.participo,
-                        onTap: () {
-                          final newMode = currentMode == FilterMode.participo
-                              ? FilterMode.todos
-                              : FilterMode.participo;
-                          onModeChanged(newMode);
-                          setSheetState(() {});
-                        },
-                        cs: cs,
-                      ),
-                      _SheetChip(
-                        label: 'Gratuitos',
-                        icon: Icons.money_off_csred_outlined,
-                        selected: currentMode == FilterMode.gratuitos,
-                        onTap: () {
-                          onModeChanged(
-                            currentMode == FilterMode.gratuitos
-                                ? FilterMode.todos
-                                : FilterMode.gratuitos,
-                          );
-                          setSheetState(() {});
-                        },
-                        cs: cs,
-                      ),
-                    ],
+                  _SheetChip(
+                    label: 'Confirmados',
+                    icon: Icons.check_circle_outline_rounded,
+                    selected: _localMode == FilterMode.participo,
+                    onTap: () {
+                      setState(() {
+                        _localMode = _localMode == FilterMode.participo
+                            ? FilterMode.todos
+                            : FilterMode.participo;
+                      });
+                      widget.onModeChanged(_localMode);
+                    },
+                    cs: cs,
                   ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'TIPO DE CAMPO',
-                    style: GoogleFonts.outfit(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white38,
-                      letterSpacing: 1.5,
-                    ),
+                  _SheetChip(
+                    label: 'Gratuitos',
+                    icon: Icons.money_off_csred_outlined,
+                    selected: _localMode == FilterMode.gratuitos,
+                    onTap: () {
+                      setState(() {
+                        _localMode = _localMode == FilterMode.gratuitos
+                            ? FilterMode.todos
+                            : FilterMode.gratuitos;
+                      });
+                      widget.onModeChanged(_localMode);
+                    },
+                    cs: cs,
                   ),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 10,
-                    children: [
-                      _SheetChip(
-                        label: 'Pavilhão',
-                        icon: Icons.stairs_outlined,
-                        selected: selectedCampo == 'Pavilhão',
-                        onTap: () {
-                          onCampoChanged(
-                            selectedCampo == 'Pavilhão' ? null : 'Pavilhão',
-                          );
-                          setSheetState(() {});
-                        },
-                        cs: cs,
-                      ),
-                      _SheetChip(
-                        label: 'Sintética',
-                        icon: Icons.grass,
-                        selected: selectedCampo == 'Relva Sintética',
-                        onTap: () {
-                          onCampoChanged(
-                            selectedCampo == 'Relva Sintética'
-                                ? null
-                                : 'Relva Sintética',
-                          );
-                          setSheetState(() {});
-                        },
-                        cs: cs,
-                      ),
-                      _SheetChip(
-                        label: 'Natural',
-                        icon: Icons.eco_outlined,
-                        selected: selectedCampo == 'Relva Natural',
-                        onTap: () {
-                          onCampoChanged(
-                            selectedCampo == 'Relva Natural'
-                                ? null
-                                : 'Relva Natural',
-                          );
-                          setSheetState(() {});
-                        },
-                        cs: cs,
-                      ),
-                    ],
-                  ),
-                  if (hasActiveFilter) ...[
-                    const SizedBox(height: 20),
-                    TextButton.icon(
-                      onPressed: () {
-                        onClearFilters();
-                        Navigator.pop(context);
-                      },
-                      icon: const Icon(Icons.close_rounded, size: 14),
-                      label: Text(
-                        'Limpar filtros',
-                        style: GoogleFonts.outfit(fontSize: 13),
-                      ),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.white38,
-                      ),
-                    ),
-                  ],
                 ],
               ),
-            ),
+              const SizedBox(height: 24),
+              Text(
+                'TIPO DE CAMPO',
+                style: GoogleFonts.outfit(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white38,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 10,
+                children: [
+                  _SheetChip(
+                    label: 'Pavilhão',
+                    icon: Icons.stairs_outlined,
+                    selected: _localCampo == 'Pavilhão',
+                    onTap: () {
+                      setState(() {
+                        _localCampo = _localCampo == 'Pavilhão'
+                            ? null
+                            : 'Pavilhão';
+                      });
+                      widget.onCampoChanged(_localCampo);
+                    },
+                    cs: cs,
+                  ),
+                  _SheetChip(
+                    label: 'Sintética',
+                    icon: Icons.grass,
+                    selected: _localCampo == 'Relva Sintética',
+                    onTap: () {
+                      setState(() {
+                        _localCampo = _localCampo == 'Relva Sintética'
+                            ? null
+                            : 'Relva Sintética';
+                      });
+                      widget.onCampoChanged(_localCampo);
+                    },
+                    cs: cs,
+                  ),
+                  _SheetChip(
+                    label: 'Natural',
+                    icon: Icons.eco_outlined,
+                    selected: _localCampo == 'Relva Natural',
+                    onTap: () {
+                      setState(() {
+                        _localCampo = _localCampo == 'Relva Natural'
+                            ? null
+                            : 'Relva Natural';
+                      });
+                      widget.onCampoChanged(_localCampo);
+                    },
+                    cs: cs,
+                  ),
+                ],
+              ),
+              if (_localHasActiveFilter) ...[
+                const SizedBox(height: 20),
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _localMode = FilterMode.todos;
+                      _localCampo = null;
+                    });
+                    widget.onClearFilters();
+                    Navigator.pop(context);
+                  },
+                  icon: const Icon(Icons.close_rounded, size: 14),
+                  label: Text(
+                    'Limpar filtros',
+                    style: GoogleFonts.outfit(fontSize: 13),
+                  ),
+                  style: TextButton.styleFrom(foregroundColor: Colors.white38),
+                ),
+              ],
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
