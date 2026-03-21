@@ -324,7 +324,6 @@ class _JogoEditarState extends State<JogoEditar> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          flex: 2,
                           child: _buildGlassInput(
                             controller: _jogadoresCtrl,
                             label: 'Nº Jogadores',
@@ -333,7 +332,7 @@ class _JogoEditarState extends State<JogoEditar> {
                             keyboardType: TextInputType.number,
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 16),
                         Expanded(
                           child: _buildGlassInput(
                             controller: _precoCtrl,

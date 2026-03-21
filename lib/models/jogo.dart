@@ -13,6 +13,8 @@ class Jogo {
   final double? lon;
   final List<String> participantes;
   final bool ativo;
+  final String? campo; // ← NOVO
+  final double? preco; // ← NOVO
 
   Jogo({
     required this.id,
@@ -27,6 +29,8 @@ class Jogo {
     this.lon,
     this.participantes = const [],
     this.ativo = true,
+    this.campo,
+    this.preco,
   });
 
   factory Jogo.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -46,6 +50,8 @@ class Jogo {
       lon: (data['lon'] as num?)?.toDouble(),
       participantes: List<String>.from(data['participantes'] ?? []),
       ativo: data['ativo'] ?? true,
+      campo: data['campo'] as String?,
+      preco: (data['preco'] as num?)?.toDouble(),
     );
   }
 
@@ -66,6 +72,8 @@ class Jogo {
       'lon': lon,
       'participantes': participantes,
       'ativo': ativo,
+      'campo': campo,
+      'preco': preco,
     };
   }
 }

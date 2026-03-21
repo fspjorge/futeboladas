@@ -43,28 +43,36 @@ class JogoDetalheInfo extends StatelessWidget {
             ),
           ),
           const Divider(color: Colors.white10, height: 1),
-          _infoRow(
-            Icons.euro_rounded,
-            'Preço',
-            FormatUtils.formatarPreco(preco),
+          Row(
+            children: [
+              Expanded(
+                child: StreamBuilder<int>(
+                  stream: presencas.countConfirmados(jogoId),
+                  builder: (context, snap) {
+                    final count = snap.data ?? 0;
+                    return _infoRow(
+                      Icons.people_outline,
+                      'Jogadores',
+                      '$count / $maxJogadores',
+                    );
+                  },
+                ),
+              ),
+              Container(width: 1, height: 60, color: Colors.white10),
+              Expanded(
+                child: _infoRow(
+                  Icons.euro_rounded,
+                  'Preço',
+                  FormatUtils.formatarPreco(preco),
+                ),
+              ),
+            ],
           ),
           const Divider(color: Colors.white10, height: 1),
           _infoRow(
             Icons.stadium_outlined,
             'Tipo de Campo',
             data['campo'] as String? ?? 'Relva Sintética',
-          ),
-          const Divider(color: Colors.white10, height: 1),
-          StreamBuilder<int>(
-            stream: presencas.countConfirmados(jogoId),
-            builder: (context, snap) {
-              final count = snap.data ?? 0;
-              return _infoRow(
-                Icons.people_outline,
-                'Equipas',
-                '$count / $maxJogadores jogadores',
-              );
-            },
           ),
           const Divider(color: Colors.white10, height: 1),
           _infoRow(Icons.person_outline, 'Organizador', createdByName),

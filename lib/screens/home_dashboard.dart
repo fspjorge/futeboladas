@@ -52,6 +52,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
           IconButton(
             icon: const Icon(Icons.account_circle_outlined, size: 28),
             color: Colors.white,
+            padding: const EdgeInsets.only(right: 16),
             onPressed: () {
               Navigator.push(
                 context,
@@ -114,7 +115,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
     return Container(
       height: 48,
-      margin: EdgeInsets.zero,
       decoration: BoxDecoration(
         color: Colors.white, // White background like SofaScore
         borderRadius: BorderRadius.circular(24), // Pill-shaped

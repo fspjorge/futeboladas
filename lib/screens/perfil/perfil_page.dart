@@ -8,13 +8,15 @@ import '../../widgets/glass_card.dart';
 
 class PerfilPage extends StatefulWidget {
   final User user;
-  const PerfilPage({super.key, required this.user});
+  final FirebaseAuth? auth;
+  const PerfilPage({super.key, required this.user, this.auth});
 
   @override
   State<PerfilPage> createState() => _PerfilPageState();
 }
 
 class _PerfilPageState extends State<PerfilPage> with WidgetsBindingObserver {
+  late final _auth = widget.auth ?? FirebaseAuth.instance;
   late User _user;
   bool _busy = false;
 
@@ -37,7 +39,7 @@ class _PerfilPageState extends State<PerfilPage> with WidgetsBindingObserver {
   Future<void> _signOut() async {
     setState(() => _busy = true);
     try {
-      await FirebaseAuth.instance.signOut();
+      await _auth.signOut();
       if (!kIsWeb) {
         await _googleSignIn.signOut();
       }
@@ -71,94 +73,13 @@ class _PerfilPageState extends State<PerfilPage> with WidgetsBindingObserver {
     try {
       await _user.updateDisplayName(name.trim());
       await _user.reload();
-      _user = FirebaseAuth.instance.currentUser!;
+      _user = _auth.currentUser!;
       if (mounted) {
         _showSnackBar('Nome atualizado com sucesso! 🤝');
       }
     } catch (e) {
       if (mounted) {
         _showSnackBar('Erro ao atualizar nome: $e', isError: true);
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _busy = false);
-      }
-    }
-  }
-
-  Future<void> _changePhoto() async {
-    // Curated list of football-themed avatars
-    final avatars = [
-      'https://api.dicebear.com/7.x/avataaars/png?seed=Felix&backgroundColor=b6e3f4',
-      'https://api.dicebear.com/7.x/avataaars/png?seed=Aneka&backgroundColor=c0aede',
-      'https://api.dicebear.com/7.x/avataaars/png?seed=George&backgroundColor=d1d4f9',
-      'https://api.dicebear.com/7.x/avataaars/png?seed=Sasha&backgroundColor=ffdfbf',
-      'https://api.dicebear.com/7.x/avataaars/png?seed=Jasper&backgroundColor=c0aede',
-    ];
-
-    final selected = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return GlassCard(
-          borderRadius: 32,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Escolhe o teu Avatar',
-                style: GoogleFonts.outfit(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                height: 100,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: avatars.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 16),
-                  itemBuilder: (ctx, i) {
-                    return InkWell(
-                      onTap: () => Navigator.pop(ctx, avatars[i]),
-                      child: CircleAvatar(
-                        radius: 40,
-                        backgroundImage: NetworkImage(avatars[i]),
-                        backgroundColor: Colors.white10,
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Mais opções de personalização brevemente!',
-                style: GoogleFonts.outfit(fontSize: 12, color: Colors.white30),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-
-    if (selected == null) {
-      return;
-    }
-
-    setState(() => _busy = true);
-    try {
-      await _user.updatePhotoURL(selected);
-      await _user.reload();
-      _user = FirebaseAuth.instance.currentUser!;
-      if (mounted) {
-        _showSnackBar('Foto de perfil atualizada! 📸');
-      }
-    } catch (e) {
-      if (mounted) {
-        _showSnackBar('Erro ao atualizar foto: $e', isError: true);
       }
     } finally {
       if (mounted) {
@@ -404,11 +325,7 @@ class _PerfilPageState extends State<PerfilPage> with WidgetsBindingObserver {
                     label: 'Alterar password',
                     onTap: _changePassword,
                   ),
-                _buildOptionTile(
-                  icon: Icons.image_outlined,
-                  label: 'Alterar foto de perfil',
-                  onTap: _changePhoto,
-                ),
+
                 const SizedBox(height: 20),
                 _buildSectionTitle('APLICAÇÃO'),
                 _buildOptionTile(
@@ -466,29 +383,6 @@ class _PerfilPageState extends State<PerfilPage> with WidgetsBindingObserver {
                   child: _user.photoURL == null
                       ? Icon(Icons.person_rounded, size: 36, color: cs.primary)
                       : null,
-                ),
-              ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: InkWell(
-                  onTap: _changePhoto,
-                  child: Container(
-                    padding: const EdgeInsets.all(5),
-                    decoration: BoxDecoration(
-                      color: cs.primary,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFF0F172A),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.camera_alt_rounded,
-                      size: 10,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ),
                 ),
               ),
             ],

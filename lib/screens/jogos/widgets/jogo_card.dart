@@ -223,6 +223,8 @@ class JogoCard extends StatelessWidget {
                                 jogoId,
                                 local,
                                 preco,
+                                maxJogadores,
+                                confirmados,
                               ),
                               cs: cs,
                             );
@@ -248,6 +250,8 @@ class JogoCard extends StatelessWidget {
     String jogoId,
     String local,
     num preco,
+    int maxJogadores,
+    int confirmados,
   ) async {
     try {
       if (!isGoing && isFull) {
@@ -309,7 +313,14 @@ class JogoCard extends StatelessWidget {
                 data: date,
                 local: local,
                 preco: preco.toDouble(),
-                weather: weatherStr,
+                weather: weatherStr != null ? Future.value(weatherStr) : null,
+                campo: data['campo'] as String?,
+                maxParticipantes: maxJogadores,
+                numParticipantes: confirmados,
+                organizadorNome: data['createdByName'] as String?,
+                organizadorFoto: data['createdByPhoto'] as String?,
+                contactosPrivados: null,
+                notasPrivadas: null,
               ),
             ),
           );

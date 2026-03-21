@@ -312,7 +312,6 @@ class _JogosFormState extends State<JogosForm> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          flex: 2,
                           child: _buildGlassInput(
                             controller: _jogadoresCtrl,
                             label: 'Nº Jogadores',
@@ -321,7 +320,7 @@ class _JogosFormState extends State<JogosForm> {
                             keyboardType: TextInputType.number,
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 16),
                         Expanded(
                           child: _buildGlassInput(
                             controller: _precoCtrl,

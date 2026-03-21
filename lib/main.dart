@@ -78,6 +78,7 @@ class FuteboladasApp extends StatelessWidget {
   }
 }
 
+// ignore_for_file: deprecated_member_use
 Future<void> _setupPasswordResetLinkHandling() async {
   if (kIsWeb) {
     final uri = Uri.base;

@@ -5,7 +5,8 @@ import 'package:futeboladas/screens/auth/verify_email_page.dart';
 import 'package:futeboladas/screens/home_dashboard.dart';
 
 class AuthGate extends StatelessWidget {
-  const AuthGate({super.key});
+  final FirebaseAuth? auth;
+  const AuthGate({super.key, this.auth});
 
   bool _needsEmailVerification(User user) {
     final providerData = user.providerData;
@@ -16,7 +17,7 @@ class AuthGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.userChanges(),
+      stream: (auth ?? FirebaseAuth.instance).userChanges(),
       builder: (context, snap) {
         final user = snap.data;
 
@@ -27,7 +28,7 @@ class AuthGate extends StatelessWidget {
         }
 
         if (user == null) {
-          return const LoginPage();
+          return LoginPage(auth: auth);
         }
 
         if (_needsEmailVerification(user)) {

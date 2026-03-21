@@ -256,6 +256,12 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                     lon: (data['lon'] as num?)?.toDouble(),
                     campo: data['campo'] as String?,
                     preco: (data['preco'] as num?)?.toDouble(),
+                    maxParticipantes: (data['jogadores'] as num?)?.toInt(),
+                    participantes: List<String>.from(
+                      data['participantes'] ?? [],
+                    ),
+                    organizadorNome: data['createdByName'] as String?,
+                    organizadorFoto: data['createdByPhoto'] as String?,
                   ),
                 ],
               );

@@ -6,14 +6,15 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../../widgets/grid_backdrop.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final FirebaseAuth? auth;
+  const LoginPage({super.key, this.auth});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _auth = FirebaseAuth.instance;
+  late final _auth = widget.auth ?? FirebaseAuth.instance;
 
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();

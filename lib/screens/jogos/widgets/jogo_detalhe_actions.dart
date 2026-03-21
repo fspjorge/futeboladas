@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../services/presenca_service.dart';
 import '../../../services/weather_service.dart';
@@ -15,6 +16,10 @@ class JogoDetalheActions extends StatelessWidget {
   final double? lon;
   final String? campo; // ← NOVO
   final double? preco; // ← NOVO
+  final int? maxParticipantes; // ← NOVO
+  final List<String>? participantes; // ← NOVO
+  final String? organizadorNome; // ← NOVO
+  final String? organizadorFoto; // ← NOVO
 
   const JogoDetalheActions({
     super.key,
@@ -27,6 +32,10 @@ class JogoDetalheActions extends StatelessWidget {
     this.lon,
     this.campo,
     this.preco,
+    this.maxParticipantes,
+    this.participantes,
+    this.organizadorNome,
+    this.organizadorFoto,
   });
 
   @override
@@ -119,16 +128,34 @@ class JogoDetalheActions extends StatelessWidget {
         ),
       );
     } else {
-      String? weatherStr;
+      Future<String?>? weatherFuture;
       if (lat != null && lon != null && date != null) {
-        final w = await WeatherService().getForecastAt(lat!, lon!, date!);
-        if (w != null) {
+        weatherFuture = WeatherService().getForecastAt(lat!, lon!, date!).then((
+          w,
+        ) {
+          if (w == null) return null;
           final desc = w['desc'] as String? ?? '';
           final capitalizedDesc = desc.isNotEmpty
               ? '${desc[0].toUpperCase()}${desc.substring(1)}'
               : '';
-          weatherStr = '$capitalizedDesc, ${w['temp']}°C';
+          return '$capitalizedDesc, ${w['temp']}°C';
+        });
+      }
+
+      // NOVO: Buscar dados privados do organizador
+      Map<String, dynamic>? privateData;
+      try {
+        final privateSnap = await FirebaseFirestore.instance
+            .collection('jogos')
+            .doc(jogoId)
+            .collection('admin')
+            .doc('privado')
+            .get();
+        if (privateSnap.exists) {
+          privateData = privateSnap.data();
         }
+      } catch (e) {
+        debugPrint('Erro ao buscar dados privados: $e');
       }
 
       if (context.mounted) {
@@ -138,9 +165,15 @@ class JogoDetalheActions extends StatelessWidget {
               titulo: titulo,
               data: date ?? DateTime.now(),
               local: local,
-              weather: weatherStr,
+              weather: weatherFuture,
               campo: campo,
               preco: preco,
+              maxParticipantes: maxParticipantes,
+              numParticipantes: (participantes?.length ?? 0) + 1,
+              organizadorNome: organizadorNome,
+              organizadorFoto: organizadorFoto,
+              contactosPrivados: privateData?['contactos'] as String?,
+              notasPrivadas: privateData?['historico'] as String?,
             ),
           ),
         );
