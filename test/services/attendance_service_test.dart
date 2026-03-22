@@ -37,7 +37,7 @@ void main() {
           .get();
 
       expect(doc.exists, isTrue);
-      expect(doc.data()!['vai'], isTrue);
+      expect(doc.data()!['isGoing'], isTrue);
       expect(doc.data()!['uid'], mockUser.uid);
     });
 
@@ -50,21 +50,21 @@ void main() {
           .doc(gameId)
           .collection('attendances')
           .doc('user1')
-          .set({'vai': true});
+          .set({'isGoing': true});
 
       await fakeFirestore
           .collection('games')
           .doc(gameId)
           .collection('attendances')
           .doc('user2')
-          .set({'vai': true});
+          .set({'isGoing': true});
 
       await fakeFirestore
           .collection('games')
           .doc(gameId)
           .collection('attendances')
           .doc('user3')
-          .set({'vai': false});
+          .set({'isGoing': false});
 
       final count = await presencaService.countConfirmados(gameId).first;
       expect(count, 2);
