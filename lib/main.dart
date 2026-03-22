@@ -1,4 +1,4 @@
-﻿import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/intl.dart';
@@ -10,8 +10,8 @@ import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platf
 
 import 'firebase_options.dart';
 import 'screens/auth/reset_password.dart';
-import 'screens/jogos/jogos_form.dart';
-import 'screens/jogos/jogos_maps.dart';
+import 'screens/games/game_form.dart';
+import 'screens/games/games_maps.dart';
 import 'theme/app_theme.dart';
 import 'widgets/auth/auth_gate.dart';
 
@@ -61,8 +61,8 @@ class FuteboladasApp extends StatelessWidget {
       theme: AppTheme.darkTheme,
       home: const AuthGate(),
       routes: {
-        '/jogos/mapa': (_) => const JogosMapa(),
-        '/jogos/novo': (_) => const JogosForm(),
+        '/games/map': (_) => const GamesMaps(),
+        '/games/new': (_) => const GameForm(),
         '/auth/reset': (ctx) {
           final uri = Uri.base;
           final code = uri.queryParameters['oobCode'];

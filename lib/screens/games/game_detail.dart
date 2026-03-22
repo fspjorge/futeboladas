@@ -1,4 +1,4 @@
-﻿import 'dart:ui' show ImageFilter;
+import 'dart:ui' show ImageFilter;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -7,24 +7,24 @@ import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../services/presenca_service.dart';
-import '../../services/jogo_service.dart';
+import '../../services/attendance_service.dart';
+import '../../services/game_service.dart';
 import '../../widgets/grid_backdrop.dart';
 import 'widgets/admin_section.dart';
-import 'widgets/jogo_detalhe_header.dart';
-import 'widgets/jogo_detalhe_info.dart';
-import 'widgets/jogo_detalhe_players.dart';
-import 'widgets/jogo_detalhe_actions.dart';
+import 'widgets/game_detail_header.dart';
+import 'widgets/game_detail_info.dart';
+import 'widgets/game_detail_players.dart';
+import 'widgets/game_detail_actions.dart';
 
-class JogoDetalhe extends StatefulWidget {
-  final String jogoId;
-  const JogoDetalhe({super.key, required this.jogoId});
+class GameDetail extends StatefulWidget {
+  final String gameId;
+  const GameDetail({super.key, required this.gameId});
 
   @override
-  State<JogoDetalhe> createState() => _JogoDetalheState();
+  State<GameDetail> createState() => _JogoDetalheState();
 }
 
-class _JogoDetalheState extends State<JogoDetalhe> {
+class _JogoDetalheState extends State<GameDetail> {
   bool _deleting = false;
   int _reminderMin = 5;
 
@@ -82,7 +82,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
         title: Text(
-          'Apagar Jogo',
+          'Apagar Game',
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -113,11 +113,11 @@ class _JogoDetalheState extends State<JogoDetalhe> {
 
     setState(() => _deleting = true);
     try {
-      await JogoService.instance.apagarJogo(widget.jogoId);
+      await GameService.instance.apagarJogo(widget.gameId);
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Jogo apagado com sucesso.')),
+          const SnackBar(content: Text('Game apagado com sucesso.')),
         );
       }
     } catch (e) {
@@ -130,9 +130,9 @@ class _JogoDetalheState extends State<JogoDetalhe> {
     }
   }
 
-  Future<void> _openMaps(String local) async {
+  Future<void> _openMaps(String location) async {
     try {
-      final res = await locationFromAddress('$local, Portugal');
+      final res = await locationFromAddress('$location, Portugal');
       if (res.isNotEmpty) {
         final pos = LatLng(res.first.latitude, res.first.longitude);
         final uri = Uri.parse(
@@ -143,7 +143,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
         throw Exception('Localização não encontrada');
       }
     } catch (e) {
-      final query = Uri.encodeComponent(local);
+      final query = Uri.encodeComponent(location);
       final uri = Uri.parse(
         'https://www.google.com/maps/search/?api=1&query=$query',
       );
@@ -154,10 +154,10 @@ class _JogoDetalheState extends State<JogoDetalhe> {
   @override
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    final presencas = PresencaService();
+    final presencas = AttendanceService();
     final jogoRef = FirebaseFirestore.instance
-        .collection('jogos')
-        .doc(widget.jogoId);
+        .collection('games')
+        .doc(widget.gameId);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -182,7 +182,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
               if (!snap.hasData || !snap.data!.exists) {
                 return Center(
                   child: Text(
-                    'Jogo não encontrado.',
+                    'Game não encontrado.',
                     style: GoogleFonts.outfit(
                       color: Colors.white38,
                       fontSize: 18,
@@ -191,11 +191,12 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                 );
               }
               final data = snap.data!.data()!;
-              final local = data['local'] as String? ?? 'Local desconhecido';
-              final date = (data['data'] as Timestamp?)?.toDate();
+              final location =
+                  data['location'] as String? ?? 'Local desconhecido';
+              final date = (data['date'] as Timestamp?)?.toDate();
               final createdBy = data['createdBy'] as String?;
               final isOwner = uid != null && createdBy == uid;
-              final preco = data['preco'] as num? ?? 0;
+              final price = data['price'] as num? ?? 0;
 
               return Column(
                 children: [
@@ -203,12 +204,12 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                     child: ListView(
                       padding: EdgeInsets.zero,
                       children: [
-                        JogoDetalheHeader(
-                          titulo: data['titulo'] as String? ?? local,
-                          local: local,
+                        GameDetailHeader(
+                          title: data['title'] as String? ?? location,
+                          location: location,
                           date: date,
-                          preco: preco,
-                          campo: data['campo'] as String?,
+                          price: price,
+                          field: data['field'] as String?,
                           lat: (data['lat'] as num?)?.toDouble(),
                           lon: (data['lon'] as num?)?.toDouble(),
                         ),
@@ -217,8 +218,8 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              JogoDetalheInfo(
-                                jogoId: widget.jogoId,
+                              GameDetailInfo(
+                                gameId: widget.gameId,
                                 data: data,
                                 presencas: presencas,
                                 onPickReminder: _pickReminder,
@@ -227,7 +228,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                               ),
                               const SizedBox(height: 24),
                               if (uid != null)
-                                JogoDetalhePlayers(
+                                GameDetailPlayers(
                                   jogoRef: jogoRef,
                                   createdBy: createdBy,
                                   uid: uid,
@@ -235,7 +236,7 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                               const SizedBox(height: 24),
                               if (isOwner)
                                 AdminSection(
-                                  jogoId: widget.jogoId,
+                                  gameId: widget.gameId,
                                   onEliminar: _eliminarJogo,
                                   jogoRef: jogoRef,
                                 ),
@@ -246,20 +247,18 @@ class _JogoDetalheState extends State<JogoDetalhe> {
                       ],
                     ),
                   ),
-                  JogoDetalheActions(
+                  GameDetailActions(
                     presencas: presencas,
-                    jogoId: widget.jogoId,
-                    titulo: data['titulo'] as String? ?? local,
-                    local: local,
+                    gameId: widget.gameId,
+                    title: data['title'] as String? ?? location,
+                    location: location,
                     date: date,
                     lat: (data['lat'] as num?)?.toDouble(),
                     lon: (data['lon'] as num?)?.toDouble(),
-                    campo: data['campo'] as String?,
-                    preco: (data['preco'] as num?)?.toDouble(),
-                    maxParticipantes: (data['jogadores'] as num?)?.toInt(),
-                    participantes: List<String>.from(
-                      data['participantes'] ?? [],
-                    ),
+                    field: data['field'] as String?,
+                    price: (data['price'] as num?)?.toDouble(),
+                    maxParticipantes: (data['players'] as num?)?.toInt(),
+                    participants: List<String>.from(data['participants'] ?? []),
                     organizadorNome: data['createdByName'] as String?,
                     organizadorFoto: data['createdByPhoto'] as String?,
                   ),

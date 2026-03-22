@@ -1,12 +1,12 @@
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:futeboladas/services/presenca_service.dart';
+import 'package:futeboladas/services/attendance_service.dart';
 
 void main() {
   late FakeFirebaseFirestore fakeFirestore;
   late MockFirebaseAuth mockAuth;
-  late PresencaService presencaService;
+  late AttendanceService presencaService;
 
   final mockUser = MockUser(
     uid: 'tester',
@@ -17,19 +17,22 @@ void main() {
   setUp(() {
     fakeFirestore = FakeFirebaseFirestore();
     mockAuth = MockFirebaseAuth(signedIn: true, mockUser: mockUser);
-    presencaService = PresencaService(firestore: fakeFirestore, auth: mockAuth);
+    presencaService = AttendanceService(
+      firestore: fakeFirestore,
+      auth: mockAuth,
+    );
   });
 
-  group('PresencaService Tests', () {
+  group('AttendanceService Tests', () {
     test('should mark presence successfully', () async {
-      const jogoId = 'jogo_1';
+      const gameId = 'jogo_1';
 
-      await presencaService.marcarPresenca(jogoId, true);
+      await presencaService.markAttendance(gameId, true);
 
       final doc = await fakeFirestore
-          .collection('jogos')
-          .doc(jogoId)
-          .collection('presencas')
+          .collection('games')
+          .doc(gameId)
+          .collection('attendances')
           .doc(mockUser.uid)
           .get();
 
@@ -39,31 +42,31 @@ void main() {
     });
 
     test('countConfirmados should return correct amount', () async {
-      const jogoId = 'jogo_2';
+      const gameId = 'jogo_2';
 
       // Add two confirmed presences manually to fake firestore
       await fakeFirestore
-          .collection('jogos')
-          .doc(jogoId)
-          .collection('presencas')
+          .collection('games')
+          .doc(gameId)
+          .collection('attendances')
           .doc('user1')
           .set({'vai': true});
 
       await fakeFirestore
-          .collection('jogos')
-          .doc(jogoId)
-          .collection('presencas')
+          .collection('games')
+          .doc(gameId)
+          .collection('attendances')
           .doc('user2')
           .set({'vai': true});
 
       await fakeFirestore
-          .collection('jogos')
-          .doc(jogoId)
-          .collection('presencas')
+          .collection('games')
+          .doc(gameId)
+          .collection('attendances')
           .doc('user3')
           .set({'vai': false});
 
-      final count = await presencaService.countConfirmados(jogoId).first;
+      final count = await presencaService.countConfirmados(gameId).first;
       expect(count, 2);
     });
   });

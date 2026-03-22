@@ -1,9 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'jogos/jogos_lista.dart';
-import 'jogos/jogos_maps.dart';
-import 'perfil/perfil_page.dart';
+import 'games/games_list.dart';
+import 'games/games_maps.dart';
+import 'profile/profile_page.dart';
 import '../widgets/grid_backdrop.dart';
 import '../main.dart';
 
@@ -57,7 +57,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => PerfilPage(user: widget.user),
+                  builder: (_) => ProfilePage(user: widget.user),
                 ),
               );
             },
@@ -83,12 +83,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
   Widget _buildFAB(ColorScheme cs) {
     return FloatingActionButton.extended(
       onPressed: () async {
-        final ok = await Navigator.of(context).pushNamed('/jogos/novo');
+        final ok = await Navigator.of(context).pushNamed('/games/new');
         if (ok == true && mounted) {
           scaffoldMessengerKey.currentState?.showSnackBar(
             SnackBar(
               content: Text(
-                'Jogo agendado com sucesso! ⚽',
+                'Game agendado com sucesso! ⚽',
                 style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
               ),
               backgroundColor: const Color(0xFF10B981),
@@ -128,7 +128,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
           fontWeight: FontWeight.w500,
         ),
         decoration: InputDecoration(
-          hintText: 'Pesquisar jogos...',
+          hintText: 'Pesquisar games...',
           hintStyle: GoogleFonts.outfit(
             color: const Color(0xFF94A3B8), // Slate-400 hint
             fontSize: 15,
@@ -170,13 +170,13 @@ class _HomeDashboardState extends State<HomeDashboard> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
         children: [
           const SizedBox(height: 12),
-          JogosLista(searchQuery: _searchQuery),
+          GamesList(searchQuery: _searchQuery),
         ],
       ),
     );
   }
 
-  Widget _buildMapa() => const JogosMapa();
+  Widget _buildMapa() => const GamesMaps();
 
   Widget _buildBottomBar(ColorScheme cs) {
     return Container(

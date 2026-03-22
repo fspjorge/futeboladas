@@ -227,7 +227,7 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                               ),
                               Text(
-                                'O teu jogo, a tua cidade.',
+                                'O teu game, a tua cidade.',
                                 style: GoogleFonts.outfit(
                                   fontSize: 12,
                                   color: Colors.white60,

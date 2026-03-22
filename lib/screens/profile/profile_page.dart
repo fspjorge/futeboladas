@@ -1,4 +1,4 @@
-﻿import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,16 +6,16 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../../widgets/grid_backdrop.dart';
 import '../../widgets/glass_card.dart';
 
-class PerfilPage extends StatefulWidget {
+class ProfilePage extends StatefulWidget {
   final User user;
   final FirebaseAuth? auth;
-  const PerfilPage({super.key, required this.user, this.auth});
+  const ProfilePage({super.key, required this.user, this.auth});
 
   @override
-  State<PerfilPage> createState() => _PerfilPageState();
+  State<ProfilePage> createState() => _PerfilPageState();
 }
 
-class _PerfilPageState extends State<PerfilPage> with WidgetsBindingObserver {
+class _PerfilPageState extends State<ProfilePage> with WidgetsBindingObserver {
   late final _auth = widget.auth ?? FirebaseAuth.instance;
   late User _user;
   bool _busy = false;
@@ -143,7 +143,7 @@ class _PerfilPageState extends State<PerfilPage> with WidgetsBindingObserver {
       builder: (ctx) => _ModernConfirmDialog(
         title: 'Eliminar Conta',
         message:
-            'Esta ação é irreversível. Perderás todo o teu histórico de jogos e presenças.',
+            'Esta ação é irreversível. Perderás todo o teu histórico de games e presenças.',
         confirmLabel: 'ELIMINAR',
         isDestructive: true,
       ),

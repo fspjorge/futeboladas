@@ -1,0 +1,28 @@
+﻿Analyzing futeboladas...                                        
+
+  error - Undefined name 'data' - lib\screens\games\confirmation_page.dart:45:64 - undefined_identifier
+  error - Undefined name 'data' - lib\screens\games\confirmation_page.dart:46:48 - undefined_identifier
+  error - The getter 'date' isn't defined for the type 'AsyncSnapshot<String?>' - lib\screens\games\confirmation_page.dart:201:57 - undefined_getter
+  error - The named parameter 'date' is required, but there's no corresponding argument - lib\screens\games\game_detail.dart:221:31 - missing_required_argument
+  error - The named parameter 'data' isn't defined - lib\screens\games\game_detail.dart:223:33 - undefined_named_parameter
+  error - The getter 'date' isn't defined for the type 'AsyncSnapshot<Set<String>>' - lib\screens\games\games_list.dart:124:38 - undefined_getter
+  error - The getter 'date' isn't defined for the type 'AsyncSnapshot<QuerySnapshot<Map<String, dynamic>>>' - lib\screens\games\games_list.dart:156:35 - undefined_getter
+  error - The getter 'date' isn't defined for the type 'AsyncSnapshot<DocumentSnapshot<Map<String, dynamic>>>' - lib\screens\games\widgets\admin_section.dart:112:41 - undefined_getter
+  error - The getter 'date' isn't defined for the type 'AsyncSnapshot<int>' - lib\screens\games\widgets\game_card.dart:78:55 - undefined_getter
+  error - The getter 'date' isn't defined for the type 'AsyncSnapshot<int>' - lib\screens\games\widgets\game_card.dart:207:55 - undefined_getter
+  error - The getter 'date' isn't defined for the type 'AsyncSnapshot<bool>' - lib\screens\games\widgets\game_card.dart:213:52 - undefined_getter
+  error - The getter 'date' isn't defined for the type 'AsyncSnapshot<bool>' - lib\screens\games\widgets\game_detail_actions.dart:58:34 - undefined_getter
+  error - The getter 'date' isn't defined for the type 'AsyncSnapshot<Map<String, dynamic>?>' - lib\screens\games\widgets\game_detail_header.dart:163:65 - undefined_getter
+  error - All final variables must be initialized, but 'data' isn't - lib\screens\games\widgets\game_detail_info.dart:16:9 - final_not_initialized_constructor
+  error - 'date' isn't a field in the enclosing class - lib\screens\games\widgets\game_detail_info.dart:19:5 - initializing_formal_for_non_existent_field
+  error - The getter 'date' isn't defined for the type 'AsyncSnapshot<int>' - lib\screens\games\widgets\game_detail_info.dart:52:40 - undefined_getter
+  error - The getter 'date' isn't defined for the type 'AsyncSnapshot<QuerySnapshot<Map<String, dynamic>>>' - lib\screens\games\widgets\game_detail_players.dart:42:31 - undefined_getter
+  error - The getter 'date' isn't defined for the type 'AsyncSnapshot<Map<String, dynamic>?>' - lib\screens\games\widgets\weather_section.dart:24:49 - undefined_getter
+  error - Target of URI doesn't exist: 'perfil/profile_page.dart' - lib\screens\home_dashboard.dart:6:8 - uri_does_not_exist
+  error - The method 'ProfilePage' isn't defined for the type '_HomeDashboardState' - lib\screens\home_dashboard.dart:60:35 - undefined_method
+  error - The getter 'date' isn't defined for the type 'AsyncSnapshot<User?>' - lib\widgets\auth\auth_gate.dart:22:27 - undefined_getter
+   info - Don't invoke 'print' in production code - tools\fix.dart:10:3 - avoid_print
+   info - Don't invoke 'print' in production code - tools\migrate_db.dart:4:3 - avoid_print
+   info - Don't invoke 'print' in production code - tools\migrate_db.dart:49:3 - avoid_print
+   info - Don't invoke 'print' in production code - tools\refactor.dart:10:3 - avoid_print
+

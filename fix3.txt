@@ -1,0 +1,15 @@
+﻿Analyzing futeboladas...                                        
+
+  error - The getter 'date' isn't defined for the type 'AsyncSnapshot<Set<String>>' - lib\screens\games\games_list.dart:124:38 - undefined_getter
+  error - The getter 'date' isn't defined for the type 'AsyncSnapshot<int>' - lib\screens\games\widgets\game_card.dart:78:55 - undefined_getter
+  error - The getter 'date' isn't defined for the type 'AsyncSnapshot<int>' - lib\screens\games\widgets\game_card.dart:207:55 - undefined_getter
+  error - The getter 'date' isn't defined for the type 'AsyncSnapshot<bool>' - lib\screens\games\widgets\game_card.dart:213:52 - undefined_getter
+  error - The getter 'date' isn't defined for the type 'AsyncSnapshot<Map<String, dynamic>?>' - lib\screens\games\widgets\game_detail_header.dart:163:65 - undefined_getter
+  error - The getter 'date' isn't defined for the type 'AsyncSnapshot<Map<String, dynamic>?>' - lib\screens\games\widgets\weather_section.dart:24:49 - undefined_getter
+   info - Don't invoke 'print' in production code - tools\fix.dart:10:3 - avoid_print
+   info - Don't invoke 'print' in production code - tools\fix2.dart:10:3 - avoid_print
+   info - Don't invoke 'print' in production code - tools\fix3.dart:10:3 - avoid_print
+   info - Don't invoke 'print' in production code - tools\migrate_db.dart:4:3 - avoid_print
+   info - Don't invoke 'print' in production code - tools\migrate_db.dart:49:3 - avoid_print
+   info - Don't invoke 'print' in production code - tools\refactor.dart:10:3 - avoid_print
+

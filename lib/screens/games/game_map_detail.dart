@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class JogoMapaDetalhe extends StatelessWidget {
+class GameMapDetail extends StatelessWidget {
   final LatLng pos;
-  final String titulo;
-  const JogoMapaDetalhe({super.key, required this.pos, required this.titulo});
+  final String title;
+  const GameMapDetail({super.key, required this.pos, required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +13,7 @@ class JogoMapaDetalhe extends StatelessWidget {
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Text(
-          titulo,
+          title,
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.transparent,
@@ -25,7 +25,9 @@ class JogoMapaDetalhe extends StatelessWidget {
           GoogleMap(
             mapType: MapType.normal,
             initialCameraPosition: CameraPosition(target: pos, zoom: 16),
-            markers: {Marker(markerId: const MarkerId('local'), position: pos)},
+            markers: {
+              Marker(markerId: const MarkerId('location'), position: pos),
+            },
             myLocationButtonEnabled: false,
             zoomControlsEnabled: true,
             compassEnabled: true,

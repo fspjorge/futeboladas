@@ -1,39 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../services/presenca_service.dart';
+import '../../../services/attendance_service.dart';
 import '../../../services/weather_service.dart';
-import '../confirmacao_page.dart';
+import '../confirmation_page.dart';
 import '../../../main.dart';
 
-class JogoDetalheActions extends StatelessWidget {
-  final PresencaService presencas;
-  final String jogoId;
-  final String titulo;
-  final String local;
+class GameDetailActions extends StatelessWidget {
+  final AttendanceService presencas;
+  final String gameId;
+  final String title;
+  final String location;
   final DateTime? date;
   final double? lat;
   final double? lon;
-  final String? campo; // ← NOVO
-  final double? preco; // ← NOVO
+  final String? field; // ← NOVO
+  final double? price; // ← NOVO
   final int? maxParticipantes; // ← NOVO
-  final List<String>? participantes; // ← NOVO
+  final List<String>? participants; // ← NOVO
   final String? organizadorNome; // ← NOVO
   final String? organizadorFoto; // ← NOVO
 
-  const JogoDetalheActions({
+  const GameDetailActions({
     super.key,
     required this.presencas,
-    required this.jogoId,
-    required this.titulo,
-    required this.local,
+    required this.gameId,
+    required this.title,
+    required this.location,
     this.date,
     this.lat,
     this.lon,
-    this.campo,
-    this.preco,
+    this.field,
+    this.price,
     this.maxParticipantes,
-    this.participantes,
+    this.participants,
     this.organizadorNome,
     this.organizadorFoto,
   });
@@ -53,7 +53,7 @@ class JogoDetalheActions extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: StreamBuilder<bool>(
-          stream: presencas.minhaPresenca(jogoId),
+          stream: presencas.minhaPresenca(gameId),
           builder: (context, snap) {
             final isGoing = snap.data ?? false;
             final isLoading = snap.connectionState == ConnectionState.waiting;
@@ -104,7 +104,7 @@ class JogoDetalheActions extends StatelessWidget {
     bool isGoing,
     ColorScheme cs,
   ) async {
-    await presencas.marcarPresenca(jogoId, !isGoing);
+    await presencas.markAttendance(gameId, !isGoing);
 
     if (!context.mounted) return;
 
@@ -113,13 +113,13 @@ class JogoDetalheActions extends StatelessWidget {
 
       scaffoldMessengerKey.currentState?.showSnackBar(
         SnackBar(
-          content: Text('Presença removida de: $titulo'),
+          content: Text('Presença removida de: $title'),
           duration: const Duration(seconds: 3),
           dismissDirection: DismissDirection.horizontal,
           action: SnackBarAction(
             label: 'ANULAR',
             onPressed: () {
-              presencas.marcarPresenca(jogoId, true);
+              presencas.markAttendance(gameId, true);
               scaffoldMessengerKey.currentState?.hideCurrentSnackBar();
             },
           ),
@@ -146,8 +146,8 @@ class JogoDetalheActions extends StatelessWidget {
       Map<String, dynamic>? privateData;
       try {
         final privateSnap = await FirebaseFirestore.instance
-            .collection('jogos')
-            .doc(jogoId)
+            .collection('games')
+            .doc(gameId)
             .collection('admin')
             .doc('privado')
             .get();
@@ -161,15 +161,15 @@ class JogoDetalheActions extends StatelessWidget {
       if (context.mounted) {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => ConfirmacaoJogoPage(
-              titulo: titulo,
-              data: date ?? DateTime.now(),
-              local: local,
+            builder: (_) => ConfirmationPage(
+              title: title,
+              date: date ?? DateTime.now(),
+              location: location,
               weather: weatherFuture,
-              campo: campo,
-              preco: preco,
+              field: field,
+              price: price,
               maxParticipantes: maxParticipantes,
-              numParticipantes: (participantes?.length ?? 0) + 1,
+              numParticipantes: (participants?.length ?? 0) + 1,
               organizadorNome: organizadorNome,
               organizadorFoto: organizadorFoto,
               contactosPrivados: privateData?['contactos'] as String?,

@@ -1,68 +1,72 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class PresencaService {
+class AttendanceService {
   final FirebaseAuth _auth;
   final FirebaseFirestore _db;
 
-  PresencaService({FirebaseAuth? auth, FirebaseFirestore? firestore})
+  AttendanceService({FirebaseAuth? auth, FirebaseFirestore? firestore})
     : _auth = auth ?? FirebaseAuth.instance,
       _db = firestore ?? FirebaseFirestore.instance;
 
   String? get _uid => _auth.currentUser?.uid;
 
-  DocumentReference<Map<String, dynamic>> _doc(String jogoId) {
+  DocumentReference<Map<String, dynamic>> _doc(String gameId) {
     final uid = _uid;
     if (uid == null) {
       throw StateError('Utilizador não autenticado');
     }
-    return _db.collection('jogos').doc(jogoId).collection('presencas').doc(uid);
+    return _db
+        .collection('games')
+        .doc(gameId)
+        .collection('attendances')
+        .doc(uid);
   }
 
-  Future<void> marcarPresenca(String jogoId, bool vai) async {
+  Future<void> markAttendance(String gameId, bool isGoing) async {
     final user = _auth.currentUser;
     if (user == null) {
       throw StateError('Utilizador não autenticado');
     }
 
     final batch = _db.batch();
-    final presenceRef = _doc(jogoId);
+    final presenceRef = _doc(gameId);
 
     // 1. Atualizar a subcoleção de presenças
     batch.set(presenceRef, {
-      'vai': vai,
+      'isGoing': isGoing,
       'updatedAt': Timestamp.now(),
       'name': user.displayName ?? '',
       'photo': user.photoURL ?? '',
-      'uid': user.uid, // ← adiciona este campo
+      'uid': user.uid, // ← adiciona este field
     }, SetOptions(merge: true));
 
     await batch.commit();
   }
 
-  Stream<int> countConfirmados(String jogoId) {
+  Stream<int> countConfirmados(String gameId) {
     return _db
-        .collection('jogos')
-        .doc(jogoId)
-        .collection('presencas')
-        .where('vai', isEqualTo: true)
+        .collection('games')
+        .doc(gameId)
+        .collection('attendances')
+        .where('isGoing', isEqualTo: true)
         .snapshots()
         .map((s) => s.size);
   }
 
-  Stream<bool> minhaPresenca(String jogoId) {
+  Stream<bool> minhaPresenca(String gameId) {
     final uid = _uid;
     if (uid == null) {
       // Se não autenticado, devolve sempre false
       return const Stream<bool>.empty();
     }
     return _db
-        .collection('jogos')
-        .doc(jogoId)
-        .collection('presencas')
+        .collection('games')
+        .doc(gameId)
+        .collection('attendances')
         .doc(uid)
         .snapshots()
-        .map((d) => (d.data()?['vai'] as bool?) ?? false);
+        .map((d) => (d.data()?['isGoing'] as bool?) ?? false);
   }
 
   Stream<Set<String>> jogosOndeVouStream() {
@@ -70,9 +74,9 @@ class PresencaService {
     if (uid == null) return Stream.value({});
 
     return _db
-        .collectionGroup('presencas')
+        .collectionGroup('attendances')
         .where('uid', isEqualTo: uid)
-        .where('vai', isEqualTo: true)
+        .where('isGoing', isEqualTo: true)
         .snapshots()
         .map(
           (snap) => snap.docs.map((d) => d.reference.parent.parent!.id).toSet(),

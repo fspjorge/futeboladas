@@ -37,7 +37,7 @@ class _FilterSheetState extends State<FilterSheet> {
   }
 
   bool get _localHasActiveFilter =>
-      _localMode != FilterMode.todos || _localCampo != null;
+      _localMode != FilterMode.all || _localCampo != null;
 
   @override
   Widget build(BuildContext context) {
@@ -86,9 +86,9 @@ class _FilterSheetState extends State<FilterSheet> {
                   _SheetChip(
                     label: 'Todos',
                     icon: Icons.grid_view_rounded,
-                    selected: _localMode == FilterMode.todos,
+                    selected: _localMode == FilterMode.all,
                     onTap: () {
-                      setState(() => _localMode = FilterMode.todos);
+                      setState(() => _localMode = FilterMode.all);
                       widget.onModeChanged(_localMode);
                     },
                     cs: cs,
@@ -96,12 +96,12 @@ class _FilterSheetState extends State<FilterSheet> {
                   _SheetChip(
                     label: 'Meus',
                     icon: Icons.person_outline_rounded,
-                    selected: _localMode == FilterMode.meus,
+                    selected: _localMode == FilterMode.mine,
                     onTap: () {
                       setState(() {
-                        _localMode = _localMode == FilterMode.meus
-                            ? FilterMode.todos
-                            : FilterMode.meus;
+                        _localMode = _localMode == FilterMode.mine
+                            ? FilterMode.all
+                            : FilterMode.mine;
                       });
                       widget.onModeChanged(_localMode);
                     },
@@ -110,12 +110,12 @@ class _FilterSheetState extends State<FilterSheet> {
                   _SheetChip(
                     label: 'Confirmados',
                     icon: Icons.check_circle_outline_rounded,
-                    selected: _localMode == FilterMode.participo,
+                    selected: _localMode == FilterMode.attending,
                     onTap: () {
                       setState(() {
-                        _localMode = _localMode == FilterMode.participo
-                            ? FilterMode.todos
-                            : FilterMode.participo;
+                        _localMode = _localMode == FilterMode.attending
+                            ? FilterMode.all
+                            : FilterMode.attending;
                       });
                       widget.onModeChanged(_localMode);
                     },
@@ -124,12 +124,12 @@ class _FilterSheetState extends State<FilterSheet> {
                   _SheetChip(
                     label: 'Gratuitos',
                     icon: Icons.money_off_csred_outlined,
-                    selected: _localMode == FilterMode.gratuitos,
+                    selected: _localMode == FilterMode.free,
                     onTap: () {
                       setState(() {
-                        _localMode = _localMode == FilterMode.gratuitos
-                            ? FilterMode.todos
-                            : FilterMode.gratuitos;
+                        _localMode = _localMode == FilterMode.free
+                            ? FilterMode.all
+                            : FilterMode.free;
                       });
                       widget.onModeChanged(_localMode);
                     },
@@ -201,7 +201,7 @@ class _FilterSheetState extends State<FilterSheet> {
                 TextButton.icon(
                   onPressed: () {
                     setState(() {
-                      _localMode = FilterMode.todos;
+                      _localMode = FilterMode.all;
                       _localCampo = null;
                     });
                     widget.onClearFilters();

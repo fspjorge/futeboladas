@@ -1,47 +1,48 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../services/osm_service.dart';
-import 'jogo_detalhe.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/grid_backdrop.dart';
 
 class _Suggestion {
-  final String local;
+  final String location;
   final double lat;
   final double lon;
-  const _Suggestion(this.local, this.lat, this.lon);
+  const _Suggestion(this.location, this.lat, this.lon);
 }
 
-class JogosForm extends StatefulWidget {
-  const JogosForm({super.key});
+class EditGame extends StatefulWidget {
+  final String gameId;
+  const EditGame({super.key, required this.gameId});
 
   @override
-  State<JogosForm> createState() => _JogosFormState();
+  State<EditGame> createState() => _JogoEditarState();
 }
 
-class _JogosFormState extends State<JogosForm> {
+class _JogoEditarState extends State<EditGame> {
   final _formKey = GlobalKey<FormState>();
   final _tituloCtrl = TextEditingController();
   final _localCtrl = TextEditingController();
-  final _jogadoresCtrl = TextEditingController(text: '10');
+  final _jogadoresCtrl = TextEditingController();
   final _precoCtrl = TextEditingController(); // ← NOVO
   DateTime? _data;
   bool _busy = false;
+  bool _loading = true;
+
   final _osmService = OsmService();
-  List<_Suggestion> _sugestoes = [];
+  List<_Suggestion> _placesSug = [];
   double? _selLat;
   double? _selLon;
   bool _showSuggestions = false;
-  String? _searchError;
   final FocusNode _localFocusNode = FocusNode();
   Timer? _debounceSug;
   String? _lastQuery;
+  String? _searchError;
   String? _campoSelected;
 
   final List<String> _campoOptions = [
@@ -55,9 +56,9 @@ class _JogosFormState extends State<JogosForm> {
   @override
   void initState() {
     super.initState();
+    _carregarInicial();
     _localFocusNode.addListener(() {
       if (!_localFocusNode.hasFocus) {
-        // Pequeno delay para permitir o clique nas sugestões antes de fechar o menu
         Future.delayed(const Duration(milliseconds: 200), () {
           if (mounted && !_localFocusNode.hasFocus) {
             setState(() => _showSuggestions = false);
@@ -78,49 +79,33 @@ class _JogosFormState extends State<JogosForm> {
     super.dispose();
   }
 
-  Future<void> _pickDateTime() async {
-    final now = DateTime.now();
-    final date = await showDatePicker(
-      context: context,
-      firstDate: now.subtract(const Duration(days: 1)),
-      lastDate: DateTime(now.year + 2),
-      initialDate: now,
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: ColorScheme.dark(
-              primary: Theme.of(context).colorScheme.primary,
-              onPrimary: const Color(0xFF0F172A),
-              surface: const Color(0xFF1E293B),
-              onSurface: Colors.white,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (date == null) return;
-    if (!mounted) return;
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: ColorScheme.dark(
-              primary: Theme.of(context).colorScheme.primary,
-              onPrimary: const Color(0xFF0F172A),
-              surface: const Color(0xFF1E293B),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (time == null) return;
-    setState(() {
-      _data = DateTime(date.year, date.month, date.day, time.hour, time.minute);
-    });
+  Future<void> _carregarInicial() async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('games')
+          .doc(widget.gameId)
+          .get();
+      if (snap.exists) {
+        final data = snap.data()!;
+        _tituloCtrl.text = (data['title'] as String?) ?? '';
+        _localCtrl.text = (data['location'] as String?) ?? '';
+        _jogadoresCtrl.text = ((data['players'] as num?)?.toInt() ?? 0)
+            .toString();
+
+        // Carregar preço
+        final price = data['price'] as num? ?? 0;
+        _precoCtrl.text = price > 0 ? price.toString() : '';
+
+        _data = (data['date'] as Timestamp?)?.toDate();
+        _campoSelected = data['field'] as String?;
+        _selLat = data['lat'] as double?;
+        _selLon = data['lon'] as double?;
+      }
+    } catch (e) {
+      debugPrint('Erro ao carregar dados: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   Future<void> _fetchSuggestions(String query) async {
@@ -132,7 +117,7 @@ class _JogosFormState extends State<JogosForm> {
         debugPrint('Debounce Timer Error: $e');
         if (mounted) {
           setState(() {
-            _searchError = 'Erro ao pesquisar local.';
+            _searchError = 'Erro ao pesquisar location.';
             _showSuggestions = true;
           });
         }
@@ -144,7 +129,7 @@ class _JogosFormState extends State<JogosForm> {
     final q = query.trim();
     if (q.length < 3) {
       setState(() {
-        _sugestoes = [];
+        _placesSug = [];
         _showSuggestions = false;
         _searchError = null;
       });
@@ -152,10 +137,11 @@ class _JogosFormState extends State<JogosForm> {
     }
 
     _lastQuery = q;
+
     try {
       setState(() {
         _searchError = null;
-        if (_sugestoes.isEmpty) _showSuggestions = true;
+        if (_placesSug.isEmpty) _showSuggestions = true;
       });
 
       final results = await _osmService.search(q);
@@ -164,10 +150,12 @@ class _JogosFormState extends State<JogosForm> {
 
       if (!mounted) return;
       setState(() {
-        _sugestoes = results
+        _placesSug = results
             .map((r) => _Suggestion(r.displayName, r.lat, r.lon))
             .toList();
-        _searchError = _sugestoes.isEmpty ? 'Nenhum local encontrado.' : null;
+        _searchError = _placesSug.isEmpty
+            ? 'Nenhum location encontrado.'
+            : null;
         _showSuggestions = true;
       });
     } catch (e) {
@@ -183,8 +171,8 @@ class _JogosFormState extends State<JogosForm> {
 
   Future<void> _selectSuggestion(_Suggestion suggestion) async {
     setState(() {
-      _localCtrl.text = suggestion.local;
-      _sugestoes = [];
+      _localCtrl.text = suggestion.location;
+      _placesSug = [];
       _showSuggestions = false;
       _selLat = suggestion.lat;
       _selLon = suggestion.lon;
@@ -192,7 +180,43 @@ class _JogosFormState extends State<JogosForm> {
     _localFocusNode.unfocus();
   }
 
-  Future<void> _submit() async {
+  Future<void> _pickDateTime() async {
+    final now = DateTime.now();
+    final init = _data ?? now;
+    final date = await showDatePicker(
+      context: context,
+      firstDate: now.subtract(const Duration(days: 1)),
+      lastDate: DateTime(now.year + 2),
+      initialDate: DateTime(init.year, init.month, init.day),
+      builder: (context, child) => _buildThemePicker(context, child),
+    );
+    if (date == null) return;
+    if (!mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(init),
+      builder: (context, child) => _buildThemePicker(context, child),
+    );
+    if (time == null) return;
+    setState(() {
+      _data = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    });
+  }
+
+  Theme _buildThemePicker(BuildContext context, Widget? child) {
+    return Theme(
+      data: ThemeData.dark().copyWith(
+        colorScheme: ColorScheme.dark(
+          primary: Theme.of(context).colorScheme.primary,
+          onPrimary: const Color(0xFF0F172A),
+          surface: const Color(0xFF1E293B),
+        ),
+      ),
+      child: child!,
+    );
+  }
+
+  Future<void> _guardar() async {
     setState(() => _showSuggestions = false);
     _localFocusNode.unfocus();
 
@@ -206,18 +230,17 @@ class _JogosFormState extends State<JogosForm> {
 
     setState(() => _busy = true);
     try {
-      final titulo = _tituloCtrl.text.trim();
-      final local = _localCtrl.text.trim();
-      final jogadores = int.tryParse(_jogadoresCtrl.text.trim()) ?? 0;
-      final preco =
+      final location = _localCtrl.text.trim();
+      final title = _tituloCtrl.text.trim();
+      final players = int.tryParse(_jogadoresCtrl.text.trim()) ?? 0;
+      final price =
           double.tryParse(_precoCtrl.text.trim().replaceFirst(',', '.')) ?? 0.0;
-      final campo = _campoSelected ?? 'Relva Sintética';
 
       double? lat = _selLat;
       double? lon = _selLon;
       if (lat == null || lon == null) {
         try {
-          final results = await locationFromAddress('$local, Portugal');
+          final results = await locationFromAddress('$location, Portugal');
           if (results.isNotEmpty) {
             lat = results.first.latitude;
             lon = results.first.longitude;
@@ -225,44 +248,28 @@ class _JogosFormState extends State<JogosForm> {
         } catch (_) {}
       }
 
-      final user = FirebaseAuth.instance.currentUser;
-      final data = <String, dynamic>{
-        'ativo': true,
-        'titulo': titulo,
-        'local': local,
-        'jogadores': jogadores,
-        'preco': preco, // ← NOVO
-        'data': Timestamp.fromDate(_data!),
-        'createdBy': user?.uid ?? '',
-        'createdAt': Timestamp.now(),
-        'createdByName': user?.displayName ?? '',
-        'createdByPhoto': user?.photoURL ?? '',
-        'campo': campo,
-        if (lat != null && lon != null) 'lat': lat,
-        if (lat != null && lon != null) 'lon': lon,
+      final update = <String, dynamic>{
+        'title': title,
+        'location': location,
+        'players': players,
+        'price': price, // ← NOVO
+        'date': Timestamp.fromDate(_data!),
+        'field': _campoSelected ?? 'Relva Sintética',
+        if (lat != null) 'lat': lat,
+        if (lon != null) 'lon': lon,
       };
 
-      final docRef = await FirebaseFirestore.instance
-          .collection('jogos')
-          .add(data);
+      await FirebaseFirestore.instance
+          .collection('games')
+          .doc(widget.gameId)
+          .update(update);
       if (!mounted) return;
-
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => JogoDetalhe(jogoId: docRef.id)),
-        (route) => route.isFirst,
-      );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Jogo agendado com sucesso!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      Navigator.of(context).pop(true);
     } catch (e) {
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Erro ao criar jogo: $e')));
+        ).showSnackBar(SnackBar(content: Text('Erro ao guardar: $e')));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -273,13 +280,20 @@ class _JogosFormState extends State<JogosForm> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
+    if (_loading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF0F172A),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          'Agendar Jogo',
+          'Editar Game',
           style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 20),
         ),
       ),
@@ -295,11 +309,11 @@ class _JogosFormState extends State<JogosForm> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildStepTitle('DEFINIR DETALHES'),
+                    _buildStepTitle('EDITAR DETALHES'),
                     const SizedBox(height: 16),
                     _buildGlassInput(
                       controller: _tituloCtrl,
-                      label: 'Nome do Jogo',
+                      label: 'Nome da Partida',
                       hint: 'ex: Futebolada Semanal',
                       icon: Icons.sports_soccer,
                       validator: (v) =>
@@ -337,7 +351,7 @@ class _JogosFormState extends State<JogosForm> {
                     const SizedBox(height: 16),
                     _buildFieldTypePicker(),
                     const SizedBox(height: 32),
-                    _buildStepTitle('QUANDO'),
+                    _buildStepTitle('DATA E HORA'),
                     const SizedBox(height: 16),
                     _buildDateTimePicker(cs),
                     const SizedBox(height: 48),
@@ -447,7 +461,7 @@ class _JogosFormState extends State<JogosForm> {
                   )
                 : Column(
                     children: [
-                      ..._sugestoes.map(
+                      ..._placesSug.map(
                         (s) => ListTile(
                           dense: true,
                           visualDensity: VisualDensity.compact,
@@ -457,7 +471,7 @@ class _JogosFormState extends State<JogosForm> {
                             color: Colors.white38,
                           ),
                           title: Text(
-                            s.local,
+                            s.location,
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 14,
@@ -466,7 +480,7 @@ class _JogosFormState extends State<JogosForm> {
                           onTap: () => _selectSuggestion(s),
                         ),
                       ),
-                      if (_sugestoes.isEmpty && _searchError == null)
+                      if (_placesSug.isEmpty && _searchError == null)
                         const Padding(
                           padding: EdgeInsets.all(16),
                           child: Center(
@@ -510,7 +524,7 @@ class _JogosFormState extends State<JogosForm> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'DATA E HORA',
+                      'DATA E HORA SELECIONADA',
                       style: TextStyle(
                         color: Colors.white38,
                         fontSize: 11,
@@ -520,7 +534,7 @@ class _JogosFormState extends State<JogosForm> {
                     const SizedBox(height: 4),
                     Text(
                       _data == null
-                          ? 'Selecione o horário'
+                          ? 'Carregando...'
                           : DateFormat(
                               "EEEE, d 'de' MMMM 'às' HH:mm",
                               'pt_PT',
@@ -547,7 +561,7 @@ class _JogosFormState extends State<JogosForm> {
       width: double.infinity,
       height: 56,
       child: ElevatedButton(
-        onPressed: _busy ? null : _submit,
+        onPressed: _busy ? null : _guardar,
         style: ElevatedButton.styleFrom(
           backgroundColor: cs.primary,
           foregroundColor: const Color(0xFF0F172A),
@@ -556,7 +570,7 @@ class _JogosFormState extends State<JogosForm> {
           ),
         ),
         child: Text(
-          'CRIAR JOGO AGORA',
+          'GUARDAR ALTERAÇÕES',
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.w900,
             letterSpacing: 1,

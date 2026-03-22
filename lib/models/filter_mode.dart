@@ -1,1 +1,1 @@
-enum FilterMode { todos, meus, participo, gratuitos }
+enum FilterMode { all, mine, attending, free }

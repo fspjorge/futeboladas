@@ -5,22 +5,22 @@ import '../../../services/weather_service.dart';
 import '../../../widgets/grid_backdrop.dart';
 import '../../../utils/format_utils.dart';
 
-class JogoDetalheHeader extends StatelessWidget {
-  final String titulo;
-  final String local;
+class GameDetailHeader extends StatelessWidget {
+  final String title;
+  final String location;
   final DateTime? date;
-  final num preco;
-  final String? campo;
+  final num price;
+  final String? field;
   final double? lat;
   final double? lon;
 
-  const JogoDetalheHeader({
+  const GameDetailHeader({
     super.key,
-    required this.titulo,
-    required this.local,
+    required this.title,
+    required this.location,
     this.date,
-    required this.preco,
-    this.campo,
+    required this.price,
+    this.field,
     this.lat,
     this.lon,
   });
@@ -73,22 +73,22 @@ class JogoDetalheHeader extends StatelessWidget {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: preco > 0
+                          color: price > 0
                               ? Colors.green.withValues(alpha: 0.2)
                               : Colors.blue.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: preco > 0
+                            color: price > 0
                                 ? Colors.green.withValues(alpha: 0.3)
                                 : Colors.blue.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Text(
-                          FormatUtils.formatarPreco(preco),
+                          FormatUtils.formatarPreco(price),
                           style: GoogleFonts.outfit(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
-                            color: preco > 0 ? Colors.green : Colors.blue,
+                            color: price > 0 ? Colors.green : Colors.blue,
                           ),
                         ),
                       ),
@@ -96,7 +96,7 @@ class JogoDetalheHeader extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    titulo,
+                    title,
                     style: GoogleFonts.outfit(
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
@@ -144,7 +144,7 @@ class JogoDetalheHeader extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            campo ?? 'Relva Sintética',
+                            field ?? 'Relva Sintética',
                             style: GoogleFonts.outfit(
                               color: Colors.white70,
                               fontWeight: FontWeight.w600,

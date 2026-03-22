@@ -5,10 +5,10 @@ void main() {
   group('FilterMode Enum', () {
     test('contains expected values', () {
       expect(FilterMode.values.length, 4);
-      expect(FilterMode.todos.name, 'todos');
-      expect(FilterMode.meus.name, 'meus');
-      expect(FilterMode.participo.name, 'participo');
-      expect(FilterMode.gratuitos.name, 'gratuitos');
+      expect(FilterMode.all.name, 'all');
+      expect(FilterMode.mine.name, 'mine');
+      expect(FilterMode.attending.name, 'attending');
+      expect(FilterMode.free.name, 'free');
     });
   });
 }

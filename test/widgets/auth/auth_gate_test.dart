@@ -14,11 +14,7 @@ void main() {
       final mockAuth = MockFirebaseAuth(signedIn: false);
 
       await mockNetworkImagesFor(() async {
-        await tester.pumpWidget(
-          MaterialApp(
-            home: AuthGate(auth: mockAuth),
-          ),
-        );
+        await tester.pumpWidget(MaterialApp(home: AuthGate(auth: mockAuth)));
       });
 
       // We should see a CircularProgressIndicator first

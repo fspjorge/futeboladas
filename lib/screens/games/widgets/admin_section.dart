@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../widgets/glass_card.dart';
-import '../../../services/jogo_service.dart';
-import '../jogo_editar.dart';
+import '../../../services/game_service.dart';
+import '../edit_game.dart';
 
 class AdminSection extends StatefulWidget {
-  final String jogoId;
+  final String gameId;
   final VoidCallback onEliminar;
   final DocumentReference<Map<String, dynamic>> jogoRef;
 
   const AdminSection({
     super.key,
-    required this.jogoId,
+    required this.gameId,
     required this.onEliminar,
     required this.jogoRef,
   });
@@ -65,7 +65,7 @@ class _AdminSectionState extends State<AdminSection> {
                             : () => Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (_) =>
-                                      JogoEditar(jogoId: widget.jogoId),
+                                      EditGame(gameId: widget.gameId),
                                 ),
                               ),
                         icon: const Icon(Icons.edit_outlined, size: 16),
@@ -124,7 +124,7 @@ class _AdminSectionState extends State<AdminSection> {
                           style: const TextStyle(color: Colors.white),
                           decoration: const InputDecoration(
                             labelText: 'Contactos Privados',
-                            hintText: 'ex: Telemóvel do responsável do campo',
+                            hintText: 'ex: Telemóvel do responsável do field',
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -146,8 +146,8 @@ class _AdminSectionState extends State<AdminSection> {
                                 : () async {
                                     setState(() => _saving = true);
                                     try {
-                                      await JogoService.instance.guardarAdmin(
-                                        widget.jogoId,
+                                      await GameService.instance.guardarAdmin(
+                                        widget.gameId,
                                         contactos: _contactosCtrl.text,
                                         historico: _historicoCtrl.text,
                                       );

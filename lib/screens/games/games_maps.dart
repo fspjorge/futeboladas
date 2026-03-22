@@ -6,18 +6,18 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'jogo_detalhe.dart';
+import 'game_detail.dart';
 import '../../widgets/glass_card.dart';
 import '../../utils/format_utils.dart';
 
-class JogosMapa extends StatefulWidget {
-  const JogosMapa({super.key});
+class GamesMaps extends StatefulWidget {
+  const GamesMaps({super.key});
 
   @override
-  State<JogosMapa> createState() => _JogosMapaState();
+  State<GamesMaps> createState() => _JogosMapaState();
 }
 
-class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
+class _JogosMapaState extends State<GamesMaps> with WidgetsBindingObserver {
   final Completer<GoogleMapController> _controller = Completer();
   final Set<Marker> _marcadores = {};
   final Map<String, Map<String, dynamic>> _jogosData = {};
@@ -32,7 +32,7 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
     zoom: 7,
   );
 
-  String _formatarPreco(num? preco) => FormatUtils.formatarPreco(preco);
+  String _formatarPreco(num? price) => FormatUtils.formatarPreco(price);
 
   @override
   void initState() {
@@ -138,18 +138,18 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
     );
   }
 
-  Future<void> _abrirDetalheJogo(String jogoId) async {
+  Future<void> _abrirDetalheJogo(String gameId) async {
     await Navigator.of(
       context,
-    ).push(MaterialPageRoute(builder: (_) => JogoDetalhe(jogoId: jogoId)));
+    ).push(MaterialPageRoute(builder: (_) => GameDetail(gameId: gameId)));
     setState(() {});
   }
 
   Future<void> _carregarJogos() async {
     try {
       final snapshot = await FirebaseFirestore.instance
-          .collection('jogos')
-          .where('ativo', isEqualTo: true)
+          .collection('games')
+          .where('isActive', isEqualTo: true)
           .get();
 
       final List<Marker> newMarkers = [];
@@ -158,11 +158,11 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
       for (final doc in snapshot.docs) {
         try {
           final data = doc.data();
-          final jogoId = doc.id;
-          final local = data['local'] as String? ?? 'Local desconhecido';
-          final dataJogo = (data['data'] as Timestamp?)?.toDate();
-          final maxJogadores = (data['jogadores'] as num?)?.toInt() ?? 0;
-          final preco = (data['preco'] as num?)?.toDouble() ?? 0.0;
+          final gameId = doc.id;
+          final location = data['location'] as String? ?? 'Local desconhecido';
+          final dataJogo = (data['date'] as Timestamp?)?.toDate();
+          final maxJogadores = (data['players'] as num?)?.toInt() ?? 0;
+          final price = (data['price'] as num?)?.toDouble() ?? 0.0;
 
           double? lat = (data['lat'] as num?)?.toDouble();
           double? lon = (data['lon'] as num?)?.toDouble();
@@ -171,7 +171,7 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
           if (lat == null || lon == null) {
             try {
               final posicoes = await locationFromAddress(
-                '$local, Portugal',
+                '$location, Portugal',
               ).timeout(const Duration(seconds: 5));
               if (posicoes.isNotEmpty) {
                 lat = posicoes.first.latitude;
@@ -179,28 +179,28 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
                 // Removida atualização automática de Firestore para evitar side-effects em leitura
               }
             } catch (e) {
-              debugPrint('Erro na geocodificação de $local: $e');
+              debugPrint('Erro na geocodificação de $location: $e');
             }
           }
 
           if (lat != null && lon != null) {
-            _jogosData[jogoId] = {
-              'titulo': data['titulo'] as String? ?? local,
-              'local': local,
+            _jogosData[gameId] = {
+              'title': data['title'] as String? ?? location,
+              'location': location,
               'dataJogo': dataJogo,
               'maxJogadores': maxJogadores,
-              'preco': preco,
+              'price': price,
               'lat': lat,
               'lon': lon,
             };
 
             newMarkers.add(
               Marker(
-                markerId: MarkerId(jogoId),
+                markerId: MarkerId(gameId),
                 position: LatLng(lat, lon),
                 onTap: () {
                   setState(() {
-                    _selectedJogoId = jogoId;
+                    _selectedJogoId = gameId;
                   });
                 },
               ),
@@ -220,7 +220,7 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Erro ao carregar jogos: $e';
+          _errorMessage = 'Erro ao carregar games: $e';
         });
       }
     }
@@ -323,7 +323,7 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
               ),
             ),
 
-          // Contador de jogos
+          // Contador de games
           if (_mapInitialized && _errorMessage == null && !_loading)
             Positioned(
               top: 16,
@@ -348,7 +348,7 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
                   ],
                 ),
                 child: Text(
-                  '${_marcadores.length} jogo${_marcadores.length != 1 ? 's' : ''}',
+                  '${_marcadores.length} game${_marcadores.length != 1 ? 's' : ''}',
                   style: GoogleFonts.outfit(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -358,7 +358,7 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
               ),
             ),
 
-          // Floating Jogo Card
+          // Floating Game Card
           if (_selectedJogoId != null &&
               _jogosData.containsKey(_selectedJogoId))
             _buildSelectedJogoCard(),
@@ -386,10 +386,10 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
     final data = _jogosData[_selectedJogoId!];
     if (data == null) return const SizedBox.shrink();
 
-    final titulo = data['titulo'] as String;
-    final local = data['local'] as String;
+    final title = data['title'] as String;
+    final location = data['location'] as String;
     final dataJogo = data['dataJogo'] as DateTime?;
-    final preco = data['preco'] as num? ?? 0;
+    final price = data['price'] as num? ?? 0;
 
     return Positioned(
       bottom: 20,
@@ -412,7 +412,7 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
                   children: [
                     Expanded(
                       child: Text(
-                        titulo.toUpperCase(),
+                        title.toUpperCase(),
                         style: GoogleFonts.outfit(
                           color: Colors.white,
                           fontSize: 16,
@@ -434,7 +434,7 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
                   ],
                 ),
                 Text(
-                  local,
+                  location,
                   style: GoogleFonts.outfit(
                     color: Colors.white70,
                     fontSize: 13,
@@ -454,7 +454,7 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
                     const SizedBox(width: 8),
                     _buildMiniInfo(
                       Icons.stadium_outlined,
-                      (data['campo'] as String? ?? 'Relva Sintética')
+                      (data['field'] as String? ?? 'Relva Sintética')
                           .replaceAll('Relva ', ''),
                     ),
                     const Spacer(),
@@ -464,15 +464,15 @@ class _JogosMapaState extends State<JogosMapa> with WidgetsBindingObserver {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: preco > 0
+                        color: price > 0
                             ? Colors.green.withValues(alpha: 0.2)
                             : Colors.blue.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        _formatarPreco(preco),
+                        _formatarPreco(price),
                         style: GoogleFonts.outfit(
-                          color: preco > 0
+                          color: price > 0
                               ? Colors.greenAccent
                               : Colors.blueAccent,
                           fontSize: 11,

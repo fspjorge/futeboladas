@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:network_image_mock/network_image_mock.dart';
-import 'package:futeboladas/screens/perfil/perfil_page.dart';
+import 'package:futeboladas/screens/profile/profile_page.dart';
 
 void main() {
-  group('PerfilPage Widget', () {
+  group('ProfilePage Widget', () {
     testWidgets('renders user profile correctly', (WidgetTester tester) async {
       final mockUser = MockUser(
         isAnonymous: false,
@@ -18,7 +18,7 @@ void main() {
       await mockNetworkImagesFor(() async {
         await tester.pumpWidget(
           MaterialApp(
-            home: PerfilPage(user: mockUser, auth: mockAuth),
+            home: ProfilePage(user: mockUser, auth: mockAuth),
           ),
         );
       });

@@ -1,65 +1,65 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../models/jogo.dart';
+import '../models/game.dart';
 
-/// Centraliza todas as operações Firestore sobre a coleção 'jogos'.
-class JogoService {
+/// Centraliza todas as operações Firestore sobre a coleção 'games'.
+class GameService {
   final FirebaseFirestore _db;
   final FirebaseAuth _auth;
 
-  JogoService({FirebaseFirestore? firestore, FirebaseAuth? auth})
+  GameService({FirebaseFirestore? firestore, FirebaseAuth? auth})
     : _db = firestore ?? FirebaseFirestore.instance,
       _auth = auth ?? FirebaseAuth.instance;
 
-  static final JogoService instance = JogoService();
+  static final GameService instance = GameService();
 
-  CollectionReference<Map<String, dynamic>> get _col => _db.collection('jogos');
+  CollectionReference<Map<String, dynamic>> get _col => _db.collection('games');
 
   // ── Queries ───────────────────────────────────────────────────────────────
 
-  /// Stream de jogos ativos, ordenados por data.
-  Stream<List<Jogo>> jogosAtivosStream() {
+  /// Stream de games ativos, ordenados por data.
+  Stream<List<Game>> jogosAtivosStream() {
     return _col
-        .where('ativo', isEqualTo: true)
-        .orderBy('data')
+        .where('isActive', isEqualTo: true)
+        .orderBy('date')
         .snapshots()
-        .map((qs) => qs.docs.map(Jogo.fromQueryDoc).toList());
+        .map((qs) => qs.docs.map(Game.fromQueryDoc).toList());
   }
 
-  /// Stream de um jogo específico.
-  Stream<Jogo?> jogoStream(String jogoId) {
-    return _col.doc(jogoId).snapshots().map((doc) {
+  /// Stream de um game específico.
+  Stream<Game?> jogoStream(String gameId) {
+    return _col.doc(gameId).snapshots().map((doc) {
       if (!doc.exists) {
         return null;
       }
-      return Jogo.fromFirestore(doc);
+      return Game.fromFirestore(doc);
     });
   }
 
   // ── Write ─────────────────────────────────────────────────────────────────
 
-  Future<String> criarJogo(Jogo jogo) async {
-    final ref = await _col.add(jogo.toFirestore());
+  Future<String> criarJogo(Game game) async {
+    final ref = await _col.add(game.toFirestore());
     return ref.id;
   }
 
-  Future<void> atualizarJogo(Jogo jogo) {
-    return _col.doc(jogo.id).update(jogo.toFirestore());
+  Future<void> atualizarJogo(Game game) {
+    return _col.doc(game.id).update(game.toFirestore());
   }
 
-  /// Apagar o jogo e todas as suas subcoleções (presencas + admin).
-  Future<void> apagarJogo(String jogoId) async {
+  /// Apagar o game e todas as suas subcoleções (presencas + admin).
+  Future<void> apagarJogo(String gameId) async {
     try {
       final user = _auth.currentUser;
       if (user == null) {
         throw StateError('Sem sessão iniciada');
       }
 
-      final docRef = _col.doc(jogoId);
+      final docRef = _col.doc(gameId);
       final docSnap = await docRef.get();
 
       if (!docSnap.exists) {
-        throw Exception('Jogo não encontrado no Firestore (ID: $jogoId)');
+        throw Exception('Game não encontrado no Firestore (ID: $gameId)');
       }
 
       final data = docSnap.data()!;
@@ -67,14 +67,14 @@ class JogoService {
 
       if (ownerUid != user.uid) {
         throw Exception(
-          'Não tens permissão para apagar este jogo (Dono: $ownerUid, Tu: ${user.uid})',
+          'Não tens permissão para apagar este game (Dono: $ownerUid, Tu: ${user.uid})',
         );
       }
 
       final batch = _db.batch();
 
       // 1. Adicionar presenças ao batch
-      final presencas = await docRef.collection('presencas').get();
+      final presencas = await docRef.collection('attendances').get();
       for (final doc in presencas.docs) {
         batch.delete(doc.reference);
       }
@@ -86,7 +86,7 @@ class JogoService {
         batch.delete(adminRef);
       }
 
-      // 3. Adicionar o próprio jogo ao batch (último)
+      // 3. Adicionar o próprio game ao batch (último)
       batch.delete(docRef);
 
       await batch.commit();
@@ -94,7 +94,7 @@ class JogoService {
       if (e is FirebaseException) {
         if (e.code == 'permission-denied') {
           throw Exception(
-            'Erro de permissão no Firestore ao apagar o jogo. Verifica se tu és o criador.',
+            'Erro de permissão no Firestore ao apagar o game. Verifica se tu és o criador.',
           );
         }
       }
@@ -104,9 +104,9 @@ class JogoService {
 
   // ── Admin (dados privados do organizador) ─────────────────────────────────
 
-  Stream<Map<String, dynamic>> adminStream(String jogoId) {
+  Stream<Map<String, dynamic>> adminStream(String gameId) {
     return _col
-        .doc(jogoId)
+        .doc(gameId)
         .collection('admin')
         .doc('privado')
         .snapshots()
@@ -114,11 +114,11 @@ class JogoService {
   }
 
   Future<void> guardarAdmin(
-    String jogoId, {
+    String gameId, {
     required String contactos,
     required String historico,
   }) {
-    return _col.doc(jogoId).collection('admin').doc('privado').set({
+    return _col.doc(gameId).collection('admin').doc('privado').set({
       'contactos': contactos,
       'historico': historico,
     }, SetOptions(merge: true));

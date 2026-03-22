@@ -23,7 +23,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
   Future<void> _loadEmail() async {
     try {
-      final email = await FirebaseAuth.instance.verifyPasswordResetCode(widget.oobCode);
+      final email = await FirebaseAuth.instance.verifyPasswordResetCode(
+        widget.oobCode,
+      );
       setState(() => _email = email);
     } on FirebaseAuthException catch (e) {
       _show('Código inválido ou expirado (${e.code}).', true);
@@ -55,7 +57,10 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     }
     setState(() => _busy = true);
     try {
-      await FirebaseAuth.instance.confirmPasswordReset(code: widget.oobCode, newPassword: p1);
+      await FirebaseAuth.instance.confirmPasswordReset(
+        code: widget.oobCode,
+        newPassword: p1,
+      );
       if (!mounted) return;
       _show('Password atualizada. Já podes entrar com a nova password.', false);
       Navigator.of(context).popUntil((r) => r.isFirst);
@@ -89,24 +94,38 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (_email != null)
-                  Text('Conta: $_email', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(
+                    'Conta: $_email',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _passCtrl,
                   obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Nova password', prefixIcon: Icon(Icons.lock_outline)),
+                  decoration: const InputDecoration(
+                    labelText: 'Nova password',
+                    prefixIcon: Icon(Icons.lock_outline),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _pass2Ctrl,
                   obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Confirmar password', prefixIcon: Icon(Icons.lock_outline)),
+                  decoration: const InputDecoration(
+                    labelText: 'Confirmar password',
+                    prefixIcon: Icon(Icons.lock_outline),
+                  ),
                 ),
                 const SizedBox(height: 20),
                 FilledButton(
                   onPressed: _busy ? null : _confirm,
                   child: _busy
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Text('Guardar nova password'),
                 ),
               ],
@@ -117,4 +136,3 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     );
   }
 }
-

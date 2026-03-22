@@ -4,20 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
-import '../jogo_detalhe.dart';
-import '../confirmacao_page.dart';
-import '../../../services/presenca_service.dart';
+import '../game_detail.dart';
+import '../confirmation_page.dart';
+import '../../../services/attendance_service.dart';
 import '../../../services/weather_service.dart';
 import '../../../utils/format_utils.dart';
 
 import '../../../main.dart';
 
-class JogoCard extends StatelessWidget {
+class GameCard extends StatelessWidget {
   final QueryDocumentSnapshot<Map<String, dynamic>> doc;
-  final PresencaService presencas;
+  final AttendanceService presencas;
   final String? uid;
 
-  const JogoCard({
+  const GameCard({
     super.key,
     required this.doc,
     required this.presencas,
@@ -28,11 +28,11 @@ class JogoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final data = doc.data();
-    final local = data['local'] as String? ?? 'Local desconhecido';
-    final maxJogadores = (data['jogadores'] as num?)?.toInt() ?? 0;
-    final preco = data['preco'] as num? ?? 0;
-    final date = (data['data'] as Timestamp).toDate();
-    final jogoId = doc.id;
+    final location = data['location'] as String? ?? 'Local desconhecido';
+    final maxJogadores = (data['players'] as num?)?.toInt() ?? 0;
+    final price = data['price'] as num? ?? 0;
+    final date = (data['date'] as Timestamp).toDate();
+    final gameId = doc.id;
     final hora = DateFormat('HH:mm').format(date);
 
     return Container(
@@ -43,7 +43,7 @@ class JogoCard extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
           child: InkWell(
             onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => JogoDetalhe(jogoId: jogoId)),
+              MaterialPageRoute(builder: (_) => GameDetail(gameId: gameId)),
             ),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -73,7 +73,7 @@ class JogoCard extends StatelessWidget {
                   ),
                   Expanded(
                     child: StreamBuilder<int>(
-                      stream: presencas.countConfirmados(jogoId),
+                      stream: presencas.countConfirmados(gameId),
                       builder: (context, countSnap) {
                         final confirmados = countSnap.data ?? 0;
                         final bool hasLimit = maxJogadores > 0;
@@ -85,7 +85,7 @@ class JogoCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              local,
+                              location,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.outfit(
@@ -133,7 +133,7 @@ class JogoCard extends StatelessWidget {
                                       ),
                                     ] else
                                       Text(
-                                        '$confirmados jogadores',
+                                        '$confirmados players',
                                         style: GoogleFonts.outfit(
                                           fontSize: 10,
                                           color: Colors.white30,
@@ -148,17 +148,17 @@ class JogoCard extends StatelessWidget {
                                     vertical: 1.5,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: preco > 0
+                                    color: price > 0
                                         ? Colors.green.withValues(alpha: 0.08)
                                         : Colors.blue.withValues(alpha: 0.08),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
-                                    FormatUtils.formatarPreco(preco),
+                                    FormatUtils.formatarPreco(price),
                                     style: GoogleFonts.outfit(
                                       fontSize: 8,
                                       fontWeight: FontWeight.w800,
-                                      color: preco > 0
+                                      color: price > 0
                                           ? Colors.green.withValues(alpha: 0.8)
                                           : Colors.blue.withValues(alpha: 0.8),
                                     ),
@@ -177,7 +177,7 @@ class JogoCard extends StatelessWidget {
                                       const SizedBox(width: 2),
                                       Flexible(
                                         child: Text(
-                                          (data['campo'] as String? ??
+                                          (data['field'] as String? ??
                                                   'Relva Sintética')
                                               .replaceAll('Relva ', ''),
                                           style: GoogleFonts.outfit(
@@ -202,13 +202,13 @@ class JogoCard extends StatelessWidget {
                   const SizedBox(width: 10),
                   if (uid != null)
                     StreamBuilder<int>(
-                      stream: presencas.countConfirmados(jogoId),
+                      stream: presencas.countConfirmados(gameId),
                       builder: (context, countSnap) {
                         final confirmados = countSnap.data ?? 0;
                         final bool isFull =
                             maxJogadores > 0 && confirmados >= maxJogadores;
                         return StreamBuilder<bool>(
-                          stream: presencas.minhaPresenca(jogoId),
+                          stream: presencas.minhaPresenca(gameId),
                           builder: (context, meSnap) {
                             final isGoing = meSnap.data ?? false;
                             return _JoinButton(
@@ -220,9 +220,9 @@ class JogoCard extends StatelessWidget {
                                 isFull,
                                 data,
                                 date,
-                                jogoId,
-                                local,
-                                preco,
+                                gameId,
+                                location,
+                                price,
                                 maxJogadores,
                                 confirmados,
                               ),
@@ -247,20 +247,20 @@ class JogoCard extends StatelessWidget {
     bool isFull,
     Map<String, dynamic> data,
     DateTime date,
-    String jogoId,
-    String local,
-    num preco,
+    String gameId,
+    String location,
+    num price,
     int maxJogadores,
     int confirmados,
   ) async {
     try {
       if (!isGoing && isFull) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Este jogo já está lotado!')),
+          const SnackBar(content: Text('Este game já está lotado!')),
         );
         return;
       }
-      await presencas.marcarPresenca(jogoId, !isGoing);
+      await presencas.markAttendance(gameId, !isGoing);
 
       if (!context.mounted) return;
 
@@ -271,7 +271,7 @@ class JogoCard extends StatelessWidget {
         scaffoldMessengerKey.currentState?.showSnackBar(
           SnackBar(
             content: Text(
-              'Presença removida de: ${data['titulo'] as String? ?? local}',
+              'Presença removida de: ${data['title'] as String? ?? location}',
             ),
             duration: const Duration(seconds: 3),
             dismissDirection:
@@ -279,7 +279,7 @@ class JogoCard extends StatelessWidget {
             action: SnackBarAction(
               label: 'ANULAR',
               onPressed: () {
-                presencas.marcarPresenca(jogoId, true);
+                presencas.markAttendance(gameId, true);
                 scaffoldMessengerKey.currentState?.hideCurrentSnackBar();
               },
             ),
@@ -308,13 +308,13 @@ class JogoCard extends StatelessWidget {
 
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => ConfirmacaoJogoPage(
-                titulo: data['titulo'] as String? ?? local,
-                data: date,
-                local: local,
-                preco: preco.toDouble(),
+              builder: (_) => ConfirmationPage(
+                title: data['title'] as String? ?? location,
+                date: date,
+                location: location,
+                price: price.toDouble(),
                 weather: weatherStr != null ? Future.value(weatherStr) : null,
-                campo: data['campo'] as String?,
+                field: data['field'] as String?,
                 maxParticipantes: maxJogadores,
                 numParticipantes: confirmados,
                 organizadorNome: data['createdByName'] as String?,

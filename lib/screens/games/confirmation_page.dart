@@ -4,13 +4,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../widgets/grid_backdrop.dart';
 
-class ConfirmacaoJogoPage extends StatelessWidget {
-  final String titulo;
-  final DateTime data;
-  final String local;
+class ConfirmationPage extends StatelessWidget {
+  final String title;
+  final DateTime date;
+  final String location;
   final Future<String?>? weather; // ← ALTERADO para Future
-  final double? preco;
-  final String? campo;
+  final double? price;
+  final String? field;
   final int? maxParticipantes; // ← NOVO
   final int? numParticipantes; // ← NOVO
   final String? organizadorNome; // ← NOVO
@@ -18,14 +18,14 @@ class ConfirmacaoJogoPage extends StatelessWidget {
   final String? contactosPrivados; // ← NOVO
   final String? notasPrivadas; // ← NOVO
 
-  const ConfirmacaoJogoPage({
+  const ConfirmationPage({
     super.key,
-    required this.titulo,
-    required this.data,
-    required this.local,
+    required this.title,
+    required this.date,
+    required this.location,
     this.weather,
-    this.preco,
-    this.campo,
+    this.price,
+    this.field,
     this.maxParticipantes,
     this.numParticipantes,
     this.organizadorNome,
@@ -34,16 +34,16 @@ class ConfirmacaoJogoPage extends StatelessWidget {
     this.notasPrivadas,
   });
 
-  String _formatarPreco(double? preco) {
-    if (preco == null || preco == 0) return 'Grátis';
-    return '${preco.toStringAsFixed(2)}€';
+  String _formatarPreco(double? price) {
+    if (price == null || price == 0) return 'Grátis';
+    return '${price.toStringAsFixed(2)}€';
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final dataStr = DateFormat('EEEE, d MMMM', 'pt_PT').format(data);
-    final horaStr = DateFormat('HH:mm').format(data);
+    final dataStr = DateFormat('EEEE, d MMMM', 'pt_PT').format(date);
+    final horaStr = DateFormat('HH:mm').format(date);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
@@ -90,7 +90,7 @@ class ConfirmacaoJogoPage extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Estás convocado para entrar em campo.',
+                    'Estás convocado para entrar em field.',
                     style: GoogleFonts.outfit(
                       fontSize: 16,
                       color: Colors.white38,
@@ -127,7 +127,7 @@ class ConfirmacaoJogoPage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              titulo,
+                              title,
                               style: GoogleFonts.outfit(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -143,8 +143,8 @@ class ConfirmacaoJogoPage extends StatelessWidget {
                               padding: EdgeInsets.symmetric(vertical: 12),
                               child: Divider(color: Colors.white10, height: 1),
                             ),
-                            _buildInfoMini(Icons.place_outlined, local),
-                            if (campo != null) ...[
+                            _buildInfoMini(Icons.place_outlined, location),
+                            if (field != null) ...[
                               const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 12),
                                 child: Divider(
@@ -152,7 +152,7 @@ class ConfirmacaoJogoPage extends StatelessWidget {
                                   height: 1,
                                 ),
                               ),
-                              _buildInfoMini(Icons.stadium_outlined, campo!),
+                              _buildInfoMini(Icons.stadium_outlined, field!),
                             ],
                             if (maxParticipantes != null &&
                                 numParticipantes != null) ...[
@@ -165,13 +165,13 @@ class ConfirmacaoJogoPage extends StatelessWidget {
                               ),
                               _buildInfoMini(
                                 Icons.people_outline,
-                                '$numParticipantes de $maxParticipantes jogadores',
+                                '$numParticipantes de $maxParticipantes players',
                                 valorCor: numParticipantes! >= maxParticipantes!
                                     ? Colors.orangeAccent
                                     : Colors.blueAccent,
                               ),
                             ],
-                            if (preco != null) ...[
+                            if (price != null) ...[
                               const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 12),
                                 child: Divider(
@@ -181,8 +181,8 @@ class ConfirmacaoJogoPage extends StatelessWidget {
                               ),
                               _buildInfoMini(
                                 Icons.euro_rounded,
-                                _formatarPreco(preco),
-                                valorCor: preco! > 0
+                                _formatarPreco(price),
+                                valorCor: price! > 0
                                     ? Colors.green
                                     : Colors.blue,
                               ),

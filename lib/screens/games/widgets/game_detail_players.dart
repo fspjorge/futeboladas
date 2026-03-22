@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class JogoDetalhePlayers extends StatelessWidget {
+class GameDetailPlayers extends StatelessWidget {
   final DocumentReference<Map<String, dynamic>> jogoRef;
   final String? createdBy;
   final String uid;
 
-  const JogoDetalhePlayers({
+  const GameDetailPlayers({
     super.key,
     required this.jogoRef,
     this.createdBy,
@@ -35,8 +35,8 @@ class JogoDetalhePlayers extends StatelessWidget {
         ),
         StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: jogoRef
-              .collection('presencas')
-              .where('vai', isEqualTo: true)
+              .collection('attendances')
+              .where('isGoing', isEqualTo: true)
               .snapshots(),
           builder: (context, snap) {
             final docs = snap.data?.docs ?? [];

@@ -1,19 +1,25 @@
-﻿rules_version = '2';
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /jogos/{id} {
+    
+    // Permitir Collection Group queries para a dashboard
+    match /{path=**}/attendances/{uid} {
+      allow read: if request.auth != null;
+    }
+
+    match /games/{id} {
       // Leitura apenas para autenticados
       allow read: if request.auth != null;
 
       // Criar jogo: autenticado + campos válidos
       allow create: if request.auth != null
-        && request.resource.data.keys().hasOnly(['ativo','titulo','local','jogadores','data','lat','lon','createdBy','createdAt','createdByName','createdByPhoto','preco','campo'])
-        && request.resource.data.ativo is bool
-        && request.resource.data.local is string
-        && request.resource.data.jogadores is int
-        && request.resource.data.data is timestamp
-        && request.resource.data.preco is number
-        && request.resource.data.campo is string
+        && request.resource.data.keys().hasOnly(['isActive','title','location','players','date','lat','lon','createdBy','createdAt','createdByName','createdByPhoto','price','field'])
+        && request.resource.data.isActive is bool
+        && request.resource.data.location is string
+        && request.resource.data.players is int
+        && request.resource.data.date is timestamp
+        && request.resource.data.price is number
+        && request.resource.data.field is string
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.createdAt is timestamp
         && (
@@ -25,12 +31,12 @@ service cloud.firestore {
       allow update: if request.auth != null
         && resource.data.createdBy == request.auth.uid
         && request.resource.data.createdBy == resource.data.createdBy
-        && request.resource.data.keys().hasOnly(['ativo','titulo','local','jogadores','data','lat','lon','createdBy','createdAt','createdByName','createdByPhoto','preco','campo'])
-        && request.resource.data.local is string
-        && request.resource.data.jogadores is int
-        && request.resource.data.data is timestamp
-        && request.resource.data.preco is number
-        && request.resource.data.campo is string
+        && request.resource.data.keys().hasOnly(['isActive','title','location','players','date','lat','lon','createdBy','createdAt','createdByName','createdByPhoto','price','field'])
+        && request.resource.data.location is string
+        && request.resource.data.players is int
+        && request.resource.data.date is timestamp
+        && request.resource.data.price is number
+        && request.resource.data.field is string
         && (
           !(request.resource.data.keys().hasAny(['lat','lon']))
           || (request.resource.data.lat is float && request.resource.data.lon is float)
@@ -41,25 +47,25 @@ service cloud.firestore {
         && resource.data.createdBy == request.auth.uid;
 
       // Subcoleção de presenças
-      match /presencas/{uid} {
+      match /attendances/{uid} {
         allow read: if request.auth != null;
         // Cada utilizador gere a sua própria presença
         allow create, update: if request.auth != null
           && request.auth.uid == uid
-          && request.resource.data.keys().hasAll(['vai', 'uid'])
-          && request.resource.data.keys().hasOnly(['vai','updatedAt','name','photo', 'uid'])
-          && request.resource.data.vai is bool;
+          && request.resource.data.keys().hasAll(['isGoing', 'uid'])
+          && request.resource.data.keys().hasOnly(['isGoing','updatedAt','name','photo', 'uid'])
+          && request.resource.data.isGoing is bool;
         // O utilizador pode apagar a sua, ou o dono do jogo pode apagar todas
         allow delete: if request.auth != null
-          && (request.auth.uid == uid || get(/databases/$(database)/documents/jogos/$(id)).data.createdBy == request.auth.uid);
+          && (request.auth.uid == uid || get(/databases/$(database)/documents/games/$(id)).data.createdBy == request.auth.uid);
       }
 
       // Subcoleção admin: apenas o criador do jogo
       match /admin/{doc} {
         allow read: if request.auth != null
-          && get(/databases/$(database)/documents/jogos/$(id)).data.createdBy == request.auth.uid;
+          && get(/databases/$(database)/documents/games/$(id)).data.createdBy == request.auth.uid;
         allow write: if request.auth != null
-          && get(/databases/$(database)/documents/jogos/$(id)).data.createdBy == request.auth.uid;
+          && get(/databases/$(database)/documents/games/$(id)).data.createdBy == request.auth.uid;
       }
     }
   }
