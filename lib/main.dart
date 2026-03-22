@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_dynamic_links/firebase_dynamic_links.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 
 import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
 import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
@@ -38,6 +40,16 @@ Future<void> main() async {
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+  try {
+    await FirebaseAppCheck.instance.activate(
+      androidProvider: AndroidProvider.playIntegrity,
+      appleProvider: AppleProvider.deviceCheck,
+      // webProvider: ReCaptchaV3Provider('recaptcha-v3-site-key'),
+    );
+  } catch (e) {
+    debugPrint('Erro no AppCheck: $e');
+  }
+
   // Locale data for Intl (pt_PT) used in DateFormat across the app
   Intl.defaultLocale = 'pt_PT';
   await initializeDateFormatting('pt_PT', null);
@@ -59,6 +71,13 @@ class FuteboladasApp extends StatelessWidget {
       title: 'Futeboladas',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
+      locale: const Locale('pt', 'PT'),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('pt', 'PT')],
       home: const AuthGate(),
       routes: {
         '/games/map': (_) => const GamesMaps(),

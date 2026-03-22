@@ -124,7 +124,7 @@ class _AdminSectionState extends State<AdminSection> {
                           style: const TextStyle(color: Colors.white),
                           decoration: const InputDecoration(
                             labelText: 'Contactos Privados',
-                            hintText: 'ex: Telemóvel do responsável do field',
+                            hintText: 'ex: Telemóvel do responsável do campo',
                           ),
                         ),
                         const SizedBox(height: 12),

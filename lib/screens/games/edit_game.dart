@@ -293,7 +293,7 @@ class _JogoEditarState extends State<EditGame> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          'Editar Game',
+          'Editar Jogo',
           style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 20),
         ),
       ),
@@ -328,22 +328,40 @@ class _JogoEditarState extends State<EditGame> {
                         Expanded(
                           child: _buildGlassInput(
                             controller: _jogadoresCtrl,
-                            label: 'Nº Jogadores',
+                            label: 'Jogadores',
                             hint: 'ex: 10',
                             icon: Icons.people_outline,
                             keyboardType: TextInputType.number,
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty)
+                                return 'Obrigatório';
+                              final val = int.tryParse(v.trim());
+                              if (val == null || val <= 0) return 'Inválido';
+                              if (val > 99) return 'Máx 99';
+                              return null;
+                            },
                           ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: _buildGlassInput(
                             controller: _precoCtrl,
-                            label: 'Preço (€)',
+                            label: 'Preço',
                             hint: '0.00',
                             icon: Icons.euro_rounded,
-                            keyboardType: TextInputType.numberWithOptions(
+                            keyboardType: const TextInputType.numberWithOptions(
                               decimal: true,
                             ),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty)
+                                return 'Obrigatório';
+                              final val = double.tryParse(
+                                v.trim().replaceFirst(',', '.'),
+                              );
+                              if (val == null || val < 0) return 'Inválido';
+                              if (val > 999) return 'Máx 999';
+                              return null;
+                            },
                           ),
                         ),
                       ],
@@ -416,10 +434,13 @@ class _JogoEditarState extends State<EditGame> {
               labelText: label,
               hintText: hint,
               prefixIcon: Icon(icon, color: Colors.white38, size: 20),
-              border: InputBorder.none,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 16,
+                horizontal: 12,
+                vertical: 18,
               ),
             ),
             validator: validator,

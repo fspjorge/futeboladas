@@ -41,6 +41,35 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:704341845387:android:2e2539d712bcd745cf7b8e",
+        "android_client_info": {
+          "package_name": "pt.fspjorge.futeboladas"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "704341845387-phrtrpoc86e4d8f1jkmd7unv28vo18vt.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCp9I07WlHZfb61QqtqL1qhG0qAY-1-ZJ0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "704341845387-phrtrpoc86e4d8f1jkmd7unv28vo18vt.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

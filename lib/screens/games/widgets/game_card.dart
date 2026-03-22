@@ -256,7 +256,7 @@ class GameCard extends StatelessWidget {
     try {
       if (!isGoing && isFull) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Este game já está lotado!')),
+          const SnackBar(content: Text('Este jogo já está lotado!')),
         );
         return;
       }

@@ -82,7 +82,7 @@ class _JogoDetalheState extends State<GameDetail> {
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
         title: Text(
-          'Apagar Game',
+          'Apagar Jogo',
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -117,7 +117,7 @@ class _JogoDetalheState extends State<GameDetail> {
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Game apagado com sucesso.')),
+          const SnackBar(content: Text('Jogo apagado com sucesso.')),
         );
       }
     } catch (e) {

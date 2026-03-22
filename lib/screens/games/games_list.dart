@@ -143,7 +143,7 @@ class _JogosListaState extends State<GamesList> {
                 child: Column(
                   children: [
                     const Icon(Icons.error_outline, color: Colors.redAccent),
-                    const Text('Erro ao carregar games'),
+                    const Text('Erro ao carregar jogos'),
                     TextButton(
                       onPressed: () => setState(() {}),
                       child: const Text('Tentar novamente'),
@@ -187,7 +187,7 @@ class _JogosListaState extends State<GamesList> {
                 if (docs.isEmpty)
                   EmptyState(
                     icon: Icons.sports_soccer,
-                    message: 'Sem games agendados.',
+                    message: 'Sem jogos agendados.',
                   )
                 else if (visibleDays.isEmpty)
                   EmptyState(

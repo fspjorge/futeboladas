@@ -23,20 +23,11 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -61,9 +52,42 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyCp9I07WlHZfb61QqtqL1qhG0qAY-1-ZJ0',
-    appId: '1:704341845387:android:87267cbcc0ea2b32cf7b8e',
+    appId: '1:704341845387:android:2e2539d712bcd745cf7b8e',
     messagingSenderId: '704341845387',
     projectId: 'futeboladas-62f15',
     storageBucket: 'futeboladas-62f15.firebasestorage.app',
   );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyADGQp_5b5JwTEvIx60XXezjd__ibVIC6Y',
+    appId: '1:704341845387:ios:504e4362fe81bc08cf7b8e',
+    messagingSenderId: '704341845387',
+    projectId: 'futeboladas-62f15',
+    storageBucket: 'futeboladas-62f15.firebasestorage.app',
+    androidClientId: '704341845387-dea8ulplfm60bqnn5m33manpi9cnva1v.apps.googleusercontent.com',
+    iosClientId: '704341845387-cf3dlngstqnd967jp1u5p49ljgs99jap.apps.googleusercontent.com',
+    iosBundleId: 'com.example.futeboladas',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyADGQp_5b5JwTEvIx60XXezjd__ibVIC6Y',
+    appId: '1:704341845387:ios:9fe033960ba60bf1cf7b8e',
+    messagingSenderId: '704341845387',
+    projectId: 'futeboladas-62f15',
+    storageBucket: 'futeboladas-62f15.firebasestorage.app',
+    androidClientId: '704341845387-dea8ulplfm60bqnn5m33manpi9cnva1v.apps.googleusercontent.com',
+    iosClientId: '704341845387-20jr843bq5aff7h6j8do86cr02527qhf.apps.googleusercontent.com',
+    iosBundleId: 'pt.fspjorge.futeboladas',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyB9EuMOXspFqAyciWMa2dqs-P_d44NEzwQ',
+    appId: '1:704341845387:web:e0ec6d44bfab4ffccf7b8e',
+    messagingSenderId: '704341845387',
+    projectId: 'futeboladas-62f15',
+    authDomain: 'futeboladas-62f15.firebaseapp.com',
+    storageBucket: 'futeboladas-62f15.firebasestorage.app',
+    measurementId: 'G-YCDLQFD75D',
+  );
+
 }

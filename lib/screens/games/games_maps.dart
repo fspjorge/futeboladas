@@ -348,7 +348,7 @@ class _JogosMapaState extends State<GamesMaps> with WidgetsBindingObserver {
                   ],
                 ),
                 child: Text(
-                  '${_marcadores.length} game${_marcadores.length != 1 ? 's' : ''}',
+                  '${_marcadores.length} jogo${_marcadores.length != 1 ? 's' : ''}',
                   style: GoogleFonts.outfit(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,

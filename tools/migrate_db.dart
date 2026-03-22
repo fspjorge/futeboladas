@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 Future<void> migrateDatabase(FirebaseFirestore db) async {
