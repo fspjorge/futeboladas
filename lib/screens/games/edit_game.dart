@@ -1,7 +1,8 @@
-import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+import '../../models/game.dart';
+import '../../services/game_service.dart';
 import '../../widgets/grid_backdrop.dart';
 import 'widgets/game_form_content.dart';
 
@@ -43,25 +44,20 @@ class _JogoEditarState extends State<EditGame> {
 
   Future<void> _carregarInicial() async {
     try {
-      final snap = await FirebaseFirestore.instance
-          .collection('games')
-          .doc(widget.gameId)
-          .get();
-      if (snap.exists) {
-        final data = snap.data()!;
-        _tituloCtrl.text = (data['title'] as String?) ?? '';
-        _localCtrl.text = (data['location'] as String?) ?? '';
-        final pCount = (data['players'] as num?)?.toInt() ?? 0;
-        _jogadoresCtrl.text = pCount.toString();
+      final game = await GameService.instance.getJogo(widget.gameId);
+      if (game != null) {
+        _tituloCtrl.text = game.title;
+        _localCtrl.text = game.location;
+        _jogadoresCtrl.text = game.players.toString();
 
-        final unitPrice = data['price'] as num? ?? 0;
-        final totalPrice = unitPrice * pCount;
+        final unitPrice = game.price ?? 0;
+        final totalPrice = unitPrice * game.players;
         _precoCtrl.text = totalPrice > 0 ? totalPrice.toStringAsFixed(2) : '';
 
-        _data = (data['date'] as Timestamp?)?.toDate();
-        _campoSelected = data['field'] as String?;
-        _selLat = data['lat'] as double?;
-        _selLon = data['lon'] as double?;
+        _data = game.date;
+        _campoSelected = game.field;
+        _selLat = game.lat;
+        _selLon = game.lon;
       }
     } catch (e) {
       debugPrint('Erro ao carregar dados: $e');
@@ -88,21 +84,19 @@ class _JogoEditarState extends State<EditGame> {
           double.tryParse(_precoCtrl.text.trim().replaceFirst(',', '.')) ?? 0.0;
       final price = (players > 0) ? (total / players) : 0.0;
 
-      final update = <String, dynamic>{
-        'title': title,
-        'location': location,
-        'players': players,
-        'price': price,
-        'date': Timestamp.fromDate(_data!),
-        'field': _campoSelected ?? 'Relva Sintética',
-        if (_selLat != null) 'lat': _selLat,
-        if (_selLon != null) 'lon': _selLon,
-      };
+      final game = Game(
+        id: widget.gameId,
+        title: title,
+        location: location,
+        players: players,
+        date: _data!,
+        field: _campoSelected ?? 'Relva Sintética',
+        lat: _selLat,
+        lon: _selLon,
+        price: price,
+      );
 
-      await FirebaseFirestore.instance
-          .collection('games')
-          .doc(widget.gameId)
-          .update(update);
+      await GameService.instance.atualizarJogo(game);
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } catch (e) {

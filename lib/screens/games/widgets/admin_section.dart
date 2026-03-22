@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../widgets/glass_card.dart';
 import '../../../services/game_service.dart';
 import '../edit_game.dart';
@@ -8,13 +8,11 @@ import '../edit_game.dart';
 class AdminSection extends StatefulWidget {
   final String gameId;
   final VoidCallback onEliminar;
-  final DocumentReference<Map<String, dynamic>> jogoRef;
 
   const AdminSection({
     super.key,
     required this.gameId,
     required this.onEliminar,
-    required this.jogoRef,
   });
 
   @override
@@ -103,13 +101,10 @@ class _AdminSectionState extends State<AdminSection> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                  stream: widget.jogoRef
-                      .collection('admin')
-                      .doc('privado')
-                      .snapshots(),
+                StreamBuilder<Map<String, dynamic>>(
+                  stream: GameService.instance.adminStream(widget.gameId),
                   builder: (context, asnap) {
-                    final adata = asnap.data?.data() ?? {};
+                    final adata = asnap.data ?? {};
                     if (!_adminLoaded && adata.isNotEmpty) {
                       _contactosCtrl.text =
                           (adata['contactos'] as String?) ?? '';
@@ -188,6 +183,19 @@ class _AdminSectionState extends State<AdminSection> {
                                       }
                                     }
                                   },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF10B981),
+                              foregroundColor: const Color(0xFF0F172A),
+                              minimumSize: const Size(0, 56),
+                              textStyle: GoogleFonts.outfit(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
                             child: _saving
                                 ? const SizedBox(
                                     width: 20,

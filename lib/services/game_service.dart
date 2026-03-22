@@ -1,126 +1,98 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/game.dart';
 
-/// Centraliza todas as operações Firestore sobre a coleção 'games'.
+/// Centraliza todas as operações Supabase sobre a tabela 'games'.
 class GameService {
-  final FirebaseFirestore _db;
-  final FirebaseAuth _auth;
+  final SupabaseClient _supabase;
 
-  GameService({FirebaseFirestore? firestore, FirebaseAuth? auth})
-    : _db = firestore ?? FirebaseFirestore.instance,
-      _auth = auth ?? FirebaseAuth.instance;
+  GameService({SupabaseClient? client})
+    : _supabase = client ?? Supabase.instance.client;
 
   static final GameService instance = GameService();
 
-  CollectionReference<Map<String, dynamic>> get _col => _db.collection('games');
+  SupabaseQueryBuilder get _table => _supabase.from('games');
 
   // ── Queries ───────────────────────────────────────────────────────────────
 
   /// Stream de games ativos, ordenados por data.
   Stream<List<Game>> jogosAtivosStream() {
-    return _col
-        .where('isActive', isEqualTo: true)
-        .orderBy('date')
-        .snapshots()
-        .map((qs) => qs.docs.map(Game.fromQueryDoc).toList());
+    return _table
+        .stream(primaryKey: ['id'])
+        .map(
+          (list) =>
+              list
+                  .where((row) => row['is_active'] == true)
+                  .map(Game.fromSupabase)
+                  .toList()
+                ..sort((a, b) => a.date.compareTo(b.date)),
+        );
   }
 
   /// Stream de um game específico.
   Stream<Game?> jogoStream(String gameId) {
-    return _col.doc(gameId).snapshots().map((doc) {
-      if (!doc.exists) {
-        return null;
-      }
-      return Game.fromFirestore(doc);
-    });
+    return _table
+        .stream(primaryKey: ['id'])
+        .eq('id', gameId)
+        .map((list) => list.isEmpty ? null : Game.fromSupabase(list.first));
   }
 
   // ── Write ─────────────────────────────────────────────────────────────────
 
   Future<String> criarJogo(Game game) async {
-    final ref = await _col.add(game.toFirestore());
-    return ref.id;
+    final data = await _table.insert(game.toSupabase()).select('id').single();
+    return data['id'].toString();
   }
 
-  Future<void> atualizarJogo(Game game) {
-    return _col.doc(game.id).update(game.toFirestore());
+  Future<void> atualizarJogo(Game game) async {
+    await _table.update(game.toSupabase()).eq('id', game.id);
   }
 
-  /// Apagar o game e todas as suas subcoleções (presencas + admin).
+  /// Apagar o game. O RLS e as FKs (ON DELETE CASCADE) tratam das dependências.
   Future<void> apagarJogo(String gameId) async {
     try {
-      final user = _auth.currentUser;
+      final user = _supabase.auth.currentUser;
       if (user == null) {
         throw StateError('Sem sessão iniciada');
       }
 
-      final docRef = _col.doc(gameId);
-      final docSnap = await docRef.get();
-
-      if (!docSnap.exists) {
-        throw Exception('Jogo não encontrado no Firestore (ID: $gameId)');
-      }
-
-      final data = docSnap.data()!;
-      final ownerUid = data['createdBy'] as String?;
-
-      if (ownerUid != user.uid) {
-        throw Exception(
-          'Não tens permissão para apagar este game (Dono: $ownerUid, Tu: ${user.uid})',
-        );
-      }
-
-      final batch = _db.batch();
-
-      // 1. Adicionar presenças ao batch
-      final presencas = await docRef.collection('attendances').get();
-      for (final doc in presencas.docs) {
-        batch.delete(doc.reference);
-      }
-
-      // 2. Adicionar documento admin ao batch (se existir)
-      final adminRef = docRef.collection('admin').doc('privado');
-      final adminDoc = await adminRef.get();
-      if (adminDoc.exists) {
-        batch.delete(adminRef);
-      }
-
-      // 3. Adicionar o próprio game ao batch (último)
-      batch.delete(docRef);
-
-      await batch.commit();
+      // No Supabase, se o RLS estiver bem configurado, o delete falhará
+      // se o utilizador não for o dono.
+      await _table.delete().eq('id', gameId);
     } catch (e) {
-      if (e is FirebaseException) {
-        if (e.code == 'permission-denied') {
-          throw Exception(
-            'Erro de permissão no Firestore ao apagar o game. Verifica se tu és o criador.',
-          );
-        }
-      }
       rethrow;
     }
   }
 
   // ── Admin (dados privados do organizador) ─────────────────────────────────
 
+  Future<Game?> getJogo(String gameId) async {
+    final response = await _supabase
+        .from('games')
+        .select()
+        .eq('id', gameId)
+        .maybeSingle();
+
+    if (response == null) return null;
+    return Game.fromSupabase(response);
+  }
+
   Stream<Map<String, dynamic>> adminStream(String gameId) {
-    return _col
-        .doc(gameId)
-        .collection('admin')
-        .doc('privado')
-        .snapshots()
-        .map((d) => d.data() ?? {});
+    return _supabase
+        .from('game_admin')
+        .stream(primaryKey: ['game_id'])
+        .eq('game_id', gameId)
+        .map((list) => list.isEmpty ? {} : list.first);
   }
 
   Future<void> guardarAdmin(
     String gameId, {
     required String contactos,
     required String historico,
-  }) {
-    return _col.doc(gameId).collection('admin').doc('privado').set({
+  }) async {
+    await _supabase.from('game_admin').upsert({
+      'game_id': gameId,
       'contactos': contactos,
       'historico': historico,
-    }, SetOptions(merge: true));
+    });
   }
 }

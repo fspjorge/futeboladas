@@ -1,7 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+import '../../models/game.dart';
+import '../../services/game_service.dart';
+import '../../services/auth_service.dart';
 
 import '../../models/filter_mode.dart';
 import '../../services/attendance_service.dart';
@@ -12,7 +14,17 @@ import 'widgets/filter_sheet.dart';
 
 class GamesList extends StatefulWidget {
   final String searchQuery;
-  const GamesList({super.key, this.searchQuery = ''});
+  final GameService? gameService;
+  final AttendanceService? attendanceService;
+  final AuthService? authService;
+
+  const GamesList({
+    super.key,
+    this.searchQuery = '',
+    this.gameService,
+    this.attendanceService,
+    this.authService,
+  });
 
   @override
   State<GamesList> createState() => _JogosListaState();
@@ -47,75 +59,65 @@ class _JogosListaState extends State<GamesList> {
     );
   }
 
-  Map<DateTime, List<QueryDocumentSnapshot<Map<String, dynamic>>>>
-  _processGames(
-    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+  Map<DateTime, List<Game>> _processGames(
+    List<Game> games,
     String? uid,
     Set<String> jogosOndeVou,
   ) {
-    final Map<DateTime, List<QueryDocumentSnapshot<Map<String, dynamic>>>>
-    groups = {};
+    final Map<DateTime, List<Game>> groups = {};
 
-    for (final d in docs) {
-      final data = d.data();
-
+    for (final g in games) {
       // Filtro de pesquisa
       if (widget.searchQuery.isNotEmpty) {
         final q = widget.searchQuery.toLowerCase();
-        final title = (data['title'] as String? ?? '').toLowerCase();
-        final location = (data['location'] as String? ?? '').toLowerCase();
+        final title = g.title.toLowerCase();
+        final location = g.location.toLowerCase();
         if (!title.contains(q) && !location.contains(q)) continue;
       }
 
       if (uid != null) {
-        if (_filterMode == FilterMode.mine && data['createdBy'] != uid) {
+        if (_filterMode == FilterMode.mine && g.createdBy != uid) {
           continue;
         }
         if (_filterMode == FilterMode.attending &&
-            !jogosOndeVou.contains(d.id)) {
+            !jogosOndeVou.contains(g.id)) {
           continue;
         }
         if (_filterMode == FilterMode.free) {
-          final price = data['price'] as num? ?? 0;
-          if (price > 0) {
-            continue;
-          }
+          if ((g.price ?? 0) > 0) continue;
         }
       }
 
       if (_selectedCampo != null) {
-        if (data['field'] != _selectedCampo) continue;
+        if (g.field != _selectedCampo) continue;
       }
 
       if (_selectedDay != null) {
-        final dt = (data['date'] as Timestamp).toDate();
-        final day = DateTime(dt.year, dt.month, dt.day);
+        final day = DateTime(g.date.year, g.date.month, g.date.day);
         if (day != _selectedDay) continue;
       }
 
-      final dt = (data['date'] as Timestamp).toDate();
-      final day = DateTime(dt.year, dt.month, dt.day);
-      groups.putIfAbsent(day, () => []).add(d);
+      final day = DateTime(g.date.year, g.date.month, g.date.day);
+      groups.putIfAbsent(day, () => []).add(g);
     }
 
     return groups;
   }
 
-  List<DateTime> _getAllDays(
-    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
-  ) {
+  List<DateTime> _getAllDays(List<Game> games) {
     final Set<DateTime> days = {};
-    for (final d in docs) {
-      final dt = (d.data()['date'] as Timestamp).toDate();
-      days.add(DateTime(dt.year, dt.month, dt.day));
+    for (final g in games) {
+      days.add(DateTime(g.date.year, g.date.month, g.date.day));
     }
     return days.toList()..sort();
   }
 
   @override
   Widget build(BuildContext context) {
-    final presencas = AttendanceService();
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final gamesService = widget.gameService ?? GameService();
+    final presencas = widget.attendanceService ?? AttendanceService();
+    final auth = widget.authService ?? AuthService.instance;
+    final uid = auth.currentUser?.id;
     final cs = Theme.of(context).colorScheme;
 
     return StreamBuilder<Set<String>>(
@@ -123,12 +125,8 @@ class _JogosListaState extends State<GamesList> {
       builder: (context, vouSnap) {
         final jogosOndeVou = vouSnap.data ?? {};
 
-        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: FirebaseFirestore.instance
-              .collection('games')
-              .where('isActive', isEqualTo: true)
-              .orderBy('date')
-              .snapshots(),
+        return StreamBuilder<List<Game>>(
+          stream: gamesService.jogosAtivosStream(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
@@ -153,9 +151,9 @@ class _JogosListaState extends State<GamesList> {
               );
             }
 
-            final docs = snapshot.data?.docs ?? [];
-            final allDays = _getAllDays(docs);
-            final filtered = _processGames(docs, uid, jogosOndeVou);
+            final games = snapshot.data ?? [];
+            final allDays = _getAllDays(games);
+            final filtered = _processGames(games, uid, jogosOndeVou);
             final visibleDays = filtered.keys.toList()..sort();
 
             return Column(
@@ -184,7 +182,7 @@ class _JogosListaState extends State<GamesList> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                if (docs.isEmpty)
+                if (games.isEmpty)
                   EmptyState(
                     icon: Icons.sports_soccer,
                     message: 'Sem jogos agendados.',
@@ -198,6 +196,7 @@ class _JogosListaState extends State<GamesList> {
                         ? () => setState(() {
                             _filterMode = FilterMode.all;
                             _selectedDay = null;
+                            _selectedCampo = null;
                           })
                         : null,
                     actionLabel: 'LIMPAR FILTROS',
@@ -227,15 +226,11 @@ class _JogosListaState extends State<GamesList> {
 
   Widget _buildDaySection(
     DateTime day,
-    List<QueryDocumentSnapshot<Map<String, dynamic>>> items,
+    List<Game> items,
     AttendanceService presencas,
     String? uid,
   ) {
-    items.sort((a, b) {
-      final da = (a.data()['date'] as Timestamp).toDate();
-      final db = (b.data()['date'] as Timestamp).toDate();
-      return da.compareTo(db);
-    });
+    items.sort((a, b) => a.date.compareTo(b.date));
 
     final dayStr = _formatDayTitle(day);
 
@@ -255,7 +250,7 @@ class _JogosListaState extends State<GamesList> {
           ),
         ),
         ...items.map(
-          (doc) => GameCard(doc: doc, presencas: presencas, uid: uid),
+          (game) => GameCard(game: game, presencas: presencas, uid: uid),
         ),
         const SizedBox(height: 8),
       ],

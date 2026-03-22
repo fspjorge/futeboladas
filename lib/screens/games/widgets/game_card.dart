@@ -1,23 +1,22 @@
-import 'dart:ui' show ImageFilter;
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'dart:ui' show ImageFilter;
 
+import '../../../models/game.dart';
 import '../game_detail.dart';
 import '../../../services/attendance_service.dart';
 import '../../../utils/format_utils.dart';
-
 import '../../../main.dart';
 
 class GameCard extends StatelessWidget {
-  final QueryDocumentSnapshot<Map<String, dynamic>> doc;
+  final Game game;
   final AttendanceService presencas;
   final String? uid;
 
   const GameCard({
     super.key,
-    required this.doc,
+    required this.game,
     required this.presencas,
     this.uid,
   });
@@ -25,12 +24,11 @@ class GameCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final data = doc.data();
-    final location = data['location'] as String? ?? 'Local desconhecido';
-    final maxJogadores = (data['players'] as num?)?.toInt() ?? 0;
-    final price = data['price'] as num? ?? 0;
-    final date = (data['date'] as Timestamp).toDate();
-    final gameId = doc.id;
+    final location = game.location;
+    final maxJogadores = game.players;
+    final price = game.price ?? 0;
+    final date = game.date;
+    final gameId = game.id;
     final hora = DateFormat('HH:mm').format(date);
 
     return Container(
@@ -175,8 +173,7 @@ class GameCard extends StatelessWidget {
                                       const SizedBox(width: 2),
                                       Flexible(
                                         child: Text(
-                                          (data['field'] as String? ??
-                                                  'Relva Sintética')
+                                          (game.field ?? 'Relva Sintética')
                                               .replaceAll('Relva ', ''),
                                           style: GoogleFonts.outfit(
                                             fontSize: 9,
@@ -216,7 +213,7 @@ class GameCard extends StatelessWidget {
                                 context,
                                 isGoing,
                                 isFull,
-                                data,
+                                game,
                                 date,
                                 gameId,
                                 location,
@@ -243,7 +240,7 @@ class GameCard extends StatelessWidget {
     BuildContext context,
     bool isGoing,
     bool isFull,
-    Map<String, dynamic> data,
+    Game game,
     DateTime date,
     String gameId,
     String location,
@@ -268,9 +265,7 @@ class GameCard extends StatelessWidget {
 
         scaffoldMessengerKey.currentState?.showSnackBar(
           SnackBar(
-            content: Text(
-              'Presença removida de: ${data['title'] as String? ?? location}',
-            ),
+            content: Text('Presença removida de: ${game.title}'),
             duration: const Duration(seconds: 3),
             dismissDirection:
                 DismissDirection.horizontal, // Mais fácil de limpar
@@ -297,9 +292,7 @@ class GameCard extends StatelessWidget {
                   const Icon(Icons.check_circle, color: Colors.white, size: 20),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      'Presença confirmada em ${data['title'] as String? ?? location}! ⚽',
-                    ),
+                    child: Text('Presença confirmada em ${game.title}! ⚽'),
                   ),
                 ],
               ),

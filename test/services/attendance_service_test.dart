@@ -1,72 +1,94 @@
-import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
-import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
+import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:futeboladas/services/attendance_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../helpers/supabase_mocks.dart';
+
+class FakePostgrestFilterBuilder extends Fake
+    implements PostgrestFilterBuilder<List<Map<String, dynamic>>> {
+  @override
+  Future<U> then<U>(
+    FutureOr<U> Function(List<Map<String, dynamic>> value) onValue, {
+    Function? onError,
+  }) async {
+    return onValue([]);
+  }
+}
 
 void main() {
-  late FakeFirebaseFirestore fakeFirestore;
-  late MockFirebaseAuth mockAuth;
-  late AttendanceService presencaService;
+  late MockSupabaseClient mockClient;
+  late MockGoTrueClient mockAuth;
+  late MockUser mockUser;
+  late AttendanceService attendanceService;
+  late MockSupabaseQueryBuilder mockQueryBuilder;
 
-  final mockUser = MockUser(
-    uid: 'tester',
-    email: 'tester@futebol.com',
-    displayName: 'Tester',
-  );
+  setUpAll(() {
+    registerFallbackValue(const <String, dynamic>{});
+  });
 
   setUp(() {
-    fakeFirestore = FakeFirebaseFirestore();
-    mockAuth = MockFirebaseAuth(signedIn: true, mockUser: mockUser);
-    presencaService = AttendanceService(
-      firestore: fakeFirestore,
-      auth: mockAuth,
-    );
+    mockClient = MockSupabaseClient();
+    mockAuth = MockGoTrueClient();
+    mockUser = MockUser();
+    mockQueryBuilder = MockSupabaseQueryBuilder();
+
+    when(() => mockClient.auth).thenReturn(mockAuth);
+    when(() => mockAuth.currentUser).thenReturn(mockUser);
+    when(() => mockUser.id).thenReturn('tester');
+
+    attendanceService = AttendanceService(client: mockClient);
   });
 
   group('AttendanceService Tests', () {
     test('should mark presence successfully', () async {
       const gameId = 'jogo_1';
+      final fakeFilterBuilder = FakePostgrestFilterBuilder();
 
-      await presencaService.markAttendance(gameId, true);
+      when(() => mockClient.from('attendances')).thenReturn(mockQueryBuilder);
+      when(
+        () => mockQueryBuilder.upsert(
+          any(),
+          onConflict: any(named: 'onConflict'),
+        ),
+      ).thenReturn(fakeFilterBuilder);
 
-      final doc = await fakeFirestore
-          .collection('games')
-          .doc(gameId)
-          .collection('attendances')
-          .doc(mockUser.uid)
-          .get();
+      await attendanceService.markAttendance(gameId, true);
 
-      expect(doc.exists, isTrue);
-      expect(doc.data()!['isGoing'], isTrue);
-      expect(doc.data()!['uid'], mockUser.uid);
+      verify(
+        () => mockQueryBuilder.upsert(
+          any(
+            that: isA<Map<String, dynamic>>()
+                .having((m) => m['game_id'], 'game_id', gameId)
+                .having((m) => m['is_going'], 'is_going', true),
+          ),
+          onConflict: 'game_id,user_id',
+        ),
+      ).called(1);
     });
 
     test('countConfirmados should return correct amount', () async {
       const gameId = 'jogo_2';
+      final mockData = [
+        {'game_id': gameId, 'is_going': true},
+        {'game_id': gameId, 'is_going': true},
+        {'game_id': gameId, 'is_going': false},
+        {'game_id': 'other', 'is_going': true},
+      ];
 
-      // Add two confirmed presences manually to fake firestore
-      await fakeFirestore
-          .collection('games')
-          .doc(gameId)
-          .collection('attendances')
-          .doc('user1')
-          .set({'isGoing': true});
+      when(() => mockClient.from('attendances')).thenReturn(mockQueryBuilder);
 
-      await fakeFirestore
-          .collection('games')
-          .doc(gameId)
-          .collection('attendances')
-          .doc('user2')
-          .set({'isGoing': true});
+      final mockStreamFilter = MockSupabaseStreamFilterBuilder();
+      when(
+        () => mockQueryBuilder.stream(primaryKey: any(named: 'primaryKey')),
+      ).thenReturn(mockStreamFilter);
 
-      await fakeFirestore
-          .collection('games')
-          .doc(gameId)
-          .collection('attendances')
-          .doc('user3')
-          .set({'isGoing': false});
+      when(() => mockStreamFilter.map(any())).thenAnswer((invocation) {
+        final mapper = invocation.positionalArguments[0] as dynamic;
+        return Stream.value(mapper(mockData));
+      });
 
-      final count = await presencaService.countConfirmados(gameId).first;
+      final count = await attendanceService.countConfirmados(gameId).first;
       expect(count, 2);
     });
   });

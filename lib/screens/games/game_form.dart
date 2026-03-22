@@ -1,8 +1,10 @@
-import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+import '../../models/game.dart';
+import '../../services/game_service.dart';
+import '../../services/auth_service.dart';
+import '../../services/attendance_service.dart';
 import 'game_detail.dart';
 import '../../widgets/grid_backdrop.dart';
 import 'widgets/game_form_content.dart';
@@ -54,30 +56,29 @@ class _JogosFormState extends State<GameForm> {
       final price = (players > 0) ? (total / players) : 0.0;
       final field = _campoSelected ?? 'Relva Sintética';
 
-      final user = FirebaseAuth.instance.currentUser;
-      final data = <String, dynamic>{
-        'isActive': true,
-        'title': title,
-        'location': location,
-        'players': players,
-        'price': price,
-        'date': Timestamp.fromDate(_data!),
-        'createdBy': user?.uid ?? '',
-        'createdAt': Timestamp.now(),
-        'createdByName': user?.displayName ?? '',
-        'createdByPhoto': user?.photoURL ?? '',
-        'field': field,
-        if (_selLat != null && _selLon != null) 'lat': _selLat,
-        if (_selLat != null && _selLon != null) 'lon': _selLon,
-      };
+      final user = AuthService.instance.currentUser;
+      final game = Game(
+        id: '', // Supabase gera o UUID
+        title: title,
+        location: location,
+        players: players,
+        date: _data!,
+        createdBy: user?.id,
+        lat: _selLat,
+        lon: _selLon,
+        field: field,
+        price: price,
+      );
 
-      final docRef = await FirebaseFirestore.instance
-          .collection('games')
-          .add(data);
+      final gameId = await GameService.instance.criarJogo(game);
+
+      // Marcar presença automática do criador
+      await AttendanceService().markAttendance(gameId, true);
+
       if (!mounted) return;
 
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => GameDetail(gameId: docRef.id)),
+        MaterialPageRoute(builder: (_) => GameDetail(gameId: gameId)),
         (route) => route.isFirst,
       );
 

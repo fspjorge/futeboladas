@@ -1,43 +1,96 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:network_image_mock/network_image_mock.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:futeboladas/widgets/auth/auth_gate.dart';
 import 'package:futeboladas/screens/auth/login_page.dart';
+import 'package:futeboladas/screens/home_dashboard.dart';
+import 'package:futeboladas/services/auth_service.dart';
+import 'package:futeboladas/services/game_service.dart';
+import 'package:futeboladas/services/attendance_service.dart';
 
 void main() {
+  late MockAuthService mockAuthService;
+  late MockGameService mockGameService;
+  late MockAttendanceService mockAttendanceService;
+
+  setUp(() {
+    mockAuthService = MockAuthService();
+    mockGameService = MockGameService();
+    mockAttendanceService = MockAttendanceService();
+  });
+
   group('AuthGate Widget', () {
-    testWidgets('shows LoginPage when user is null', (
+    testWidgets('shows LoginPage when session user is null', (
       WidgetTester tester,
     ) async {
-      // Mock FirebaseAuth with null user
-      final mockAuth = MockFirebaseAuth(signedIn: false);
+      when(() => mockAuthService.authStateChanges).thenAnswer(
+        (_) => Stream.value(const AuthState(AuthChangeEvent.signedOut, null)),
+      );
 
       await mockNetworkImagesFor(() async {
-        tester.view.physicalSize = const Size(800, 1200);
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(() {
-          tester.view.resetPhysicalSize();
-          tester.view.resetDevicePixelRatio();
-        });
-
         await tester.pumpWidget(
           MaterialApp(
-            home: Scaffold(
-              body: SizedBox(height: 2000, child: AuthGate(auth: mockAuth)),
+            home: AuthGate(
+              authService: mockAuthService,
+              gameService: mockGameService,
+              attendanceService: mockAttendanceService,
             ),
           ),
         );
       });
 
-      // We should see a CircularProgressIndicator first
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-
-      // Wait for stream to emit
-      await tester.pumpAndSettle();
-
-      // Since user is null, LoginPage should be rendered
+      await tester.pump();
       expect(find.byType(LoginPage), findsOneWidget);
+    });
+
+    testWidgets('shows HomeDashboard when user is authenticated', (
+      WidgetTester tester,
+    ) async {
+      final mockUser = MockUser();
+      final mockSession = MockSession();
+      when(() => mockSession.user).thenReturn(mockUser);
+      when(() => mockUser.id).thenReturn('123');
+      when(() => mockUser.email).thenReturn('test@test.com');
+      when(() => mockUser.userMetadata).thenReturn({});
+
+      when(() => mockAuthService.authStateChanges).thenAnswer(
+        (_) => Stream.value(AuthState(AuthChangeEvent.signedIn, mockSession)),
+      );
+
+      // Mock games stream used by HomeDashboard -> GamesList
+      when(
+        () => mockGameService.jogosAtivosStream(),
+      ).thenAnswer((_) => Stream.value([]));
+      when(
+        () => mockAttendanceService.jogosOndeVouStream(),
+      ).thenAnswer((_) => Stream.value({}));
+
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: AuthGate(
+              authService: mockAuthService,
+              gameService: mockGameService,
+              attendanceService: mockAttendanceService,
+            ),
+          ),
+        );
+      });
+
+      await tester.pump();
+      expect(find.byType(HomeDashboard), findsOneWidget);
     });
   });
 }
+
+class MockAuthService extends Mock implements AuthService {}
+
+class MockGameService extends Mock implements GameService {}
+
+class MockAttendanceService extends Mock implements AttendanceService {}
+
+class MockSession extends Mock implements Session {}
+
+class MockUser extends Mock implements User {}

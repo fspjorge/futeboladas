@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../models/game.dart';
+import '../../../services/game_service.dart';
 import '../../../services/attendance_service.dart';
 import '../../../widgets/glass_card.dart';
 import '../../../utils/format_utils.dart';
 
 class GameDetailInfo extends StatelessWidget {
   final String gameId;
-  final Map<String, dynamic> data;
+  final Game game;
   final AttendanceService presencas;
   final VoidCallback onPickReminder;
   final int reminderMin;
@@ -18,7 +20,7 @@ class GameDetailInfo extends StatelessWidget {
   const GameDetailInfo({
     super.key,
     required this.gameId,
-    required this.data,
+    required this.game,
     required this.presencas,
     required this.onPickReminder,
     required this.reminderMin,
@@ -29,10 +31,10 @@ class GameDetailInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final location = data['location'] as String? ?? '';
-    final maxJogadores = (data['players'] as num?)?.toInt() ?? 0;
-    final createdByName = data['createdByName'] as String? ?? 'Desconhecido';
-    final price = data['price'] as num? ?? 0;
+    final location = game.location;
+    final maxJogadores = game.players;
+    final createdByName = game.createdByName ?? 'Desconhecido';
+    final price = game.price ?? 0;
 
     return GlassCard(
       child: Column(
@@ -100,17 +102,12 @@ class GameDetailInfo extends StatelessWidget {
                       labelColor: Theme.of(context).colorScheme.primary,
                       valueColor: Theme.of(context).colorScheme.primary,
                     ),
-                    FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                      future: FirebaseFirestore.instance
-                          .collection('games')
-                          .doc(gameId)
-                          .collection('admin')
-                          .doc('privado')
-                          .get(),
+                    StreamBuilder<Map<String, dynamic>>(
+                      stream: GameService.instance.adminStream(gameId),
                       builder: (context, privSnap) {
-                        final privData = privSnap.data?.data();
-                        final contacts = privData?['contactos'] as String?;
-                        final notes = privData?['historico'] as String?;
+                        final privData = privSnap.data ?? {};
+                        final contacts = privData['contactos'] as String?;
+                        final notes = privData['historico'] as String?;
 
                         return Column(
                           children: [
@@ -158,9 +155,9 @@ class GameDetailInfo extends StatelessWidget {
   }
 
   Future<void> _adicionarCalendario(BuildContext context) async {
-    final date = (data['date'] as Timestamp?)?.toDate() ?? DateTime.now();
-    final title = data['title'] as String? ?? 'Futebolada';
-    final location = data['location'] as String? ?? '';
+    final date = game.date;
+    final title = game.title;
+    final location = game.location;
 
     try {
       final start =

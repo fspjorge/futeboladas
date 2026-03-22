@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class GameDetailPlayers extends StatelessWidget {
-  final DocumentReference<Map<String, dynamic>> jogoRef;
+  final String gameId;
   final String? createdBy;
   final String uid;
 
   const GameDetailPlayers({
     super.key,
-    required this.jogoRef,
+    required this.gameId,
     this.createdBy,
     required this.uid,
   });
@@ -33,13 +33,19 @@ class GameDetailPlayers extends StatelessWidget {
             ),
           ),
         ),
-        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: jogoRef
-              .collection('attendances')
-              .where('isGoing', isEqualTo: true)
-              .snapshots(),
+        StreamBuilder<List<Map<String, dynamic>>>(
+          stream: Supabase.instance.client
+              .from('game_participants_view')
+              .stream(primaryKey: ['attendance_id'])
+              .map(
+                (rows) => rows
+                    .where(
+                      (r) => r['game_id'] == gameId && r['is_going'] == true,
+                    )
+                    .toList(),
+              ),
           builder: (context, snap) {
-            final docs = snap.data?.docs ?? [];
+            final docs = snap.data ?? [];
             if (docs.isEmpty) {
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 20),
@@ -68,9 +74,10 @@ class GameDetailPlayers extends StatelessWidget {
                 itemCount: docs.length,
                 itemBuilder: (context, i) {
                   final d = docs[i];
-                  final name = d.data()['name'] as String? ?? 'Jogador';
-                  final photo = d.data()['photo'] as String?;
-                  final isOrg = d.id == createdBy;
+                  final name = d['name'] as String? ?? 'Jogador';
+                  final photo = d['photo_url'] as String?;
+                  final userId = d['user_id'] as String?;
+                  final isOrg = userId == createdBy;
 
                   return Container(
                     padding: const EdgeInsets.symmetric(

@@ -1,17 +1,20 @@
-import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
+
+import '../../models/game.dart';
+import '../../services/game_service.dart';
 import 'game_detail.dart';
 import '../../widgets/glass_card.dart';
 import '../../utils/format_utils.dart';
 
 class GamesMaps extends StatefulWidget {
-  const GamesMaps({super.key});
+  final GameService? gameService;
+  const GamesMaps({super.key, this.gameService});
 
   @override
   State<GamesMaps> createState() => _JogosMapaState();
@@ -20,7 +23,8 @@ class GamesMaps extends StatefulWidget {
 class _JogosMapaState extends State<GamesMaps> with WidgetsBindingObserver {
   final Completer<GoogleMapController> _controller = Completer();
   final Set<Marker> _marcadores = {};
-  final Map<String, Map<String, dynamic>> _jogosData = {};
+  final Map<String, Game> _jogosData = {};
+  StreamSubscription? _subscription;
   bool _loading = true;
   bool _hasLocationPermission = false;
   bool _mapInitialized = false;
@@ -43,6 +47,7 @@ class _JogosMapaState extends State<GamesMaps> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _subscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -50,11 +55,10 @@ class _JogosMapaState extends State<GamesMaps> with WidgetsBindingObserver {
   Future<void> _initializeMap() async {
     try {
       await _checkLocationPermission();
-      await _carregarJogos();
+      _carregarJogos(); // Inicia o stream
       if (mounted) {
         setState(() {
           _mapInitialized = true;
-          _loading = false;
         });
       }
     } catch (e) {
@@ -145,85 +149,68 @@ class _JogosMapaState extends State<GamesMaps> with WidgetsBindingObserver {
     setState(() {});
   }
 
-  Future<void> _carregarJogos() async {
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('games')
-          .where('isActive', isEqualTo: true)
-          .get();
+  void _carregarJogos() {
+    _subscription?.cancel();
+    final service = widget.gameService ?? GameService.instance;
+    _subscription = service.jogosAtivosStream().listen(
+      (games) async {
+        final List<Marker> newMarkers = [];
+        _jogosData.clear();
 
-      final List<Marker> newMarkers = [];
-      _jogosData.clear();
+        for (final game in games) {
+          double? lat = game.lat;
+          double? lon = game.lon;
 
-      for (final doc in snapshot.docs) {
-        try {
-          final data = doc.data();
-          final gameId = doc.id;
-          final location = data['location'] as String? ?? 'Local desconhecido';
-          final dataJogo = (data['date'] as Timestamp?)?.toDate();
-          final maxJogadores = (data['players'] as num?)?.toInt() ?? 0;
-          final price = (data['price'] as num?)?.toDouble() ?? 0.0;
-
-          double? lat = (data['lat'] as num?)?.toDouble();
-          double? lon = (data['lon'] as num?)?.toDouble();
-
-          // Se não tem coordenadas, tenta geocodificar (limite suave para não abusar)
+          // Se não tem coordenadas, tenta geocodificar
           if (lat == null || lon == null) {
             try {
               final posicoes = await locationFromAddress(
-                '$location, Portugal',
+                '${game.location}, Portugal',
               ).timeout(const Duration(seconds: 5));
               if (posicoes.isNotEmpty) {
                 lat = posicoes.first.latitude;
                 lon = posicoes.first.longitude;
-                // Removida atualização automática de Firestore para evitar side-effects em leitura
+                // Idealmente deveríamos atualizar no DB, mas aqui apenas exibimos
               }
             } catch (e) {
-              debugPrint('Erro na geocodificação de $location: $e');
+              debugPrint('Erro na geocodificação de ${game.location}: $e');
             }
           }
 
           if (lat != null && lon != null) {
-            _jogosData[gameId] = {
-              'title': data['title'] as String? ?? location,
-              'location': location,
-              'dataJogo': dataJogo,
-              'maxJogadores': maxJogadores,
-              'price': price,
-              'lat': lat,
-              'lon': lon,
-            };
+            _jogosData[game.id] = game;
 
             newMarkers.add(
               Marker(
-                markerId: MarkerId(gameId),
+                markerId: MarkerId(game.id),
                 position: LatLng(lat, lon),
                 onTap: () {
                   setState(() {
-                    _selectedJogoId = gameId;
+                    _selectedJogoId = game.id;
                   });
                 },
               ),
             );
           }
-        } catch (e) {
-          debugPrint('Erro ao processar documento ${doc.id}: $e');
         }
-      }
 
-      if (mounted) {
-        setState(() {
-          _marcadores.clear();
-          _marcadores.addAll(newMarkers);
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Erro ao carregar games: $e';
-        });
-      }
-    }
+        if (mounted) {
+          setState(() {
+            _marcadores.clear();
+            _marcadores.addAll(newMarkers);
+            _loading = false;
+          });
+        }
+      },
+      onError: (e) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Erro ao carregar games: $e';
+            _loading = false;
+          });
+        }
+      },
+    );
   }
 
   @override
@@ -312,7 +299,7 @@ class _JogosMapaState extends State<GamesMaps> with WidgetsBindingObserver {
                           setState(() {
                             _loading = true;
                             _errorMessage = null;
-                            _initializeMap();
+                            _carregarJogos();
                           });
                         },
                         child: const Text('TENTAR NOVAMENTE'),
@@ -383,13 +370,13 @@ class _JogosMapaState extends State<GamesMaps> with WidgetsBindingObserver {
   }
 
   Widget _buildSelectedJogoCard() {
-    final data = _jogosData[_selectedJogoId!];
-    if (data == null) return const SizedBox.shrink();
+    final game = _jogosData[_selectedJogoId!];
+    if (game == null) return const SizedBox.shrink();
 
-    final title = data['title'] as String;
-    final location = data['location'] as String;
-    final dataJogo = data['dataJogo'] as DateTime?;
-    final price = data['price'] as num? ?? 0;
+    final title = game.title;
+    final location = game.location;
+    final dataJogo = game.date;
+    final price = game.price ?? 0;
 
     return Positioned(
       bottom: 20,
@@ -454,8 +441,10 @@ class _JogosMapaState extends State<GamesMaps> with WidgetsBindingObserver {
                     const SizedBox(width: 8),
                     _buildMiniInfo(
                       Icons.stadium_outlined,
-                      (data['field'] as String? ?? 'Relva Sintética')
-                          .replaceAll('Relva ', ''),
+                      (game.field ?? 'Relva Sintética').replaceAll(
+                        'Relva ',
+                        '',
+                      ),
                     ),
                     const Spacer(),
                     Container(

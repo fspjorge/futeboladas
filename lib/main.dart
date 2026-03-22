@@ -7,11 +7,13 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_dynamic_links/firebase_dynamic_links.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
 import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 
 import 'firebase_options.dart';
+import 'config.dart';
 import 'screens/auth/reset_password.dart';
 import 'screens/games/game_form.dart';
 import 'screens/games/games_maps.dart';
@@ -47,6 +49,12 @@ Future<void> main() async {
   }
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Initialize Supabase
+  await Supabase.initialize(
+    url: Config.supabaseUrl,
+    anonKey: Config.supabaseAnonKey,
+  );
 
   try {
     await FirebaseAppCheck.instance.activate(

@@ -1,12 +1,12 @@
-import 'dart:ui' show ImageFilter;
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:ui' show ImageFilter;
 
+import '../../models/game.dart';
+import '../../services/auth_service.dart';
 import '../../services/attendance_service.dart';
 import '../../services/game_service.dart';
 import '../../services/weather_service.dart';
@@ -182,11 +182,9 @@ class _JogoDetalheState extends State<GameDetail> {
 
   @override
   Widget build(BuildContext context) {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = AuthService.instance.currentUser?.id;
     final presencas = AttendanceService();
-    final jogoRef = FirebaseFirestore.instance
-        .collection('games')
-        .doc(widget.gameId);
+    final gameService = GameService.instance;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -202,13 +200,14 @@ class _JogoDetalheState extends State<GameDetail> {
         children: [
           Positioned.fill(child: Container(color: const Color(0xFF0F172A))),
           Positioned.fill(child: const GridBackdrop()),
-          StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-            stream: jogoRef.snapshots(),
+          StreamBuilder<Game?>(
+            stream: gameService.jogoStream(widget.gameId),
             builder: (context, snap) {
               if (snap.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
-              if (!snap.hasData || !snap.data!.exists) {
+              final game = snap.data;
+              if (game == null) {
                 if (_deleting) {
                   return const Center(child: CircularProgressIndicator());
                 }
@@ -222,15 +221,14 @@ class _JogoDetalheState extends State<GameDetail> {
                   ),
                 );
               }
-              final data = snap.data!.data()!;
-              final location =
-                  data['location'] as String? ?? 'Local desconhecido';
-              final date = (data['date'] as Timestamp?)?.toDate();
-              final createdBy = data['createdBy'] as String?;
+
+              final location = game.location;
+              final date = game.date;
+              final createdBy = game.createdBy;
               final isOwner = uid != null && createdBy == uid;
-              final price = data['price'] as num? ?? 0;
-              final lat = (data['lat'] as num?)?.toDouble();
-              final lon = (data['lon'] as num?)?.toDouble();
+              final price = game.price ?? 0;
+              final lat = game.lat;
+              final lon = game.lon;
 
               _updateWeather(lat, lon, date);
 
@@ -241,11 +239,11 @@ class _JogoDetalheState extends State<GameDetail> {
                       padding: EdgeInsets.zero,
                       children: [
                         GameDetailHeader(
-                          title: data['title'] as String? ?? location,
+                          title: game.title,
                           location: location,
                           date: date,
                           price: price,
-                          field: data['field'] as String?,
+                          field: game.field,
                           lat: lat,
                           lon: lon,
                           weather: _weatherFuture,
@@ -261,7 +259,7 @@ class _JogoDetalheState extends State<GameDetail> {
                             children: [
                               GameDetailInfo(
                                 gameId: widget.gameId,
-                                data: data,
+                                game: game,
                                 presencas: presencas,
                                 onPickReminder: _pickReminder,
                                 reminderMin: _reminderMin,
@@ -271,7 +269,7 @@ class _JogoDetalheState extends State<GameDetail> {
                               ),
                               if (uid != null)
                                 GameDetailPlayers(
-                                  jogoRef: jogoRef,
+                                  gameId: widget.gameId,
                                   createdBy: createdBy,
                                   uid: uid,
                                 ),
@@ -280,7 +278,6 @@ class _JogoDetalheState extends State<GameDetail> {
                                 AdminSection(
                                   gameId: widget.gameId,
                                   onEliminar: _eliminarJogo,
-                                  jogoRef: jogoRef,
                                 ),
                               const SizedBox(height: 100),
                             ],
@@ -292,17 +289,18 @@ class _JogoDetalheState extends State<GameDetail> {
                   GameDetailActions(
                     presencas: presencas,
                     gameId: widget.gameId,
-                    title: data['title'] as String? ?? location,
+                    title: game.title,
                     location: location,
                     date: date,
-                    lat: (data['lat'] as num?)?.toDouble(),
-                    lon: (data['lon'] as num?)?.toDouble(),
-                    field: data['field'] as String?,
-                    price: (data['price'] as num?)?.toDouble(),
-                    maxParticipantes: (data['players'] as num?)?.toInt(),
-                    participants: List<String>.from(data['participants'] ?? []),
-                    organizadorNome: data['createdByName'] as String?,
-                    organizadorFoto: data['createdByPhoto'] as String?,
+                    lat: lat,
+                    lon: lon,
+                    field: game.field,
+                    price: price.toDouble(),
+                    maxParticipantes: game.players,
+                    participants:
+                        const [], // Buscado via stream em GameDetailActions
+                    organizadorNome: game.createdByName,
+                    organizadorFoto: game.createdByPhoto,
                   ),
                 ],
               );

@@ -104,6 +104,7 @@ class GameDetailActions extends StatelessWidget {
     await presencas.markAttendance(gameId, !isGoing);
 
     if (!context.mounted) return;
+    // ... rest of the snackbar logic remains same
 
     if (isGoing) {
       scaffoldMessengerKey.currentState?.clearSnackBars();

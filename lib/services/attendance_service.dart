@@ -1,85 +1,78 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AttendanceService {
-  final FirebaseAuth _auth;
-  final FirebaseFirestore _db;
+  final SupabaseClient _supabase;
 
-  AttendanceService({FirebaseAuth? auth, FirebaseFirestore? firestore})
-    : _auth = auth ?? FirebaseAuth.instance,
-      _db = firestore ?? FirebaseFirestore.instance;
+  AttendanceService({SupabaseClient? client})
+    : _supabase = client ?? Supabase.instance.client;
 
-  String? get _uid => _auth.currentUser?.uid;
+  String? get _uid => _supabase.auth.currentUser?.id;
 
-  DocumentReference<Map<String, dynamic>> _doc(String gameId) {
+  Future<void> markAttendance(String gameId, bool isGoing) async {
     final uid = _uid;
     if (uid == null) {
       throw StateError('Utilizador não autenticado');
     }
-    return _db
-        .collection('games')
-        .doc(gameId)
-        .collection('attendances')
-        .doc(uid);
-  }
 
-  Future<void> markAttendance(String gameId, bool isGoing) async {
-    final user = _auth.currentUser;
-    if (user == null) {
-      throw StateError('Utilizador não autenticado');
+    try {
+      // Usamos upsert com onConflict para garantir que atualizamos se já existir
+      await _supabase.from('attendances').upsert({
+        'game_id': gameId,
+        'user_id': uid,
+        'is_going': isGoing,
+        'updated_at': DateTime.now().toIso8601String(),
+      }, onConflict: 'game_id,user_id');
+
+      debugPrint(
+        'AttendanceService: Presença atualizada com sucesso para $gameId ($isGoing)',
+      );
+    } catch (e) {
+      debugPrint('AttendanceService: Erro ao marcar presença: $e');
+      rethrow;
     }
-
-    final batch = _db.batch();
-    final presenceRef = _doc(gameId);
-
-    // 1. Atualizar a subcoleção de presenças
-    batch.set(presenceRef, {
-      'isGoing': isGoing,
-      'updatedAt': Timestamp.now(),
-      'name': user.displayName ?? '',
-      'photo': user.photoURL ?? '',
-      'uid': user.uid, // ← adiciona este field
-    }, SetOptions(merge: true));
-
-    await batch.commit();
   }
 
   Stream<int> countConfirmados(String gameId) {
-    return _db
-        .collection('games')
-        .doc(gameId)
-        .collection('attendances')
-        .where('isGoing', isEqualTo: true)
-        .snapshots()
-        .map((s) => s.size);
+    return _supabase
+        .from('attendances')
+        .stream(primaryKey: ['id'])
+        .map(
+          (list) => list
+              .where(
+                (row) => row['game_id'] == gameId && row['is_going'] == true,
+              )
+              .length,
+        );
   }
 
   Stream<bool> minhaPresenca(String gameId) {
     final uid = _uid;
-    if (uid == null) {
-      // Se não autenticado, devolve sempre false
-      return const Stream<bool>.empty();
-    }
-    return _db
-        .collection('games')
-        .doc(gameId)
-        .collection('attendances')
-        .doc(uid)
-        .snapshots()
-        .map((d) => (d.data()?['isGoing'] as bool?) ?? false);
+    if (uid == null) return Stream.value(false);
+
+    // Ouvimos todas as mudanças na tabela para este utilizador e jogo
+    return _supabase.from('attendances').stream(primaryKey: ['id']).map((list) {
+      final row = list.where(
+        (r) => r['game_id'] == gameId && r['user_id'] == uid,
+      );
+      if (row.isEmpty) return false;
+      final going = row.first['is_going'] == true;
+      return going;
+    });
   }
 
   Stream<Set<String>> jogosOndeVouStream() {
     final uid = _uid;
     if (uid == null) return Stream.value({});
 
-    return _db
-        .collectionGroup('attendances')
-        .where('uid', isEqualTo: uid)
-        .where('isGoing', isEqualTo: true)
-        .snapshots()
+    return _supabase
+        .from('attendances')
+        .stream(primaryKey: ['id'])
         .map(
-          (snap) => snap.docs.map((d) => d.reference.parent.parent!.id).toSet(),
+          (list) => list
+              .where((r) => r['user_id'] == uid && r['is_going'] == true)
+              .map((d) => d['game_id'].toString())
+              .toSet(),
         );
   }
 }

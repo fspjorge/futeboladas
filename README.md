@@ -1,10 +1,10 @@
 ﻿# Futeboladas ⚽
 
 ![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white)
-![Firebase](https://img.shields.io/badge/Firebase-Auth%20%7C%20Firestore-FFCA28?logo=firebase&logoColor=black)
+![Supabase](https://img.shields.io/badge/Supabase-Auth%20%7C%20Database-3ECF8E?logo=supabase&logoColor=white)
 ![License](https://img.shields.io/badge/License-Private-red)
 
-**Futeboladas** is a modern, premium mobile application designed to seamlessly organize, manage, and schedule amateur football (soccer) matches amongst friends. Built with Flutter and Firebase, it delivers a stunning Glassmorphism UI with real-time synchronize capabilities.
+**Futeboladas** is a modern, premium mobile application designed to seamlessly organize, manage, and schedule amateur football (soccer) matches amongst friends. Built with Flutter and Supabase, it delivers a stunning Glassmorphism UI with real-time synchronize capabilities.
 
 > **Note:** The application's User Interface (UI) is localized in **Portuguese (PT-PT)** for its target audience, but the entire underlying **codebase, architecture, and database schematic are written in English** to ensure global scalability and standard developer collaboration.
 
@@ -25,7 +25,7 @@
 ## 🛠️ Technology Stack
 
 - **Framework**: [Flutter](https://flutter.dev/) (Dart)
-- **Backend/Database**: [Firebase](https://firebase.google.com/) (Authentication & Cloud Firestore)
+- **Backend/Database**: [Supabase](https://supabase.com/) (Authentication & PostgreSQL with Realtime)
 - **Location Services**: [Photon API](https://photon.komoot.io/) & `url_launcher` for Maps routing.
 - **Weather Services**: [OpenWeather API](https://openweathermap.org/)
 - **Design System**: Custom constraints, `google_fonts` (Outfit), and blur-backdrop filters.
@@ -65,13 +65,11 @@ git clone https://github.com/fspjorge/futeboladas.git
 cd futeboladas
 ```
 
-### 2. Configure Firebase (FlutterFire)
-1. Ensure you have the `flutterfire_cli` installed: `dart pub global activate flutterfire_cli`
-2. Configure your project to generate `lib/firebase_options.dart`:
-```bash
-flutterfire configure --project=futeboladas-62f15
-```
-3. Deploy the database rules (See [FIREBASE.md](FIREBASE.md)). 
+### 2. Configure Supabase
+1. Create a project at [Supabase](https://supabase.com/).
+2. Setup your database schemas (Profiles, Games, Attendances).
+3. Enable **Realtime** for the `attendances` and `games` tables in the Supabase Dashboard (Database -> Replication).
+4. Create a `.env` file based on `.env.example` with your `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `GOOGLE_WEB_CLIENT_ID`.
 
 ### 3. OpenWeather API Configuration
 The application relies on an OpenWeatherMap API key for accurate forecasts. 

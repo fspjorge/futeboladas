@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// No Firestore imports needed
 
 class Game {
   final String id;
@@ -33,45 +33,33 @@ class Game {
     this.price,
   });
 
-  factory Game.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data()!;
+  factory Game.fromSupabase(Map<String, dynamic> data) {
     return Game(
-      id: doc.id,
+      id: data['id']?.toString() ?? '',
       title: data['title'] ?? '',
       location: data['location'] ?? '',
-      players: (data['players'] as num?)?.toInt() ?? 0,
-      date: data['date'] is Timestamp
-          ? (data['date'] as Timestamp).toDate()
-          : DateTime.parse(data['date'] as String),
-      createdBy: data['createdBy'],
-      createdByName: data['createdByName'],
-      createdByPhoto: data['createdByPhoto'],
+      players: (data['players_limit'] as num?)?.toInt() ?? 0,
+      date: DateTime.parse(data['date'] as String),
+      createdBy: data['created_by']?.toString(),
+      // Nota: createdByName e createdByPhoto podem ser buscados via JOIN com a tabela profiles
       lat: (data['lat'] as num?)?.toDouble(),
       lon: (data['lon'] as num?)?.toDouble(),
-      participants: List<String>.from(data['participants'] ?? []),
-      isActive: data['isActive'] ?? true,
+      isActive: data['is_active'] ?? true,
       field: data['field'] as String?,
       price: (data['price'] as num?)?.toDouble(),
     );
   }
 
-  factory Game.fromQueryDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
-    return Game.fromFirestore(doc);
-  }
-
-  Map<String, dynamic> toFirestore() {
+  Map<String, dynamic> toSupabase() {
     return {
       'title': title,
       'location': location,
-      'players': players,
-      'date': Timestamp.fromDate(date),
-      'createdBy': createdBy,
-      'createdByName': createdByName,
-      'createdByPhoto': createdByPhoto,
+      'players_limit': players,
+      'date': date.toIso8601String(),
+      'created_by': createdBy,
       'lat': lat,
       'lon': lon,
-      'participants': participants,
-      'isActive': isActive,
+      'is_active': isActive,
       'field': field,
       'price': price,
     };

@@ -1,48 +1,38 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import '../../services/auth_service.dart';
 import '../../widgets/grid_backdrop.dart';
 import '../../widgets/glass_card.dart';
 
 class ProfilePage extends StatefulWidget {
   final User user;
-  final FirebaseAuth? auth;
-  const ProfilePage({super.key, required this.user, this.auth});
+  final AuthService? authService;
+  const ProfilePage({super.key, required this.user, this.authService});
 
   @override
   State<ProfilePage> createState() => _PerfilPageState();
 }
 
 class _PerfilPageState extends State<ProfilePage> with WidgetsBindingObserver {
-  late final _auth = widget.auth ?? FirebaseAuth.instance;
+  late final AuthService _authService;
   late User _user;
   bool _busy = false;
-
-  late final GoogleSignIn _googleSignIn = kIsWeb
-      ? GoogleSignIn(
-          clientId:
-              '704341845387-phrtrpoc86e4d8f1jkmd7unv28vo18vt.apps.googleusercontent.com',
-        )
-      : GoogleSignIn();
 
   @override
   void initState() {
     super.initState();
+    _authService = widget.authService ?? AuthService.instance;
     _user = widget.user;
   }
 
-  bool get _isEmailUser =>
-      _user.providerData.any((p) => p.providerId == 'password');
+  bool get _isEmailUser => _user.appMetadata['provider'] == 'email';
 
   Future<void> _signOut() async {
     setState(() => _busy = true);
     try {
-      await _auth.signOut();
-      if (!kIsWeb) {
-        await _googleSignIn.signOut();
-      }
+      await _authService.signOut();
       if (mounted) {
         Navigator.pop(context);
       }
@@ -58,24 +48,28 @@ class _PerfilPageState extends State<ProfilePage> with WidgetsBindingObserver {
   }
 
   Future<void> _updateDisplayName() async {
+    // No Supabase, o nome completo costuma estar em user_metadata['full_name']
+    final currentName = _user.userMetadata?['full_name'] ?? '';
     final name = await _showModernEditDialog(
       title: 'Alterar Nome',
-      initialValue: _user.displayName ?? '',
+      initialValue: currentName,
       hint: 'O teu nome de jogador',
       icon: Icons.person_outline_rounded,
     );
 
-    if (name == null || name.trim().isEmpty || name == _user.displayName) {
+    if (name == null || name.trim().isEmpty || name == currentName) {
       return;
     }
 
     setState(() => _busy = true);
     try {
-      await _user.updateDisplayName(name.trim());
-      await _user.reload();
-      _user = _auth.currentUser!;
+      final res = await Supabase.instance.client.auth.updateUser(
+        UserAttributes(data: {'full_name': name.trim()}),
+      );
+      _user = res.user!;
       if (mounted) {
         _showSnackBar('Nome atualizado com sucesso! 🤝');
+        setState(() {});
       }
     } catch (e) {
       if (mounted) {
@@ -89,9 +83,7 @@ class _PerfilPageState extends State<ProfilePage> with WidgetsBindingObserver {
   }
 
   Future<void> _changePassword() async {
-    if (!_isEmailUser) {
-      return;
-    }
+    if (!_isEmailUser) return;
 
     final result = await _showModernEditDialog(
       title: 'Nova Password',
@@ -111,24 +103,15 @@ class _PerfilPageState extends State<ProfilePage> with WidgetsBindingObserver {
 
     setState(() => _busy = true);
     try {
-      // For password change, we usually need recent re-auth, but let's try direct update first
-      // since the user just logged in or is active.
-      await _user.updatePassword(result.trim());
+      await Supabase.instance.client.auth.updateUser(
+        UserAttributes(password: result.trim()),
+      );
       if (mounted) {
         _showSnackBar('Password alterada com sucesso! 🔐');
       }
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'requires-recent-login' && mounted) {
-        _showSnackBar(
-          'Por segurança, precisas de entrar novamente na app.',
-          isError: true,
-        );
-      } else if (mounted) {
-        _showSnackBar('Erro: ${e.message}', isError: true);
-      }
     } catch (e) {
       if (mounted) {
-        _showSnackBar('Erro inesperado: $e', isError: true);
+        _showSnackBar('Erro: $e', isError: true);
       }
     } finally {
       if (mounted) {
@@ -138,42 +121,10 @@ class _PerfilPageState extends State<ProfilePage> with WidgetsBindingObserver {
   }
 
   Future<void> _deleteAccount() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => _ModernConfirmDialog(
-        title: 'Eliminar Conta',
-        message:
-            'Esta ação é irreversível. Perderás todo o teu histórico de games e presenças.',
-        confirmLabel: 'ELIMINAR',
-        isDestructive: true,
-      ),
+    _showSnackBar(
+      'Contacta o suporte para eliminar a conta (Supabase Admin required).',
+      isError: true,
     );
-
-    if (confirm != true) {
-      return;
-    }
-
-    setState(() => _busy = true);
-    try {
-      await _user.delete();
-      if (mounted) {
-        _showSnackBar('Conta eliminada. Sentiremos a tua falta! 👋');
-        Navigator.pop(context);
-      }
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'requires-recent-login' && mounted) {
-        _showSnackBar(
-          'Para eliminar, precisas de ter feito login recentemente.',
-          isError: true,
-        );
-      } else if (mounted) {
-        _showSnackBar('Erro: ${e.message}', isError: true);
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _busy = false);
-      }
-    }
   }
 
   void _showSnackBar(String msg, {bool isError = false}) {
@@ -377,10 +328,10 @@ class _PerfilPageState extends State<ProfilePage> with WidgetsBindingObserver {
                 child: CircleAvatar(
                   radius: 36,
                   backgroundColor: cs.primary.withValues(alpha: 0.1),
-                  backgroundImage: _user.photoURL != null
-                      ? NetworkImage(_user.photoURL!)
+                  backgroundImage: _user.userMetadata?['avatar_url'] != null
+                      ? NetworkImage(_user.userMetadata?['avatar_url'])
                       : null,
-                  child: _user.photoURL == null
+                  child: _user.userMetadata?['avatar_url'] == null
                       ? Icon(Icons.person_rounded, size: 36, color: cs.primary)
                       : null,
                 ),
@@ -389,7 +340,7 @@ class _PerfilPageState extends State<ProfilePage> with WidgetsBindingObserver {
           ),
           const SizedBox(height: 12),
           Text(
-            _user.displayName ?? 'Jogador',
+            _user.userMetadata?['full_name'] ?? 'Jogador',
             style: GoogleFonts.outfit(
               fontSize: 20,
               fontWeight: FontWeight.w800,

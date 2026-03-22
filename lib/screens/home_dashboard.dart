@@ -1,16 +1,29 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'games/games_list.dart';
 import 'games/games_maps.dart';
 import 'profile/profile_page.dart';
+import '../services/auth_service.dart';
 import '../widgets/grid_backdrop.dart';
 import '../main.dart';
+import '../services/game_service.dart';
+import '../services/attendance_service.dart';
 
 class HomeDashboard extends StatefulWidget {
   final User user;
-  const HomeDashboard({super.key, required this.user});
+  final GameService? gameService;
+  final AttendanceService? attendanceService;
+  final AuthService? authService;
+
+  const HomeDashboard({
+    super.key,
+    required this.user,
+    this.gameService,
+    this.attendanceService,
+    this.authService,
+  });
 
   @override
   State<HomeDashboard> createState() => _HomeDashboardState();
@@ -178,13 +191,18 @@ class _HomeDashboardState extends State<HomeDashboard> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
         children: [
           const SizedBox(height: 12),
-          GamesList(searchQuery: _searchQuery),
+          GamesList(
+            searchQuery: _searchQuery,
+            gameService: widget.gameService,
+            attendanceService: widget.attendanceService,
+            authService: widget.authService,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildMapa() => const GamesMaps();
+  Widget _buildMapa() => GamesMaps(gameService: widget.gameService);
 
   Widget _buildBottomBar(ColorScheme cs) {
     return Container(

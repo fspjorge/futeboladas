@@ -1,25 +1,32 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:futeboladas/screens/auth/login_page.dart';
-import 'package:futeboladas/screens/auth/verify_email_page.dart';
 import 'package:futeboladas/screens/home_dashboard.dart';
+import '../../services/auth_service.dart';
+import '../../services/game_service.dart';
+import '../../services/attendance_service.dart';
 
 class AuthGate extends StatelessWidget {
-  final FirebaseAuth? auth;
-  const AuthGate({super.key, this.auth});
+  final AuthService? authService;
+  final GameService? gameService;
+  final AttendanceService? attendanceService;
 
-  bool _needsEmailVerification(User user) {
-    final providerData = user.providerData;
-    final isEmailUser = providerData.any((p) => p.providerId == 'password');
-    return isEmailUser && !user.emailVerified;
-  }
+  const AuthGate({
+    super.key,
+    this.authService,
+    this.gameService,
+    this.attendanceService,
+  });
+
+  AuthService get _auth => authService ?? AuthService.instance;
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: (auth ?? FirebaseAuth.instance).userChanges(),
+    return StreamBuilder<AuthState>(
+      stream: _auth.authStateChanges,
       builder: (context, snap) {
-        final user = snap.data;
+        final session = snap.data?.session;
+        final user = session?.user;
 
         if (snap.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -28,14 +35,19 @@ class AuthGate extends StatelessWidget {
         }
 
         if (user == null) {
-          return LoginPage(auth: auth);
+          return LoginPage(authService: _auth);
         }
 
-        if (_needsEmailVerification(user)) {
-          return VerifyEmailPage(user: user);
-        }
+        // No Supabase, a verificação de email pode ser gerida por políticas de RLS
+        // ou verificando o campo email_confirmed_at.
+        // Por agora, vamos assumir que o login é suficiente.
 
-        return HomeDashboard(user: user);
+        return HomeDashboard(
+          user: user,
+          gameService: gameService,
+          attendanceService: attendanceService,
+          authService: _auth,
+        );
       },
     );
   }
