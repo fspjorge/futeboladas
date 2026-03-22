@@ -4,7 +4,7 @@ import '../config.dart';
 
 class WeatherService {
   final http.Client _client;
-  static const String _apiKey = Config.weatherApiKey;
+  static String get _apiKey => Config.weatherApiKey;
   static const String _baseUrl =
       'https://api.openweathermap.org/data/2.5/weather';
   static const String _forecastUrl =

@@ -1,28 +1,41 @@
 import 'package:flutter/material.dart';
-import '../../../services/weather_service.dart';
 
 class WeatherSection extends StatelessWidget {
-  final double lat;
-  final double lon;
-  final DateTime date;
+  final Future<Map<String, dynamic>?>? forecast;
   final Widget Function(IconData icon, String label, String value)
   infoRowBuilder;
 
   const WeatherSection({
     super.key,
-    required this.lat,
-    required this.lon,
-    required this.date,
+    required this.forecast,
     required this.infoRowBuilder,
   });
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<Map<String, dynamic>?>(
-      future: WeatherService().getForecastAt(lat, lon, date),
+      future: forecast,
       builder: (context, weatherSnap) {
+        if (weatherSnap.connectionState == ConnectionState.waiting) {
+          return infoRowBuilder(
+            Icons.cloud_outlined,
+            'Previsão',
+            'A carregar...',
+          );
+        }
+        if (weatherSnap.hasError) {
+          return infoRowBuilder(
+            Icons.cloud_off_outlined,
+            'Previsão',
+            'Erro de ligação',
+          );
+        }
         if (!weatherSnap.hasData || weatherSnap.data == null) {
-          return const SizedBox.shrink();
+          return infoRowBuilder(
+            Icons.cloud_off_outlined,
+            'Previsão',
+            'Indisponível',
+          );
         }
         final w = weatherSnap.data!;
         final desc = w['desc'] as String? ?? '';

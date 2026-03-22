@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/attendance_service.dart';
 import '../../services/game_service.dart';
+import '../../services/weather_service.dart';
 import '../../widgets/grid_backdrop.dart';
 import 'widgets/admin_section.dart';
 import 'widgets/game_detail_header.dart';
@@ -27,6 +28,34 @@ class GameDetail extends StatefulWidget {
 class _JogoDetalheState extends State<GameDetail> {
   bool _deleting = false;
   int _reminderMin = 5;
+
+  Future<Map<String, dynamic>?>? _weatherFuture;
+  double? _lastLat;
+  double? _lastLon;
+  DateTime? _lastDate;
+
+  void _updateWeather(double? lat, double? lon, DateTime? date) {
+    // Se as coordenadas ou data forem as mesmas, não refaz o fetch
+    final sameLat = lat == _lastLat;
+    final sameLon = lon == _lastLon;
+    final sameDate =
+        date?.millisecondsSinceEpoch == _lastDate?.millisecondsSinceEpoch;
+
+    // Se tudo for igual E já tivermos uma future inicializada, não fazemos nada
+    if (sameLat && sameLon && sameDate && _weatherFuture != null) {
+      return;
+    }
+
+    _lastLat = lat;
+    _lastLon = lon;
+    _lastDate = date;
+
+    if (lat != null && lon != null && date != null) {
+      _weatherFuture = WeatherService().getForecastAt(lat, lon, date);
+    } else {
+      _weatherFuture = null;
+    }
+  }
 
   Future<void> _pickReminder() async {
     final opts = const [0, 5, 10, 15, 30, 60];
@@ -200,6 +229,10 @@ class _JogoDetalheState extends State<GameDetail> {
               final createdBy = data['createdBy'] as String?;
               final isOwner = uid != null && createdBy == uid;
               final price = data['price'] as num? ?? 0;
+              final lat = (data['lat'] as num?)?.toDouble();
+              final lon = (data['lon'] as num?)?.toDouble();
+
+              _updateWeather(lat, lon, date);
 
               return Column(
                 children: [
@@ -213,11 +246,16 @@ class _JogoDetalheState extends State<GameDetail> {
                           date: date,
                           price: price,
                           field: data['field'] as String?,
-                          lat: (data['lat'] as num?)?.toDouble(),
-                          lon: (data['lon'] as num?)?.toDouble(),
+                          lat: lat,
+                          lon: lon,
+                          weather: _weatherFuture,
                         ),
                         Padding(
-                          padding: const EdgeInsets.all(20),
+                          padding: const EdgeInsets.only(
+                            left: 20,
+                            right: 20,
+                            bottom: 20,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -228,8 +266,9 @@ class _JogoDetalheState extends State<GameDetail> {
                                 onPickReminder: _pickReminder,
                                 reminderMin: _reminderMin,
                                 onOpenMaps: _openMaps,
+                                weather: _weatherFuture,
+                                uid: uid,
                               ),
-                              const SizedBox(height: 24),
                               if (uid != null)
                                 GameDetailPlayers(
                                   jogoRef: jogoRef,
@@ -269,6 +308,7 @@ class _JogoDetalheState extends State<GameDetail> {
               );
             },
           ),
+
           if (_deleting)
             Container(
               color: Colors.black54,

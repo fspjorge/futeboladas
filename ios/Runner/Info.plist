@@ -49,5 +49,10 @@
 		<string>A tua localização é necessária para mostrar jogos perto de ti no mapa.</string>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>LSApplicationQueriesSchemes</key>
+		<array>
+			<string>https</string>
+			<string>http</string>
+		</array>
 	</dict>
 </plist>

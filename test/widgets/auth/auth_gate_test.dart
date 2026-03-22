@@ -21,7 +21,13 @@ void main() {
           tester.view.resetDevicePixelRatio();
         });
 
-        await tester.pumpWidget(MaterialApp(home: AuthGate(auth: mockAuth)));
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(height: 2000, child: AuthGate(auth: mockAuth)),
+            ),
+          ),
+        );
       });
 
       // We should see a CircularProgressIndicator first

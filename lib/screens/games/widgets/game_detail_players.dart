@@ -22,7 +22,7 @@ class GameDetailPlayers extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          padding: const EdgeInsets.only(left: 4, top: 16, bottom: 8),
           child: Text(
             'JOGADORES CONFIRMADOS',
             style: GoogleFonts.outfit(
@@ -55,8 +55,10 @@ class GameDetailPlayers extends StatelessWidget {
             return Container(
               constraints: const BoxConstraints(maxHeight: 200),
               child: GridView.builder(
+                padding: EdgeInsets.zero,
                 shrinkWrap: true,
-                physics: const AlwaysScrollableScrollPhysics(),
+                physics:
+                    const NeverScrollableScrollPhysics(), // Melhor para Column/ListView
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   childAspectRatio: 3.5,

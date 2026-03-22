@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../services/attendance_service.dart';
 import '../../../widgets/glass_card.dart';
 import '../../../utils/format_utils.dart';
-import 'weather_section.dart';
 
 class GameDetailInfo extends StatelessWidget {
   final String gameId;
@@ -12,6 +12,8 @@ class GameDetailInfo extends StatelessWidget {
   final VoidCallback onPickReminder;
   final int reminderMin;
   final Function(String) onOpenMaps;
+  final Future<Map<String, dynamic>?>? weather;
+  final String? uid;
 
   const GameDetailInfo({
     super.key,
@@ -21,6 +23,8 @@ class GameDetailInfo extends StatelessWidget {
     required this.onPickReminder,
     required this.reminderMin,
     required this.onOpenMaps,
+    this.weather,
+    this.uid,
   });
 
   @override
@@ -69,24 +73,8 @@ class GameDetailInfo extends StatelessWidget {
             ],
           ),
           const Divider(color: Colors.white10, height: 1),
-          _infoRow(
-            Icons.stadium_outlined,
-            'Tipo de Campo',
-            data['field'] as String? ?? 'Relva Sintética',
-          ),
-          const Divider(color: Colors.white10, height: 1),
           _infoRow(Icons.person_outline, 'Organizador', createdByName),
           const Divider(color: Colors.white10, height: 1),
-          if (data['lat'] != null &&
-              data['lon'] != null &&
-              data['date'] != null) ...[
-            WeatherSection(
-              lat: (data['lat'] as num).toDouble(),
-              lon: (data['lon'] as num).toDouble(),
-              date: (data['date'] as Timestamp).toDate(),
-              infoRowBuilder: _infoRow,
-            ),
-          ],
           InkWell(
             onTap: onPickReminder,
             child: _infoRow(
@@ -96,9 +84,123 @@ class GameDetailInfo extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right, color: Colors.white24),
             ),
           ),
+          if (uid != null)
+            StreamBuilder<bool>(
+              stream: presencas.minhaPresenca(gameId),
+              builder: (context, meSnap) {
+                if (meSnap.data != true) return const SizedBox.shrink();
+
+                return Column(
+                  children: [
+                    const Divider(color: Colors.white10, height: 1),
+                    _infoRow(
+                      Icons.check_circle_outline,
+                      'Estado',
+                      'Estás convocado!',
+                      labelColor: Theme.of(context).colorScheme.primary,
+                      valueColor: Theme.of(context).colorScheme.primary,
+                    ),
+                    FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                      future: FirebaseFirestore.instance
+                          .collection('games')
+                          .doc(gameId)
+                          .collection('admin')
+                          .doc('privado')
+                          .get(),
+                      builder: (context, privSnap) {
+                        final privData = privSnap.data?.data();
+                        final contacts = privData?['contactos'] as String?;
+                        final notes = privData?['historico'] as String?;
+
+                        return Column(
+                          children: [
+                            if (contacts != null && contacts.isNotEmpty) ...[
+                              const Divider(color: Colors.white10, height: 1),
+                              _infoRow(
+                                Icons.contact_phone_outlined,
+                                'Contactos Organização',
+                                contacts,
+                              ),
+                            ],
+                            if (notes != null && notes.isNotEmpty) ...[
+                              const Divider(color: Colors.white10, height: 1),
+                              _infoRow(
+                                Icons.notes_outlined,
+                                'Notas / Info Adicional',
+                                notes,
+                              ),
+                            ],
+                          ],
+                        );
+                      },
+                    ),
+                    const Divider(color: Colors.white10, height: 1),
+                    InkWell(
+                      onTap: () => _adicionarCalendario(context),
+                      child: _infoRow(
+                        Icons.calendar_month_outlined,
+                        'Agenda',
+                        'Adicionar ao Calendário',
+                        trailing: const Icon(
+                          Icons.open_in_new_rounded,
+                          color: Colors.white24,
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
         ],
       ),
     );
+  }
+
+  Future<void> _adicionarCalendario(BuildContext context) async {
+    final date = (data['date'] as Timestamp?)?.toDate() ?? DateTime.now();
+    final title = data['title'] as String? ?? 'Futebolada';
+    final location = data['location'] as String? ?? '';
+
+    try {
+      final start =
+          date
+              .toUtc()
+              .toIso8601String()
+              .replaceAll('-', '')
+              .replaceAll(':', '')
+              .split('.')
+              .first +
+          'Z';
+      final end =
+          date
+              .add(const Duration(hours: 1, minutes: 30))
+              .toUtc()
+              .toIso8601String()
+              .replaceAll('-', '')
+              .replaceAll(':', '')
+              .split('.')
+              .first +
+          'Z';
+
+      final uri = Uri.parse(
+        'https://www.google.com/calendar/render'
+        '?action=TEMPLATE'
+        '&text=${Uri.encodeComponent(title)}'
+        '&dates=$start/$end'
+        '&location=${Uri.encodeComponent(location)}',
+      );
+
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        throw Exception('Não foi possível abrir o calendário');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erro ao abrir calendário: $e')));
+      }
+    }
   }
 
   Widget _infoRow(
@@ -106,6 +208,8 @@ class GameDetailInfo extends StatelessWidget {
     String label,
     String value, {
     Widget? trailing,
+    Color? labelColor,
+    Color? valueColor,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -126,12 +230,16 @@ class GameDetailInfo extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                  style: TextStyle(
+                    color: labelColor ?? Colors.white38,
+                    fontSize: 12,
+                    fontWeight: labelColor != null ? FontWeight.bold : null,
+                  ),
                 ),
                 Text(
                   value,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: valueColor ?? Colors.white,
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),

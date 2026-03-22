@@ -5,9 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../game_detail.dart';
-import '../confirmation_page.dart';
 import '../../../services/attendance_service.dart';
-import '../../../services/weather_service.dart';
 import '../../../utils/format_utils.dart';
 
 import '../../../main.dart';
@@ -288,40 +286,27 @@ class GameCard extends StatelessWidget {
           ),
         );
       } else {
-        String? weatherStr;
-        final lat = (data['lat'] as num?)?.toDouble();
-        final lon = (data['lon'] as num?)?.toDouble();
-        if (lat != null && lon != null) {
-          final w = await WeatherService().getForecastAt(lat, lon, date);
-          if (w != null) {
-            final desc = w['desc'] as String? ?? '';
-            final capitalizedDesc = desc.isNotEmpty
-                ? '${desc[0].toUpperCase()}${desc.substring(1)}'
-                : '';
-            weatherStr = '$capitalizedDesc, ${w['temp']}°C';
-          }
-        }
-
         if (context.mounted) {
           // Hide snackbar if any before navigating to avoid dismissal issues
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => ConfirmationPage(
-                title: data['title'] as String? ?? location,
-                date: date,
-                location: location,
-                price: price.toDouble(),
-                weather: weatherStr != null ? Future.value(weatherStr) : null,
-                field: data['field'] as String?,
-                maxParticipantes: maxJogadores,
-                numParticipantes: confirmados,
-                organizadorNome: data['createdByName'] as String?,
-                organizadorFoto: data['createdByPhoto'] as String?,
-                contactosPrivados: null,
-                notasPrivadas: null,
+          scaffoldMessengerKey.currentState?.showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Presença confirmada em ${data['title'] as String? ?? location}! ⚽',
+                    ),
+                  ),
+                ],
               ),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              duration: const Duration(seconds: 4),
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             ),
           );
         }

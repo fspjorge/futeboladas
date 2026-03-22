@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../../../services/weather_service.dart';
 import '../../../widgets/grid_backdrop.dart';
 import '../../../utils/format_utils.dart';
 
@@ -13,6 +12,7 @@ class GameDetailHeader extends StatelessWidget {
   final String? field;
   final double? lat;
   final double? lon;
+  final Future<Map<String, dynamic>?>? weather;
 
   const GameDetailHeader({
     super.key,
@@ -23,175 +23,124 @@ class GameDetailHeader extends StatelessWidget {
     this.field,
     this.lat,
     this.lon,
+    this.weather,
   });
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
-    return Container(
-      constraints: const BoxConstraints(minHeight: 220),
-      decoration: const BoxDecoration(
-        color: Colors
-            .transparent, // Background provided by parent (Scaffold/Stack)
-      ),
-      child: Stack(
-        children: [
-          const Positioned.fill(child: GridBackdrop()),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: cs.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          'JOGO CONFIRMADO',
-                          style: GoogleFonts.outfit(
-                            color: cs.primary,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: price > 0
-                              ? Colors.green.withValues(alpha: 0.2)
-                              : Colors.blue.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: price > 0
-                                ? Colors.green.withValues(alpha: 0.3)
-                                : Colors.blue.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Text(
-                          FormatUtils.formatarPreco(price),
-                          style: GoogleFonts.outfit(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: price > 0 ? Colors.green : Colors.blue,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    title,
-                    style: GoogleFonts.outfit(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      height: 1.1,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 12,
-                    runSpacing: 8,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.schedule,
-                            size: 16,
-                            color: Colors.white38,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            date != null
-                                ? DateFormat(
-                                    "EEEE, d 'de' MMMM 'às' HH:mm",
-                                    'pt_PT',
-                                  ).format(date!)
-                                : 'Sem data',
-                            style: GoogleFonts.outfit(
-                              color: Colors.white38,
-                              fontWeight: FontWeight.w500,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.stadium_outlined,
-                            size: 16,
-                            color: Colors.white38,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            field ?? 'Relva Sintética',
-                            style: GoogleFonts.outfit(
-                              color: Colors.white70,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  if (lat != null && lon != null && date != null)
-                    FutureBuilder<Map<String, dynamic>?>(
-                      future: WeatherService().getForecastAt(lat!, lon!, date!),
-                      builder: (context, weatherSnap) {
-                        if (!weatherSnap.hasData || weatherSnap.data == null) {
-                          return const SizedBox.shrink();
-                        }
-                        final w = weatherSnap.data!;
-                        return Row(
-                          children: [
-                            Icon(
-                              w['diaNoite'] == 'Noite'
-                                  ? Icons.nightlight_round
-                                  : Icons.wb_sunny_rounded,
-                              size: 16,
-                              color: Colors.amber.withValues(alpha: 0.8),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${w['temp']}°C • ${w['desc']}',
-                              style: GoogleFonts.outfit(
-                                color: Colors.white70,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                ],
-              ),
-            ),
+    return Stack(
+      children: [
+        const Positioned.fill(child: GridBackdrop()),
+        Padding(
+          padding: EdgeInsets.only(
+            top: MediaQuery.of(context).padding.top + 16,
+            left: 24,
+            right: 24,
+            bottom: 40,
           ),
-        ],
-      ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.outfit(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  height: 1.1,
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Linha 1: Data e Hora
+              _headerInfoRow(
+                Icons.calendar_today_outlined,
+                date != null
+                    ? DateFormat(
+                        "EEEE, d 'de' MMMM 'às' HH:mm",
+                        'pt_PT',
+                      ).format(date!)
+                    : 'Sem data',
+              ),
+              const SizedBox(height: 10),
+              // Linha 2: Tipo de Campo
+              _headerInfoRow(
+                Icons.stadium_outlined,
+                field ?? 'Relva Sintética',
+              ),
+              const SizedBox(height: 10),
+              // Linha 3: Meteorologia
+              if (weather != null)
+                FutureBuilder<Map<String, dynamic>?>(
+                  future: weather,
+                  builder: (context, weatherSnap) {
+                    if (weatherSnap.connectionState ==
+                        ConnectionState.waiting) {
+                      return _headerInfoRow(
+                        Icons.cloud_outlined,
+                        'À procura de previsão...',
+                        iconColor: Colors.white24,
+                      );
+                    }
+
+                    if (weatherSnap.hasError) {
+                      return _headerInfoRow(
+                        Icons.cloud_off_outlined,
+                        'Meteorologia Indisponível',
+                        iconColor: Colors.white24,
+                      );
+                    }
+
+                    if (!weatherSnap.hasData || weatherSnap.data == null) {
+                      return _headerInfoRow(
+                        Icons.info_outline,
+                        'Previsão indisponível',
+                        iconColor: Colors.white24,
+                      );
+                    }
+
+                    final w = weatherSnap.data!;
+                    final desc = w['desc'] as String?;
+                    final temp = w['temp'];
+                    final diaNoite = w['diaNoite'];
+
+                    final capitalizedDesc = desc != null && desc.isNotEmpty
+                        ? '${desc[0].toUpperCase()}${desc.substring(1)}'
+                        : '';
+                    final text = '$capitalizedDesc, $temp°C';
+                    final icon = diaNoite == 'Noite'
+                        ? Icons.nightlight_round
+                        : Icons.wb_sunny_rounded;
+                    final iconColor = Colors.amber;
+
+                    return _headerInfoRow(icon, text, iconColor: iconColor);
+                  },
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _headerInfoRow(IconData icon, String text, {Color? iconColor}) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: iconColor ?? Colors.white38),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: GoogleFonts.outfit(
+              color: Colors.white70,
+              fontWeight: FontWeight.w500,
+              fontSize: 15,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }
