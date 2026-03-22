@@ -92,9 +92,11 @@ class _JogoEditarState extends State<EditGame> {
         _jogadoresCtrl.text = ((data['players'] as num?)?.toInt() ?? 0)
             .toString();
 
-        // Carregar preço
-        final price = data['price'] as num? ?? 0;
-        _precoCtrl.text = price > 0 ? price.toString() : '';
+        // Carregar preço (exibimos o TOTAL no formulário)
+        final unitPrice = data['price'] as num? ?? 0;
+        final playersCount = (data['players'] as num?)?.toInt() ?? 0;
+        final totalPrice = unitPrice * playersCount;
+        _precoCtrl.text = totalPrice > 0 ? totalPrice.toStringAsFixed(2) : '';
 
         _data = (data['date'] as Timestamp?)?.toDate();
         _campoSelected = data['field'] as String?;
@@ -233,8 +235,9 @@ class _JogoEditarState extends State<EditGame> {
       final location = _localCtrl.text.trim();
       final title = _tituloCtrl.text.trim();
       final players = int.tryParse(_jogadoresCtrl.text.trim()) ?? 0;
-      final price =
+      final total =
           double.tryParse(_precoCtrl.text.trim().replaceFirst(',', '.')) ?? 0.0;
+      final price = (players > 0) ? (total / players) : 0.0;
 
       double? lat = _selLat;
       double? lon = _selLon;
@@ -332,6 +335,7 @@ class _JogoEditarState extends State<EditGame> {
                             hint: 'ex: 10',
                             icon: Icons.people_outline,
                             keyboardType: TextInputType.number,
+                            onChanged: (v) => setState(() {}),
                             validator: (v) {
                               if (v == null || v.trim().isEmpty)
                                 return 'Obrigatório';
@@ -344,24 +348,63 @@ class _JogoEditarState extends State<EditGame> {
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: _buildGlassInput(
-                            controller: _precoCtrl,
-                            label: 'Preço',
-                            hint: '0.00',
-                            icon: Icons.euro_rounded,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            validator: (v) {
-                              if (v == null || v.trim().isEmpty)
-                                return 'Obrigatório';
-                              final val = double.tryParse(
-                                v.trim().replaceFirst(',', '.'),
-                              );
-                              if (val == null || val < 0) return 'Inválido';
-                              if (val > 999) return 'Máx 999';
-                              return null;
-                            },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildGlassInput(
+                                controller: _precoCtrl,
+                                label: 'Preço Total',
+                                hint: '0.00',
+                                icon: Icons.euro_rounded,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                onChanged: (v) => setState(() {}),
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty)
+                                    return 'Obrigatório';
+                                  final val = double.tryParse(
+                                    v.trim().replaceFirst(',', '.'),
+                                  );
+                                  if (val == null || val < 0) return 'Inválido';
+                                  if (val > 999) return 'Máx 999';
+                                  return null;
+                                },
+                              ),
+                              if (_precoCtrl.text.isNotEmpty &&
+                                  _jogadoresCtrl.text.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    top: 8,
+                                    left: 4,
+                                  ),
+                                  child: Builder(
+                                    builder: (context) {
+                                      final p =
+                                          int.tryParse(_jogadoresCtrl.text) ??
+                                          0;
+                                      final t =
+                                          double.tryParse(
+                                            _precoCtrl.text.replaceFirst(
+                                              ',',
+                                              '.',
+                                            ),
+                                          ) ??
+                                          0;
+                                      final unit = p > 0 ? (t / p) : 0;
+                                      return Text(
+                                        '≈ ${unit.toStringAsFixed(2)}€ por pessoa',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 12,
+                                          color: Colors.white70,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       ],

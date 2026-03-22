@@ -180,9 +180,12 @@ class _JogoDetalheState extends State<GameDetail> {
                 return const Center(child: CircularProgressIndicator());
               }
               if (!snap.hasData || !snap.data!.exists) {
+                if (_deleting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
                 return Center(
                   child: Text(
-                    'Game não encontrado.',
+                    'Jogo não encontrado.',
                     style: GoogleFonts.outfit(
                       color: Colors.white38,
                       fontSize: 18,

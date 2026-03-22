@@ -59,7 +59,7 @@ class GameService {
       final docSnap = await docRef.get();
 
       if (!docSnap.exists) {
-        throw Exception('Game não encontrado no Firestore (ID: $gameId)');
+        throw Exception('Jogo não encontrado no Firestore (ID: $gameId)');
       }
 
       final data = docSnap.data()!;
