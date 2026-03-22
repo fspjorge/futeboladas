@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/grid_backdrop.dart';
@@ -18,25 +18,38 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
 
   Future<void> _resend() async {
     setState(() => _busy = true);
-    await widget.user.sendEmailVerification();
-    setState(() {
-      _sent = true;
-      _busy = false;
-    });
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Email de verificação enviado.')),
-    );
+    try {
+      await Supabase.instance.client.auth.resend(
+        type: OtpType.signup,
+        email: widget.user.email,
+      );
+      setState(() {
+        _sent = true;
+        _busy = false;
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Email de verificação enviado.')),
+      );
+    } catch (e) {
+      if (mounted) setState(() => _busy = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao reenviar: $e')));
+    }
   }
 
   Future<void> _refresh() async {
-    await widget.user.reload();
-    final refreshed = FirebaseAuth.instance.currentUser;
-    if (refreshed != null && refreshed.emailVerified) {
+    // No Supabase, refrescar o utilizador para ver se o email_confirmed_at mudou
+    await Supabase.instance.client.auth.getUser();
+    final refreshed = Supabase.instance.client.auth.currentUser;
+    if (refreshed != null && refreshed.emailConfirmedAt != null) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Email verificado.')));
+      // Navigator should pop or push to home via AuthGate
     } else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -116,7 +129,8 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                       ),
                       const SizedBox(height: 16),
                       TextButton.icon(
-                        onPressed: () => FirebaseAuth.instance.signOut(),
+                        onPressed: () =>
+                            Supabase.instance.client.auth.signOut(),
                         icon: const Icon(Icons.logout, size: 18),
                         label: const Text('Sair'),
                       ),

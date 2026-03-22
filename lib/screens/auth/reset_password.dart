@@ -1,9 +1,13 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../services/auth_service.dart';
 
 class ResetPasswordPage extends StatefulWidget {
-  final String oobCode;
-  const ResetPasswordPage({super.key, required this.oobCode});
+  // O Supabase lida com o token/sessão automaticamente via deep link.
+  // Já não precisamos obrigatoriamente do código aqui, mas mantemos o parâmetro
+  // para compatibilidade de rotas se necessário.
+  final String? oobCode;
+  const ResetPasswordPage({super.key, this.oobCode});
 
   @override
   State<ResetPasswordPage> createState() => _ResetPasswordPageState();
@@ -13,36 +17,21 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   final _passCtrl = TextEditingController();
   final _pass2Ctrl = TextEditingController();
   bool _busy = false;
-  String? _email;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadEmail();
-  }
-
-  Future<void> _loadEmail() async {
-    try {
-      final email = await FirebaseAuth.instance.verifyPasswordResetCode(
-        widget.oobCode,
-      );
-      setState(() => _email = email);
-    } on FirebaseAuthException catch (e) {
-      _show('Código inválido ou expirado (${e.code}).', true);
-    } catch (e) {
-      _show('Falha ao validar código: $e', true);
-    }
-  }
 
   void _show(String msg, bool error) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: error ? Colors.red : null),
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: error ? Colors.red : Colors.green,
+      ),
     );
   }
 
   Future<void> _confirm() async {
     final p1 = _passCtrl.text.trim();
     final p2 = _pass2Ctrl.text.trim();
+
     if (p1.isEmpty || p2.isEmpty) {
       _show('Preenche ambas as passwords.', true);
       return;
@@ -55,19 +44,15 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       _show('A password deve ter pelo menos 6 caracteres.', true);
       return;
     }
+
     setState(() => _busy = true);
     try {
-      await FirebaseAuth.instance.confirmPasswordReset(
-        code: widget.oobCode,
-        newPassword: p1,
-      );
+      await AuthService.instance.updatePassword(p1);
+      _show('Password atualizada com sucesso!', false);
       if (!mounted) return;
-      _show('Password atualizada. Já podes entrar com a nova password.', false);
       Navigator.of(context).popUntil((r) => r.isFirst);
-    } on FirebaseAuthException catch (e) {
-      _show(e.message ?? 'Erro ao atualizar password (${e.code}).', true);
     } catch (e) {
-      _show('Erro inesperado: $e', true);
+      _show('Erro ao atualizar password: $e', true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -82,6 +67,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final user = Supabase.instance.client.auth.currentUser;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Definir nova password')),
       body: Center(
@@ -93,16 +80,20 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (_email != null)
+                if (user?.email != null)
                   Text(
-                    'Conta: $_email',
+                    'Conta: ${user!.email}',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white70,
+                    ),
                   ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _passCtrl,
                   obscureText: true,
+                  style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(
                     labelText: 'Nova password',
                     prefixIcon: Icon(Icons.lock_outline),
@@ -112,21 +103,28 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                 TextField(
                   controller: _pass2Ctrl,
                   obscureText: true,
+                  style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(
                     labelText: 'Confirmar password',
                     prefixIcon: Icon(Icons.lock_outline),
                   ),
                 ),
-                const SizedBox(height: 20),
-                FilledButton(
+                const SizedBox(height: 24),
+                ElevatedButton(
                   onPressed: _busy ? null : _confirm,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, 56),
+                  ),
                   child: _busy
                       ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3,
+                            color: Color(0xFF0F172A),
+                          ),
                         )
-                      : const Text('Guardar nova password'),
+                      : const Text('GUARDAR NOVA PASSWORD'),
                 ),
               ],
             ),

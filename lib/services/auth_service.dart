@@ -65,4 +65,8 @@ class AuthService {
       accessToken: accessToken,
     );
   }
+
+  Future<UserResponse> updatePassword(String newPassword) {
+    return _supabase.auth.updateUser(UserAttributes(password: newPassword));
+  }
 }
